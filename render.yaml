@@ -12,7 +12,7 @@ services:
         sync: false
       - key: INTERNAL_DATABASE_API_KEY
         sync: false
-      - key: BRIGHT_DATA_API_KEY
+      - key: SCRAPING_DOG_API_KEY
         sync: false
     healthCheckPath: /
     autoDeploy: true 

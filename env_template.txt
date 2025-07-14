@@ -12,4 +12,4 @@ OPENAI_API_KEY=your_openai_api_key
 INTERNAL_DATABASE_API_KEY=your_apollo_api_key
 
 # Bright Data Configuration
-BRIGHT_DATA_API_KEY=your_bright_data_api_key 
+SCRAPING_DOG_API_KEY=your_scraping_dog_api_key 

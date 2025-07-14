@@ -9,7 +9,7 @@ _secrets = {}
 try:
     # First try environment variables (for Render deployment)
     INTERNAL_DATABASE_API_KEY = os.getenv("INTERNAL_DATABASE_API_KEY")
-    BRIGHT_DATA_API_KEY = os.getenv("BRIGHT_DATA_API_KEY")
+    SCRAPING_DOG_API_KEY = os.getenv("SCRAPING_DOG_API_KEY")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     
     # Fallback to secrets.json for local development
@@ -19,13 +19,13 @@ try:
         decoder = json.JSONDecoder()
         _secrets, _ = decoder.raw_decode(content)
         INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
-        BRIGHT_DATA_API_KEY = BRIGHT_DATA_API_KEY or _secrets.get("bright_data_api_key")
+        SCRAPING_DOG_API_KEY = SCRAPING_DOG_API_KEY or _secrets.get("scraping_dog_api_key")
         OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
 except (FileNotFoundError, json.JSONDecodeError) as e:
     print(f"⚠️  Warning: Could not load secrets.json: {e}")
     print("   Using environment variables or create secrets.json with your API keys.")
     INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
-    BRIGHT_DATA_API_KEY = BRIGHT_DATA_API_KEY or _secrets.get("bright_data_api_key")
+    SCRAPING_DOG_API_KEY = SCRAPING_DOG_API_KEY or _secrets.get("scraping_dog_api_key")
     OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
 
 def get_witty_error_response() -> str:

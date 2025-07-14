@@ -22,7 +22,7 @@ if not os.getenv('OPENAI_API_KEY'):
             secrets = json.load(f)
             os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
             os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '')
-            os.environ['BRIGHT_DATA_API_KEY'] = secrets.get('bright_data_api_key', '')
+            os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
@@ -351,13 +351,30 @@ async def process_search(request_id: str, request: SearchRequest):
                 # Always prefer enriched data for company and photo
                 company = candidate.get("company") or person_data.get("organization_name") or person_data.get("company") or "Unknown"
                 photo_url = None
+                location = person_data.get("location")
                 linkedin_profile = person_data.get("linkedin_profile", {})
+                
+                # Extract data from ScrapingDog LinkedIn profile
                 if linkedin_profile:
+                    # Extract company from description
+                    description = linkedin_profile.get("description", {})
+                    if description and isinstance(description, dict):
+                        company_from_desc = description.get("description1", "")
+                        if company_from_desc and company_from_desc != "Unknown":
+                            company = company_from_desc
+                    
+                    # Extract location
+                    linkedin_location = linkedin_profile.get("location", "")
+                    if linkedin_location and linkedin_location != "Unknown":
+                        location = linkedin_location
+                    
+                    # Extract profile photo
                     photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
                     for field in photo_fields:
                         if linkedin_profile.get(field):
                             photo_url = linkedin_profile[field]
                             break
+                
                 if not photo_url:
                     photo_url = person_data.get("profile_photo_url")
                 # Log what will be stored
@@ -375,7 +392,7 @@ async def process_search(request_id: str, request: SearchRequest):
                     "reasons": candidate.get("reasons", []),
                     "linkedin_url": person_data.get("linkedin_url"),
                     "profile_photo_url": photo_url,
-                    "location": person_data.get("location"),
+                    "location": location,
                     "linkedin_profile": linkedin_profile,
                     "linkedin_posts": person_data.get("linkedin_posts", [])
                 }

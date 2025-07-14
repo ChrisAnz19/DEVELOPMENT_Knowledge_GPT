@@ -19,7 +19,7 @@ SUPABASE_PORT=5432
 ```
 OPENAI_API_KEY=your_openai_api_key_here
 INTERNAL_DATABASE_API_KEY=your_apollo_api_key_here
-BRIGHT_DATA_API_KEY=your_bright_data_api_key_here
+SCRAPING_DOG_API_KEY=your_scraping_dog_api_key_here
 ```
 
 #### 3. **Render Configuration**
@@ -62,8 +62,8 @@ PORT=8000
    Key: INTERNAL_DATABASE_API_KEY
    Value: [Your Apollo API Key]
    
-   Key: BRIGHT_DATA_API_KEY
-   Value: [Your Bright Data API Key]
+   Key: SCRAPING_DOG_API_KEY
+   Value: [Your ScrapingDog API Key]
    
    Key: PORT
    Value: 8000
