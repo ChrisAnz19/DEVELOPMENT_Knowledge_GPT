@@ -50,12 +50,14 @@ class DatabaseManager:
     def connect(self) -> bool:
         """Establish database connection"""
         try:
+            logger.info(f"Attempting to connect to database at host={self.db_config['host']} user={self.db_config['user']} port={self.db_config['port']} dbname={self.db_config['dbname']}")
             self.connection = psycopg2.connect(**self.db_config)
             self.cursor = self.connection.cursor(cursor_factory=RealDictCursor)
             logger.info("Database connection established successfully!")
             return True
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
+            logger.error("Check that all environment variables are set and that the database is accessible from this environment.")
             return False
     
     def disconnect(self):
