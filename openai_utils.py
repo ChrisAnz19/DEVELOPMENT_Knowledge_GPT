@@ -138,6 +138,8 @@ def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
     Parse JSON response from OpenAI, robust to extra data or multiple JSON objects.
     """
     try:
+        # Debug: print raw response
+        logger.error(f"RAW OPENAI RESPONSE: {response}")
         # Try to extract JSON from the response
         start_idx = response.find('{')
         end_idx = response.rfind('}') + 1

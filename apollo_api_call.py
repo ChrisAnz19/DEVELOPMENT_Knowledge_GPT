@@ -43,6 +43,7 @@ def search_people_via_internal_database(filters: dict, page: int = 1, per_page: 
             "reveal_phone_number": False
         }
         try:
+            print(f"[Internal Database] Attempting enrichment for person ID {person_id}")
             enrich_response = requests.post(
                 "https://api.apollo.io/api/v1/people/match",
                 params=enrich_params,

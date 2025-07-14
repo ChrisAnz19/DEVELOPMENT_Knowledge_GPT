@@ -43,7 +43,7 @@ def select_top_candidates(user_prompt: str, people: list) -> list:
         "- Engagement with specific marketing content or campaigns "
         "Use their LinkedIn profile only as guidance for the TYPES of reasons to generate (e.g., if they're in sales, focus on sales-related behavioral patterns). "
         "Make these reasons specific and realistic, as if you have actual behavioral data showing their website visits and online activities. "
-        "IMPORTANT: Return ONLY valid JSON with no extra text. The response must be a list of exactly two objects with keys: name, title, company, email, accuracy, reasons."
+        "IMPORTANT: Return ONLY valid JSON, inside a single markdown code block (triple backticks, json). No extra text, no explanation, no comments. The response must be a list of exactly two objects with keys: name, title, company, email, accuracy, reasons."
     )
     
     prompt = f"User request: {user_prompt}\nCandidates:\n{json.dumps(simplified_people)}"

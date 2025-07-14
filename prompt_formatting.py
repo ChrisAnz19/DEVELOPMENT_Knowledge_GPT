@@ -134,7 +134,8 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "3. Use arrays for multiple values\n"
         "4. Don't use revenue_range, technology_uids, or other complex filters\n"
         "5. Focus on basic location, title, and seniority filters\n"
-        "Return only valid JSON with keys: organization_filters, person_filters, and reasoning."
+        "6. Return ONLY valid JSON, inside a single markdown code block (triple backticks, json). No extra text, no explanation, no comments.\n"
+        "7. The JSON must have keys: organization_filters, person_filters, reasoning."
     )
     
     filters = call_openai_for_json(
