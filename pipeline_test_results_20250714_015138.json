@@ -1,0 +1,46 @@
+{
+  "start_time": "2025-07-14T01:51:29.391289",
+  "tests_passed": 6,
+  "tests_failed": 2,
+  "total_tests": 8,
+  "results": [
+    {
+      "test": "health_check",
+      "status": "PASSED"
+    },
+    {
+      "test": "database_stats",
+      "status": "FAILED"
+    },
+    {
+      "test": "search_listing",
+      "status": "PASSED"
+    },
+    {
+      "test": "exclusions_endpoint",
+      "status": "FAILED"
+    },
+    {
+      "test": "search_creation_1",
+      "status": "PASSED",
+      "request_id": "61a2b619-fff9-4a42-b0f6-ceecf34f820e"
+    },
+    {
+      "test": "search_completion_1",
+      "status": "PASSED",
+      "request_id": "61a2b619-fff9-4a42-b0f6-ceecf34f820e"
+    },
+    {
+      "test": "json_endpoint_1",
+      "status": "PASSED",
+      "request_id": "61a2b619-fff9-4a42-b0f6-ceecf34f820e"
+    },
+    {
+      "test": "search_deletion_1",
+      "status": "PASSED",
+      "request_id": "61a2b619-fff9-4a42-b0f6-ceecf34f820e"
+    }
+  ],
+  "end_time": "2025-07-14T01:51:38.085371",
+  "success_rate": 75.0
+}
