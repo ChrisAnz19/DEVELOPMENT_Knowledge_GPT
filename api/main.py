@@ -142,13 +142,17 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 @app.get("/api/search/{request_id}", response_model=SearchResponse)
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
-    db_result = get_search_from_database(request_id)
-    if db_result:
-        return SearchResponse(**db_result)
-    # Fallback to in-memory storage
-    if request_id in search_results:
-        return search_results[request_id]
-    raise HTTPException(status_code=404, detail="Search request not found")
+    try:
+        db_result = get_search_from_database(request_id)
+        if db_result:
+            return SearchResponse(**db_result)
+        # Fallback to in-memory storage
+        if request_id in search_results:
+            return search_results[request_id]
+        raise HTTPException(status_code=404, detail="Search request not found")
+    except Exception as e:
+        logger.error(f"Error retrieving search result for {request_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
 @app.get("/api/search")
 async def list_searches():
@@ -184,13 +188,23 @@ async def list_searches():
 async def get_database_stats():
     """Get database statistics"""
     try:
-        # The original code had db_manager.connection and db_manager.cursor checks,
-        # but db_manager is no longer imported.
-        # Assuming the intent was to check if the Supabase client is initialized
-        # or if there's a placeholder for future use.
-        # For now, we'll return a placeholder or a generic message.
-        # Since db_manager is removed, we'll just return a placeholder.
-        return {"database_status": "Supabase client not initialized", "message": "Database connection status cannot be determined without db_manager"}
+        # Query Supabase for counts
+        from supabase_client import supabase
+        # Total searches
+        searches_res = supabase.table("searches").select("id", count="exact").execute()
+        total_searches = searches_res.count if hasattr(searches_res, 'count') else None
+        # Total candidates
+        people_res = supabase.table("people").select("id", count="exact").execute()
+        total_candidates = people_res.count if hasattr(people_res, 'count') else None
+        # Total exclusions (not expired)
+        exclusions_res = supabase.table("people_exclusions").select("id", count="exact").gt("expires_at", "now()").execute()
+        total_exclusions = exclusions_res.count if hasattr(exclusions_res, 'count') else None
+        return {
+            "database_status": "connected",
+            "total_searches": total_searches,
+            "total_candidates": total_candidates,
+            "total_exclusions": total_exclusions
+        }
     except Exception as e:
         logger.error(f"Database stats error: {e}")
         return {"database_status": "error", "error": str(e)}
