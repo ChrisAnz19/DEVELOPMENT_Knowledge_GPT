@@ -44,8 +44,8 @@ def test_full_system():
             db_stats = db_response.json()
             print(f"✅ Database Status: {db_stats['database_status']}")
             if 'total_searches' in db_stats:
-                print(f"📊 Total Searches: {db_stats['total_searches']}")
-                print(f"👥 Total Candidates: {db_stats['total_candidates']}")
+                            print(f"📊 Total Searches: {db_stats['total_searches']}")
+            print(f"👥 Total People: {db_stats['total_candidates']}")
         else:
             print(f"⚠️  Database stats failed: {db_response.status_code}")
     except Exception as e:
@@ -154,21 +154,21 @@ def test_full_system():
             print(f"🧠 Behavioral Data: Generated")
         
         if final_data.get("candidates"):
-            candidates = final_data["candidates"]
-            print(f"👥 Candidates Found: {len(candidates)}")
+            people = final_data["candidates"]
+            print(f"👥 People Found: {len(people)}")
             
-            for i, candidate in enumerate(candidates, 1):
-                print(f"\n🥇 CANDIDATE #{i}")
-                print(f"   👤 Name: {candidate.get('name', 'N/A')}")
-                print(f"   💼 Title: {candidate.get('title', 'N/A')}")
-                print(f"   🏢 Company: {candidate.get('company', 'N/A')}")
-                print(f"   📧 Email: {candidate.get('email', 'N/A')}")
-                print(f"   📊 Accuracy: {candidate.get('accuracy', 'N/A')}%")
-                print(f"   🔗 LinkedIn: {'Yes' if candidate.get('linkedin_url') else 'No'}")
-                print(f"   📸 Photo: {'Yes' if candidate.get('profile_photo_url') else 'No'}")
+            for i, person in enumerate(people, 1):
+                print(f"\n🥇 PERSON #{i}")
+                print(f"   👤 Name: {person.get('name', 'N/A')}")
+                print(f"   💼 Title: {person.get('title', 'N/A')}")
+                print(f"   🏢 Company: {person.get('company', 'N/A')}")
+                print(f"   📧 Email: {person.get('email', 'N/A')}")
+                print(f"   📊 Accuracy: {person.get('accuracy', 'N/A')}%")
+                print(f"   🔗 LinkedIn: {'Yes' if person.get('linkedin_url') else 'No'}")
+                print(f"   📸 Photo: {'Yes' if person.get('profile_photo_url') else 'No'}")
                 
-                if candidate.get('reasons'):
-                    print(f"   💡 Reasons: {len(candidate['reasons'])} reason(s)")
+                if person.get('reasons'):
+                    print(f"   💡 Reasons: {len(person['reasons'])} reason(s)")
         
         # Step 6: Test Database Retrieval
         print("\n6️⃣ Testing Database Retrieval...")

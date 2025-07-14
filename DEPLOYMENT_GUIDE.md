@@ -154,7 +154,7 @@ curl -X GET "https://knowledge-gpt-siuq.onrender.com/api/exclusions"
    - Candidates are saved with LinkedIn data
 
 2. **Exclusion System Working**
-   - `/api/exclusions` shows excluded candidates
+   - `/api/exclusions` shows excluded people
    - 30-day automatic exclusion is active
    - Cleanup endpoint works
 
@@ -168,7 +168,7 @@ curl -X GET "https://knowledge-gpt-siuq.onrender.com/api/exclusions"
 ✅ Database connection established  
 ✅ Tables created successfully  
 ✅ Search data stored in Supabase  
-✅ Candidate data with LinkedIn info saved  
+✅ People data with LinkedIn info saved  
 ✅ Exclusion system operational  
 ✅ All API endpoints responding  
 ✅ Previous 2 search entries migrated to database  

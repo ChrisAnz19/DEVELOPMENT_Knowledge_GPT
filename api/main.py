@@ -193,7 +193,7 @@ async def get_database_stats():
             db_manager.cursor.execute("SELECT COUNT(*) as total_searches FROM searches")
             total_searches = db_manager.cursor.fetchone()['total_searches']
             
-            db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM candidates")
+            db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM people")
             total_candidates = db_manager.cursor.fetchone()['total_candidates']
             
             db_manager.cursor.execute("SELECT COUNT(*) as total_exclusions FROM candidate_exclusions WHERE expires_at > CURRENT_TIMESTAMP")

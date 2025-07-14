@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS searches (
     error TEXT
 );
 
--- Table to store each candidate returned for a search
-CREATE TABLE IF NOT EXISTS candidates (
+-- Table to store each person returned for a search
+CREATE TABLE IF NOT EXISTS people (
     id SERIAL PRIMARY KEY,
     search_id INTEGER REFERENCES searches(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS candidate_exclusions (
 
 -- Indexes for faster lookups
 CREATE INDEX IF NOT EXISTS idx_searches_request_id ON searches(request_id);
-CREATE INDEX IF NOT EXISTS idx_candidates_search_id ON candidates(search_id);
+CREATE INDEX IF NOT EXISTS idx_people_search_id ON people(search_id);
 CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_email ON candidate_exclusions(email);
 CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_expires ON candidate_exclusions(expires_at);
 
@@ -53,5 +53,5 @@ CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_expires ON candidate_exclusi
 -- INSERT INTO searches (request_id, prompt, status, created_at, completed_at) 
 -- VALUES ('test-123', 'Find marketing directors in San Francisco', 'completed', NOW(), NOW());
 
--- INSERT INTO candidates (search_id, name, title, company, email, accuracy) 
+-- INSERT INTO people (search_id, name, title, company, email, accuracy) 
 -- VALUES (1, 'John Doe', 'Marketing Director', 'Tech Corp', 'john@techcorp.com', 85); 

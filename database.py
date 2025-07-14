@@ -87,9 +87,9 @@ class DatabaseManager:
                 );
             """)
             
-            # Create candidates table
+            # Create people table
             self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS candidates (
+                CREATE TABLE IF NOT EXISTS people (
                     id SERIAL PRIMARY KEY,
                     search_id INTEGER REFERENCES searches(id) ON DELETE CASCADE,
                     name VARCHAR(255) NOT NULL,
@@ -160,28 +160,28 @@ class DatabaseManager:
             
             search_id = self.cursor.fetchone()['id']
             
-            # Store candidates if they exist
-            candidates = search_data.get('candidates', [])
-            for candidate in candidates:
+            # Store people if they exist
+            people = search_data.get('candidates', [])
+            for person in people:
                 self.cursor.execute("""
-                    INSERT INTO candidates (
+                    INSERT INTO people (
                         search_id, name, title, company, email, linkedin_url, 
                         profile_photo_url, location, accuracy, reasons, 
                         linkedin_profile, linkedin_posts
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     search_id,
-                    candidate.get('name'),
-                    candidate.get('title'),
-                    candidate.get('company'),
-                    candidate.get('email'),
-                    candidate.get('linkedin_url'),
-                    candidate.get('profile_photo_url'),
-                    candidate.get('location'),
-                    candidate.get('accuracy'),
-                    json.dumps(candidate.get('reasons', [])),
-                    json.dumps(candidate.get('linkedin_profile', {})),
-                    json.dumps(candidate.get('linkedin_posts', []))
+                    person.get('name'),
+                    person.get('title'),
+                    person.get('company'),
+                    person.get('email'),
+                    person.get('linkedin_url'),
+                    person.get('profile_photo_url'),
+                    person.get('location'),
+                    person.get('accuracy'),
+                    json.dumps(person.get('reasons', [])),
+                    json.dumps(person.get('linkedin_profile', {})),
+                    json.dumps(person.get('linkedin_posts', []))
                 ))
             
             self.connection.commit()
@@ -204,16 +204,16 @@ class DatabaseManager:
             if not search:
                 return None
             
-            # Get candidates for this search
+            # Get people for this search
             self.cursor.execute("""
-                SELECT * FROM candidates WHERE search_id = %s ORDER BY accuracy DESC
+                SELECT * FROM people WHERE search_id = %s ORDER BY accuracy DESC
             """, (search['id'],))
             
-            candidates = self.cursor.fetchall()
+            people = self.cursor.fetchall()
             
             # Convert to dict and format
             search_dict = dict(search)
-            search_dict['candidates'] = [dict(candidate) for candidate in candidates]
+            search_dict['candidates'] = [dict(person) for person in people]
             
             return search_dict
             
@@ -225,9 +225,9 @@ class DatabaseManager:
         """Get recent search results"""
         try:
             self.cursor.execute("""
-                SELECT s.*, COUNT(c.id) as candidate_count 
+                SELECT s.*, COUNT(p.id) as candidate_count 
                 FROM searches s 
-                LEFT JOIN candidates c ON s.id = c.search_id 
+                LEFT JOIN people p ON s.id = p.search_id 
                 GROUP BY s.id 
                 ORDER BY s.created_at DESC 
                 LIMIT %s
