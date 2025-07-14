@@ -82,15 +82,26 @@ class HealthResponse(BaseModel):
     timestamp: str
     version: str
 
-# Initialize database on startup
-logger.info("🔌 Initializing database connection...")
-if init_database():
-    logger.info("✅ Database initialized successfully!")
-else:
-    logger.warning("⚠️  Database initialization failed - will use in-memory storage as fallback")
+# Database initialization will happen on first use
+logger.info("🚀 Knowledge_GPT API starting up...")
 
 # In-memory storage for fallback only
 search_results = {}
+
+# Database initialization state
+_database_initialized = False
+
+def ensure_database_initialized():
+    """Initialize database on first use"""
+    global _database_initialized
+    if not _database_initialized:
+        logger.info("🔌 Initializing database connection...")
+        if init_database():
+            logger.info("✅ Database initialized successfully!")
+            _database_initialized = True
+        else:
+            logger.warning("⚠️  Database initialization failed - will use in-memory storage as fallback")
+            _database_initialized = True  # Mark as attempted to avoid repeated failures
 
 # JSON file storage for persistent data
 def save_search_to_json(request_id: str, data: dict):
@@ -147,6 +158,7 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 @app.get("/api/search/{request_id}", response_model=SearchResponse)
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
+    ensure_database_initialized()
     db_result = get_search_from_database(request_id)
     if db_result:
         return SearchResponse(**db_result)
@@ -158,6 +170,7 @@ async def get_search_result(request_id: str):
 @app.get("/api/search")
 async def list_searches():
     """List all search requests"""
+    ensure_database_initialized()
     db_searches = get_recent_searches_from_database(limit=50)
     if db_searches:
         return {
@@ -188,6 +201,7 @@ async def list_searches():
 @app.get("/api/database/stats")
 async def get_database_stats():
     """Get database statistics"""
+    ensure_database_initialized()
     try:
         if db_manager.connection and db_manager.cursor:
             db_manager.cursor.execute("SELECT COUNT(*) as total_searches FROM searches")
@@ -214,6 +228,7 @@ async def get_database_stats():
 @app.get("/api/exclusions")
 async def get_exclusions():
     """Get all currently excluded people"""
+    ensure_database_initialized()
     try:
         exclusions = get_excluded_people_from_database()
         return {
@@ -227,6 +242,7 @@ async def get_exclusions():
 @app.post("/api/exclusions/cleanup")
 async def cleanup_exclusions():
     """Clean up expired exclusions"""
+    ensure_database_initialized()
     try:
         cleaned_count = cleanup_expired_exclusions_in_database()
         return {
@@ -399,6 +415,7 @@ async def process_search(request_id: str, request: SearchRequest):
         result.completed_at = datetime.now(timezone.utc).isoformat()
         
         # Store in database (primary storage)
+        ensure_database_initialized()
         search_data = result.dict()
         db_search_id = store_search_to_database(search_data)
         if db_search_id:
@@ -430,6 +447,7 @@ async def process_search(request_id: str, request: SearchRequest):
 @app.delete("/api/search/{request_id}")
 async def delete_search(request_id: str):
     """Delete a search request"""
+    ensure_database_initialized()
     if delete_search_from_database(request_id):
         # Also delete the JSON file
         try:
