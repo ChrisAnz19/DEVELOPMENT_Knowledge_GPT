@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 import uvicorn
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 # Import the existing Knowledge_GPT modules
@@ -83,7 +83,7 @@ async def health_check():
     """Health check endpoint"""
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         version="1.0.0"
     )
 
@@ -97,7 +97,7 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         request_id=request_id,
         status="processing",
         prompt=request.prompt,
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.now(timezone.utc).isoformat()
     )
     
     # Start background processing
@@ -140,7 +140,7 @@ async def process_search(request_id: str, request: SearchRequest):
         if filters["reasoning"].startswith("Error"):
             result.status = "failed"
             result.error = filters["reasoning"]
-            result.completed_at = datetime.utcnow().isoformat()
+            result.completed_at = datetime.now(timezone.utc).isoformat()
             return
         
         result.filters = filters
@@ -158,7 +158,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 behavioral_data = simulate_behavioral_data(filters)
                 result.behavioral_data = behavioral_data
                 result.status = "completed"
-                result.completed_at = datetime.utcnow().isoformat()
+                result.completed_at = datetime.now(timezone.utc).isoformat()
                 return
                 
         except Exception as e:
@@ -167,7 +167,7 @@ async def process_search(request_id: str, request: SearchRequest):
             behavioral_data = simulate_behavioral_data(filters)
             result.behavioral_data = behavioral_data
             result.status = "completed"
-            result.completed_at = datetime.utcnow().isoformat()
+            result.completed_at = datetime.now(timezone.utc).isoformat()
             return
         
         # Step 3: Scrape LinkedIn profiles (if enabled)
@@ -233,14 +233,14 @@ async def process_search(request_id: str, request: SearchRequest):
         result.behavioral_data = behavioral_data
         
         result.status = "completed"
-        result.completed_at = datetime.utcnow().isoformat()
+        result.completed_at = datetime.now(timezone.utc).isoformat()
         print(f"[{request_id}] Search completed successfully")
         
     except Exception as e:
         print(f"[{request_id}] Unexpected error: {e}")
         result.status = "failed"
         result.error = str(e)
-        result.completed_at = datetime.utcnow().isoformat()
+        result.completed_at = datetime.now(timezone.utc).isoformat()
 
 @app.delete("/api/search/{request_id}")
 async def delete_search(request_id: str):
