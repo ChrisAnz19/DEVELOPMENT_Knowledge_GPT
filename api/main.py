@@ -31,11 +31,10 @@ from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
 from assess_and_return import select_top_candidates
 from database import (
-    init_database, store_search_to_database, get_search_from_database, 
+    store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
     add_person_exclusion_to_database, is_person_excluded_in_database,
-    get_excluded_people_from_database, cleanup_expired_exclusions_in_database,
-    db_manager
+    get_excluded_people_from_database, cleanup_expired_exclusions_in_database
 )
 import logging
 
@@ -87,21 +86,6 @@ logger.info("🚀 Knowledge_GPT API starting up...")
 
 # In-memory storage for fallback only
 search_results = {}
-
-# Database initialization state
-_database_initialized = False
-
-def ensure_database_initialized():
-    """Initialize database on first use"""
-    global _database_initialized
-    if not _database_initialized:
-        logger.info("🔌 Initializing database connection...")
-        if init_database():
-            logger.info("✅ Database initialized successfully!")
-            _database_initialized = True
-        else:
-            logger.warning("⚠️  Database initialization failed - will use in-memory storage as fallback")
-            _database_initialized = True  # Mark as attempted to avoid repeated failures
 
 # JSON file storage for persistent data
 def save_search_to_json(request_id: str, data: dict):
@@ -158,7 +142,6 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 @app.get("/api/search/{request_id}", response_model=SearchResponse)
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
-    ensure_database_initialized()
     db_result = get_search_from_database(request_id)
     if db_result:
         return SearchResponse(**db_result)
@@ -170,7 +153,6 @@ async def get_search_result(request_id: str):
 @app.get("/api/search")
 async def list_searches():
     """List all search requests"""
-    ensure_database_initialized()
     db_searches = get_recent_searches_from_database(limit=50)
     if db_searches:
         return {
@@ -201,26 +183,14 @@ async def list_searches():
 @app.get("/api/database/stats")
 async def get_database_stats():
     """Get database statistics"""
-    ensure_database_initialized()
     try:
-        if db_manager.connection and db_manager.cursor:
-            db_manager.cursor.execute("SELECT COUNT(*) as total_searches FROM searches")
-            total_searches = db_manager.cursor.fetchone()['total_searches']
-            
-            db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM people")
-            total_candidates = db_manager.cursor.fetchone()['total_candidates']
-            
-            db_manager.cursor.execute("SELECT COUNT(*) as total_exclusions FROM people_exclusions WHERE expires_at > CURRENT_TIMESTAMP")
-            total_exclusions = db_manager.cursor.fetchone()['total_exclusions']
-            
-            return {
-                "database_status": "connected",
-                "total_searches": total_searches,
-                "total_candidates": total_candidates,
-                "total_exclusions": total_exclusions
-            }
-        else:
-            return {"database_status": "disconnected"}
+        # The original code had db_manager.connection and db_manager.cursor checks,
+        # but db_manager is no longer imported.
+        # Assuming the intent was to check if the Supabase client is initialized
+        # or if there's a placeholder for future use.
+        # For now, we'll return a placeholder or a generic message.
+        # Since db_manager is removed, we'll just return a placeholder.
+        return {"database_status": "Supabase client not initialized", "message": "Database connection status cannot be determined without db_manager"}
     except Exception as e:
         logger.error(f"Database stats error: {e}")
         return {"database_status": "error", "error": str(e)}
@@ -228,7 +198,6 @@ async def get_database_stats():
 @app.get("/api/exclusions")
 async def get_exclusions():
     """Get all currently excluded people"""
-    ensure_database_initialized()
     try:
         exclusions = get_excluded_people_from_database()
         return {
@@ -242,7 +211,6 @@ async def get_exclusions():
 @app.post("/api/exclusions/cleanup")
 async def cleanup_exclusions():
     """Clean up expired exclusions"""
-    ensure_database_initialized()
     try:
         cleaned_count = cleanup_expired_exclusions_in_database()
         return {
@@ -415,7 +383,6 @@ async def process_search(request_id: str, request: SearchRequest):
         result.completed_at = datetime.now(timezone.utc).isoformat()
         
         # Store in database (primary storage)
-        ensure_database_initialized()
         search_data = result.dict()
         db_search_id = store_search_to_database(search_data)
         if db_search_id:
@@ -447,7 +414,6 @@ async def process_search(request_id: str, request: SearchRequest):
 @app.delete("/api/search/{request_id}")
 async def delete_search(request_id: str):
     """Delete a search request"""
-    ensure_database_initialized()
     if delete_search_from_database(request_id):
         # Also delete the JSON file
         try:
