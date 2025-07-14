@@ -417,7 +417,7 @@ async def process_search(request_id: str, request: SearchRequest):
             
             # Store people in people table
             if result.candidates:
-                store_people_to_database(result.candidates, db_search_id)
+                store_people_to_database(db_search_id, result.candidates)
                 logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
         else:
             logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
