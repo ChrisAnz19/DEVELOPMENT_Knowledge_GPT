@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: knowledge-gpt-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python api/main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: APOLLO_API_KEY
+        sync: false
+      - key: BRIGHT_DATA_API_KEY
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true 
