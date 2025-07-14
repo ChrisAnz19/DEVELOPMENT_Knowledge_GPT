@@ -78,59 +78,6 @@ def scrape_linkedin_profiles(urls):
     return results
 
 
-def scrape_linkedin_posts(post_urls):
-    """
-    Scrape LinkedIn post data via ScrapingDog API for given post URLs.
-    Args:
-        post_urls (list of str): LinkedIn post URLs to scrape.
-    Returns:
-        list of dict: Scraped post data for each URL.
-    """
-    if not SCRAPING_DOG_API_KEY:
-        print("⚠️  LinkedIn post scraping disabled - no API key available")
-        return []
-    
-    if not post_urls:
-        print("⚠️  No LinkedIn post URLs provided")
-        return []
-    
-    print(f"🔍 Scraping {len(post_urls)} LinkedIn posts with ScrapingDog API...")
-    
-    results = []
-    for i, url in enumerate(post_urls, 1):
-        try:
-            print(f"📊 Scraping post {i}/{len(post_urls)}")
-            
-            # ScrapingDog API endpoint for posts
-            api_url = "https://api.scrapingdog.com/linkedin"
-            params = {
-                "api_key": SCRAPING_DOG_API_KEY,
-                "type": "post",
-                "linkId": url,
-                "premium": "false"
-            }
-            
-            response = requests.get(api_url, params=params, timeout=60)
-            response.raise_for_status()
-            
-            post_data = response.json()
-            
-            # Check if we got valid data
-            if post_data and isinstance(post_data, dict):
-                print(f"✅ Successfully scraped post {i}")
-                results.append(post_data)
-            else:
-                print(f"⚠️  Invalid response for post {i}: {post_data}")
-                
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️  Request failed for post {url}: {e}")
-        except Exception as e:
-            print(f"⚠️  Error scraping post {url}: {e}")
-    
-    print(f"✅ Completed LinkedIn post scraping: {len(results)} posts scraped successfully")
-    return results
-
-
 if __name__ == "__main__":
     # Test the scraper
     if len(sys.argv) > 1:

@@ -28,7 +28,7 @@ if not os.getenv('OPENAI_API_KEY'):
 
 from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
 from apollo_api_call import search_people_via_internal_database
-from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
+from linkedin_scraping import scrape_linkedin_profiles
 from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
@@ -62,7 +62,6 @@ class SearchRequest(BaseModel):
     prompt: str
     max_candidates: Optional[int] = 2
     include_linkedin: Optional[bool] = True
-    include_posts: Optional[bool] = True
 
 class SearchResponse(BaseModel):
     request_id: str
@@ -315,22 +314,6 @@ async def process_search(request_id: str, request: SearchRequest):
                 people = enriched_people
                 logger.info(f"[{request_id}] LinkedIn profiles scraped")
         
-        # Step 4: Scrape LinkedIn posts (if enabled)
-        if request.include_posts and request.include_linkedin:
-            logger.info(f"[{request_id}] Scraping LinkedIn posts...")
-            for person in people[:2]:  # Only scrape posts for top 2 candidates
-                profile = person.get("linkedin_profile", {})
-                posts = profile.get("posts", [])
-                recent_posts = posts[:5]  # Get up to 5 recent posts
-                
-                if recent_posts:
-                    posts_data = scrape_linkedin_posts(recent_posts)
-                    if posts_data:
-                        person["linkedin_posts"] = posts_data
-                    await asyncio.sleep(1)  # Rate limiting
-            
-            logger.info(f"[{request_id}] LinkedIn posts scraped")
-        
         # Step 5: Assess and select top candidates
         logger.info(f"[{request_id}] Assessing candidates...")
         try:
@@ -393,8 +376,7 @@ async def process_search(request_id: str, request: SearchRequest):
                     "linkedin_url": person_data.get("linkedin_url"),
                     "profile_photo_url": photo_url,
                     "location": location,
-                    "linkedin_profile": linkedin_profile,
-                    "linkedin_posts": person_data.get("linkedin_posts", [])
+                    "linkedin_profile": linkedin_profile
                 }
                 enhanced_candidates.append(enhanced_candidate)
             result.candidates = enhanced_candidates
