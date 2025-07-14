@@ -34,7 +34,8 @@ from database import (
     init_database, store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
     add_person_exclusion_to_database, is_person_excluded_in_database,
-    get_excluded_people_from_database, cleanup_expired_exclusions_in_database
+    get_excluded_people_from_database, cleanup_expired_exclusions_in_database,
+    db_manager
 )
 import logging
 
@@ -188,8 +189,7 @@ async def list_searches():
 async def get_database_stats():
     """Get database statistics"""
     try:
-        from database import db_manager
-        if db_manager.connection:
+        if db_manager.connection and db_manager.cursor:
             db_manager.cursor.execute("SELECT COUNT(*) as total_searches FROM searches")
             total_searches = db_manager.cursor.fetchone()['total_searches']
             
@@ -208,6 +208,7 @@ async def get_database_stats():
         else:
             return {"database_status": "disconnected"}
     except Exception as e:
+        logger.error(f"Database stats error: {e}")
         return {"database_status": "error", "error": str(e)}
 
 @app.get("/api/exclusions")
