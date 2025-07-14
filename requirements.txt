@@ -1,5 +1,6 @@
 # Knowledge_GPT API Python Dependencies
 # This is a Python project, not Node.js
+# Python version: 3.11.0
 openai>=1.0.0
 requests>=2.28.0
 fastapi>=0.104.0
