@@ -1,14 +1,14 @@
 import requests
 import json
-from prompt_formatting import APOLLO_API_KEY
+from prompt_formatting import INTERNAL_DATABASE_API_KEY
 
-def search_people_via_apollo(filters: dict, page: int = 1, per_page: int = 5) -> list:
+def search_people_via_internal_database(filters: dict, page: int = 1, per_page: int = 5) -> list:
     """
-    Search Apollo for people matching the filters, then enrich each person and only return those with a LinkedIn URL.
+    Search our internal database for people matching the filters, then enrich each person and only return those with a LinkedIn URL.
     Handles enrichment errors gracefully and logs skipped people.
     """
-    if not APOLLO_API_KEY:
-        print("⚠️  Apollo API key not found. Cannot search for people.")
+    if not INTERNAL_DATABASE_API_KEY:
+        print("⚠️  Our internal database API key not found. Cannot search for people.")
         return []
     
     payload = {}
@@ -18,14 +18,14 @@ def search_people_via_apollo(filters: dict, page: int = 1, per_page: int = 5) ->
     payload["per_page"] = per_page
 
     headers = {
-        "x-api-key": APOLLO_API_KEY
+        "x-api-key": INTERNAL_DATABASE_API_KEY
     }
 
     try:
-        response = requests.post("https://api.apollo.io/api/v1/mixed_people/search", json=payload, headers=headers, timeout=30)
+        response = requests.post("https://api.our-internal-database.com/api/v1/mixed_people/search", json=payload, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"⚠️  Apollo API request failed: {e}")
+        print(f"⚠️  Our internal database API request failed: {e}")
         return []
 
     data = response.json()
@@ -34,9 +34,9 @@ def search_people_via_apollo(filters: dict, page: int = 1, per_page: int = 5) ->
     for person in people:
         person_id = person.get("id")
         if not person_id:
-            print(f"[Apollo] Skipping person with missing ID: {person}")
+            print(f"[Internal Database] Skipping person with missing ID: {person}")
             continue
-        # Enrich via Apollo People Enrichment endpoint
+        # Enrich via our internal database People Enrichment endpoint
         enrich_params = {
             "id": person_id,
             "reveal_personal_emails": False,
@@ -44,7 +44,7 @@ def search_people_via_apollo(filters: dict, page: int = 1, per_page: int = 5) ->
         }
         try:
             enrich_response = requests.post(
-                "https://api.apollo.io/api/v1/people/match",
+                "https://api.our-internal-database.com/api/v1/people/match",
                 params=enrich_params,
                 headers=headers,
                 timeout=10
@@ -53,15 +53,15 @@ def search_people_via_apollo(filters: dict, page: int = 1, per_page: int = 5) ->
             enriched_person = enrich_response.json().get("person", {})
             if enriched_person.get("linkedin_url"):
                 enriched.append(enriched_person)
-                print(f"[Apollo] Enriched and kept: {enriched_person.get('name', 'Unknown')} ({enriched_person.get('linkedin_url')})")
+                print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} ({enriched_person.get('linkedin_url')})")
             else:
-                print(f"[Apollo] Skipped (no LinkedIn): {enriched_person.get('name', 'Unknown')}")
+                print(f"[Internal Database] Skipped (no LinkedIn): {enriched_person.get('name', 'Unknown')}")
         except Exception as e:
-            print(f"[Apollo] Enrichment failed for person ID {person_id}: {e}")
+            print(f"[Internal Database] Enrichment failed for person ID {person_id}: {e}")
             continue
         if len(enriched) >= per_page:
             break
-    print(f"[Apollo] Returning {len(enriched)} enriched people with LinkedIn URLs.")
+    print(f"[Internal Database] Returning {len(enriched)} enriched people with LinkedIn URLs.")
     return enriched
 
 if __name__ == "__main__":
@@ -72,5 +72,5 @@ if __name__ == "__main__":
         print("Invalid JSON input.")
         exit(1)
 
-    people = search_people_via_apollo(filters)
+    people = search_people_via_internal_database(filters)
     print(json.dumps(people, indent=2))

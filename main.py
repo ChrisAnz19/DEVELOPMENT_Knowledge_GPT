@@ -1,5 +1,5 @@
-from prompt_formatting import parse_prompt_to_apollo_filters, simulate_behavioral_data
-from apollo_api_call import search_people_via_apollo
+from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
+from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
 from assess_and_return import select_top_candidates
 import json
@@ -33,9 +33,9 @@ def main():
             print(f"\n🔍 Processing: '{prompt}'")
             print("=" * 50)
             
-            # Step 2: Generate Apollo filters
-            print("📊 Step 1/5: Generating Apollo API filters...")
-            filters = parse_prompt_to_apollo_filters(prompt)
+            # Step 2: Generate our internal database filters
+            print("📊 Step 1/5: Generating our internal database API filters...")
+            filters = parse_prompt_to_internal_database_filters(prompt)
             
             if filters["reasoning"].startswith("Error"):
                 print(f"❌ Error: {filters['reasoning']}")
@@ -44,10 +44,10 @@ def main():
             print("✅ Filters generated successfully!")
             print(f"📋 Reasoning: {filters['reasoning']}")
             
-            # Step 3: Search Apollo for people
-            print("\n🔎 Step 2/5: Searching Apollo for matching people...")
+            # Step 3: Search our internal database for people
+            print("\n🔎 Step 2/5: Searching our internal database for matching people...")
             try:
-                people = search_people_via_apollo(filters, page=1, per_page=3)
+                people = search_people_via_internal_database(filters, page=1, per_page=3)
                 print(f"✅ Found {len(people)} people with LinkedIn profiles")
                 
                 if not people:
@@ -55,7 +55,7 @@ def main():
                     continue
                     
             except Exception as e:
-                print(f"❌ Apollo API error: {e}")
+                print(f"❌ Our internal database API error: {e}")
                 print("⚠️  Continuing with behavioral simulation only...")
                 # Fall back to behavioral simulation
                 behavioral_data = simulate_behavioral_data(filters)
@@ -74,7 +74,7 @@ def main():
                 print(f"🔗 Scraping {len(linkedin_urls)} LinkedIn profiles...")
                 profile_data = scrape_linkedin_profiles(linkedin_urls)
                 
-                # Merge profile data with Apollo data
+                # Merge profile data with our internal database data
                 enriched_people = []
                 for i, person in enumerate(people):
                     if person.get("linkedin_url") and i < len(profile_data) and profile_data:
@@ -84,7 +84,7 @@ def main():
                 if profile_data:
                     print("✅ LinkedIn profiles scraped successfully!")
                 else:
-                    print("⚠️  LinkedIn scraping unavailable. Continuing with Apollo data only...")
+                    print("⚠️  LinkedIn scraping unavailable. Continuing with our internal database data only...")
             
             # Step 5: Scrape LinkedIn posts for top profiles
             print("\n📝 Step 4/5: Scraping recent LinkedIn posts...")
@@ -130,8 +130,8 @@ def main():
                 
             except Exception as e:
                 print(f"❌ Assessment error: {e}")
-                print("Showing raw Apollo data instead...")
-                print("\n📋 Raw Apollo Results:")
+                print("Showing raw our internal database data instead...")
+                print("\n📋 Raw our internal database Results:")
                 for person in people[:2]:
                     print(f"• {person.get('name', 'Unknown')} - {person.get('title', 'Unknown')} at {person.get('organization_name', 'Unknown')}")
             

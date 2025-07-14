@@ -21,13 +21,13 @@ if not os.getenv('OPENAI_API_KEY'):
             import json
             secrets = json.load(f)
             os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
-            os.environ['APOLLO_API_KEY'] = secrets.get('apollo_api_key', '')
+            os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '')
             os.environ['BRIGHT_DATA_API_KEY'] = secrets.get('bright_data_api_key', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
-from prompt_formatting import parse_prompt_to_apollo_filters, simulate_behavioral_data
-from apollo_api_call import search_people_via_apollo
+from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
+from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
 from assess_and_return import select_top_candidates
 
@@ -133,9 +133,9 @@ async def process_search(request_id: str, request: SearchRequest):
     try:
         result = search_results[request_id]
         
-        # Step 1: Generate Apollo filters
-        print(f"[{request_id}] Generating Apollo filters...")
-        filters = parse_prompt_to_apollo_filters(request.prompt)
+        # Step 1: Generate our internal database filters
+        print(f"[{request_id}] Generating our internal database filters...")
+        filters = parse_prompt_to_internal_database_filters(request.prompt)
         
         if filters["reasoning"].startswith("Error"):
             result.status = "failed"
@@ -146,10 +146,10 @@ async def process_search(request_id: str, request: SearchRequest):
         result.filters = filters
         print(f"[{request_id}] Filters generated successfully")
         
-        # Step 2: Search Apollo for people
-        print(f"[{request_id}] Searching Apollo...")
+        # Step 2: Search our internal database for people
+        print(f"[{request_id}] Searching our internal database...")
         try:
-            people = search_people_via_apollo(filters, page=1, per_page=request.max_candidates or 2)
+            people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
             print(f"[{request_id}] Found {len(people)} people")
             
             if not people:
@@ -162,7 +162,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 return
                 
         except Exception as e:
-            print(f"[{request_id}] Apollo API error: {e}")
+            print(f"[{request_id}] Our internal database API error: {e}")
             # Fall back to behavioral simulation
             behavioral_data = simulate_behavioral_data(filters)
             result.behavioral_data = behavioral_data
@@ -178,7 +178,7 @@ async def process_search(request_id: str, request: SearchRequest):
             if linkedin_urls:
                 profile_data = scrape_linkedin_profiles(linkedin_urls)
                 
-                # Merge profile data with Apollo data
+                # Merge profile data with our internal database data
                 enriched_people = []
                 for i, person in enumerate(people):
                     if person.get("linkedin_url") and profile_data:

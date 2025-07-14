@@ -10,7 +10,7 @@ services:
         value: 3.11.0
       - key: OPENAI_API_KEY
         sync: false
-      - key: APOLLO_API_KEY
+      - key: INTERNAL_DATABASE_API_KEY
         sync: false
       - key: BRIGHT_DATA_API_KEY
         sync: false

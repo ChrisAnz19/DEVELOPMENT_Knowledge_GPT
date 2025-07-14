@@ -7,7 +7,7 @@ import random
 _secrets = {}
 try:
     # First try environment variables (for Render deployment)
-    APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
+    INTERNAL_DATABASE_API_KEY = os.getenv("INTERNAL_DATABASE_API_KEY")
     BRIGHT_DATA_API_KEY = os.getenv("BRIGHT_DATA_API_KEY")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     
@@ -17,13 +17,13 @@ try:
             content = f.read()
         decoder = json.JSONDecoder()
         _secrets, _ = decoder.raw_decode(content)
-        APOLLO_API_KEY = APOLLO_API_KEY or _secrets.get("apollo_api_key")
+        INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
         BRIGHT_DATA_API_KEY = BRIGHT_DATA_API_KEY or _secrets.get("bright_data_api_key")
         OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
 except (FileNotFoundError, json.JSONDecodeError) as e:
     print(f"⚠️  Warning: Could not load secrets.json: {e}")
     print("   Using environment variables or create secrets.json with your API keys.")
-    APOLLO_API_KEY = APOLLO_API_KEY or _secrets.get("apollo_api_key")
+    INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
     BRIGHT_DATA_API_KEY = BRIGHT_DATA_API_KEY or _secrets.get("bright_data_api_key")
     OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
 
@@ -94,19 +94,19 @@ def is_ridiculous_prompt(prompt: str) -> bool:
     
     return False
 
-def parse_prompt_to_apollo_filters(prompt: str) -> dict:
+def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
     """
-    Parses a natural-language prompt into Apollo API filters for organizations and people.
+    Parses a natural-language prompt into our internal database API filters for organizations and people.
     This is an interim solution using AI to simulate behavioral data until the actual dataset is migrated.
 
     Returns a dictionary with the following structure:
     {
-        "organization_filters": { ... },  # filters for Apollo mixed_companies/search
-        "person_filters": { ... },        # filters for Apollo mixed_people/search
+        "organization_filters": { ... },  # filters for our internal database mixed_companies/search
+        "person_filters": { ... },        # filters for our internal database mixed_people/search
         "reasoning": "..."                 # a concise explanation of the filter choices
     }
 
-    Each filter object should be a dict ready to be passed to the respective Apollo endpoint.
+    Each filter object should be a dict ready to be passed to the respective internal database endpoint.
     The reasoning is a string explaining the rationale behind the chosen filters.
     """
     # Check for ridiculous prompts first
@@ -120,7 +120,7 @@ def parse_prompt_to_apollo_filters(prompt: str) -> dict:
     system_message = {
         "role": "system",
         "content": (
-            "You are an expert at converting user prompts into Apollo People Search API filter payloads. "
+            "You are an expert at converting user prompts into our internal database People Search API filter payloads. "
             "Think step-by-step to infer any necessary organization filters, then person filters. "
             "IMPORTANT: Keep filters SIMPLE and RELIABLE to avoid API errors. "
             "Only use these exact People Search parameters:\n\n"
@@ -181,7 +181,7 @@ def parse_prompt_to_apollo_filters(prompt: str) -> dict:
         if not isinstance(filters["reasoning"], str):
             filters["reasoning"] = "Generated filters based on prompt analysis"
 
-        # Post-processing to enforce correct types per Apollo People Search API
+        # Post-processing to enforce correct types per our internal database People Search API
         org_list_keys = [
             "organization_locations",
             "q_organization_keyword_tags",
@@ -222,7 +222,7 @@ def simulate_behavioral_data(filters: dict) -> dict:
     This is an interim solution until the actual behavioral dataset is migrated.
     
     Args:
-        filters: The Apollo API filters generated from the prompt
+        filters: The our internal database API filters generated from the prompt
         
     Returns:
         dict: Simulated behavioral data with relevant insights
@@ -241,7 +241,7 @@ def simulate_behavioral_data(filters: dict) -> dict:
         
         user_message = {
             "role": "user",
-            "content": f"Generate behavioral insights for these filters: {json.dumps(filters, indent=2)}"
+            "content": f"Generate behavioral insights for these our internal database filters: {json.dumps(filters, indent=2)}"
         }
         
         response = openai.chat.completions.create(
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     )
     
     # Generate filters
-    filters = parse_prompt_to_apollo_filters(example_prompt)
+    filters = parse_prompt_to_internal_database_filters(example_prompt)
     print("Generated Filters:")
     print(json.dumps(filters, indent=2))
     
