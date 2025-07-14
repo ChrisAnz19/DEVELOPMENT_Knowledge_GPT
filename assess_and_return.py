@@ -1,10 +1,7 @@
 # type: ignore
 import json
-import openai
-from prompt_formatting import OPENAI_API_KEY
+from openai_utils import call_openai_for_json, call_openai
 from typing import List
-
-openai.api_key = OPENAI_API_KEY
 
 def select_top_candidates(user_prompt: str, people: list) -> list:
     """
@@ -26,71 +23,51 @@ def select_top_candidates(user_prompt: str, people: list) -> list:
             "linkedin_url": person.get("linkedin_url", "")
         })
     
-    system_message: dict[str, str] = {
-        "role": "system",
-        "content": (
-            "You are an expert at evaluating candidate fit based on behavioral data from website visits and online activity. "
-            "You have access to a trillion rows of website visit data per month across 450k top domains and tens of millions of websites. "
-            "You will receive a user request and a JSON array of up to three people, each with name, title, company, email, and linkedin_url. "
-            "First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request. "
-            "Then select the two with the highest probabilities. "
-            "For each of these two, provide 2-3 specific behavioral reasons why they were selected based on their online activity patterns. "
-            "These reasons should be based on website visit data and behavioral patterns that CANNOT be determined from LinkedIn alone, such as: "
-            "- Specific website visits to competitor or industry sites "
-            "- Time spent on particular product pages or pricing pages "
-            "- Multiple visits to job boards or career sites "
-            "- Engagement with specific content (whitepapers, case studies, webinars) "
-            "- Research patterns on technology comparison sites "
-            "- Browsing behavior on industry-specific forums or communities "
-            "- Search patterns and keyword research activity "
-            "- Time spent on specific product categories or solutions "
-            "- Return visits to particular vendor or service provider websites "
-            "- Engagement with specific marketing content or campaigns "
-            "Use their LinkedIn profile only as guidance for the TYPES of reasons to generate (e.g., if they're in sales, focus on sales-related behavioral patterns). "
-            "Make these reasons specific and realistic, as if you have actual behavioral data showing their website visits and online activities. "
-            "IMPORTANT: Return ONLY valid JSON with no extra text. The response must be a list of exactly two objects with keys: name, title, company, email, accuracy, reasons."
-        )
-    }
-    user_message: dict[str, str] = {
-        "role": "user",
-        "content": f"User request: {user_prompt}\nCandidates:\n{json.dumps(simplified_people)}"
-    }
-    messages: List[dict[str, str]] = [system_message, user_message]
+    system_prompt = (
+        "You are an expert at evaluating candidate fit based on behavioral data from website visits and online activity. "
+        "You have access to a trillion rows of website visit data per month across 450k top domains and tens of millions of websites. "
+        "You will receive a user request and a JSON array of up to three people, each with name, title, company, email, and linkedin_url. "
+        "First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request. "
+        "Then select the two with the highest probabilities. "
+        "For each of these two, provide 2-3 specific behavioral reasons why they were selected based on their online activity patterns. "
+        "These reasons should be based on website visit data and behavioral patterns that CANNOT be determined from LinkedIn alone, such as: "
+        "- Specific website visits to competitor or industry sites "
+        "- Time spent on particular product pages or pricing pages "
+        "- Multiple visits to job boards or career sites "
+        "- Engagement with specific content (whitepapers, case studies, webinars) "
+        "- Research patterns on technology comparison sites "
+        "- Browsing behavior on industry-specific forums or communities "
+        "- Search patterns and keyword research activity "
+        "- Time spent on specific product categories or solutions "
+        "- Return visits to particular vendor or service provider websites "
+        "- Engagement with specific marketing content or campaigns "
+        "Use their LinkedIn profile only as guidance for the TYPES of reasons to generate (e.g., if they're in sales, focus on sales-related behavioral patterns). "
+        "Make these reasons specific and realistic, as if you have actual behavioral data showing their website visits and online activities. "
+        "IMPORTANT: Return ONLY valid JSON with no extra text. The response must be a list of exactly two objects with keys: name, title, company, email, accuracy, reasons."
+    )
     
-    try:
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800
-        )
-        content = response.choices[0].message.content
-        if content is None or content.strip() == "":
-            print("[Assessment] OpenAI returned empty response, using fallback logic")
-            return _fallback_assessment(people)
-        
-        # Clean the response content
-        content = content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-        
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError as e:
-            print(f"[Assessment] JSON parsing error: {e}")
-            print(f"[Assessment] Raw response: {content[:200]}...")
-            return _fallback_assessment(people)
-            
-    except Exception as e:
-        error_msg = str(e)
-        if "context_length_exceeded" in error_msg:
-            print("[Assessment] Context length exceeded, using fallback logic")
-        else:
-            print(f"[Assessment] OpenAI API error: {e}")
+    prompt = f"User request: {user_prompt}\nCandidates:\n{json.dumps(simplified_people)}"
+    
+    # Use the new OpenAI utility function
+    result = call_openai_for_json(
+        prompt=prompt,
+        system_message=system_prompt,
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        max_tokens=800,
+        expected_keys=["name", "title", "company", "email", "accuracy", "reasons"]
+    )
+    
+    if not result:
+        print("[Assessment] OpenAI API call failed, using fallback logic")
         return _fallback_assessment(people)
+    
+    # Ensure result is a list
+    if not isinstance(result, list):
+        print("[Assessment] Response is not a list, using fallback logic")
+        return _fallback_assessment(people)
+    
+    return result
 
 def _fallback_assessment(people: list) -> list:
     """

@@ -2,6 +2,7 @@
 import os
 import json
 import random
+from openai_utils import call_openai_for_json, call_openai
 
 # Load API keys from environment variables or secrets.json with graceful error handling
 _secrets = {}
@@ -26,13 +27,6 @@ except (FileNotFoundError, json.JSONDecodeError) as e:
     INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
     BRIGHT_DATA_API_KEY = BRIGHT_DATA_API_KEY or _secrets.get("bright_data_api_key")
     OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
-
-import openai
-
-if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
-else:
-    print("⚠️  Warning: OpenAI API key not found. Some features may be limited.")
 
 def get_witty_error_response() -> str:
     """
@@ -117,104 +111,96 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
             "reasoning": get_witty_error_response()
         }
     
-    system_message = {
-        "role": "system",
-        "content": (
-            "You are an expert at converting user prompts into our internal database People Search API filter payloads. "
-            "Think step-by-step to infer any necessary organization filters, then person filters. "
-            "IMPORTANT: Keep filters SIMPLE and RELIABLE to avoid API errors. "
-            "Only use these exact People Search parameters:\n\n"
-            "Organization filters (arrays or integers):\n"
-            "- organization_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
-            "- q_organization_keyword_tags[] (e.g. [\"Software\", \"Technology\"])\n"
-            "- organization_num_employees_ranges[] (e.g. [\"1,10\", \"11,50\"])\n\n"
-            "Person filters:\n"
-            "- person_titles[] (e.g. [\"CEO\", \"CTO\", \"Sales Director\"])\n"
-            "- person_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
-            "- person_seniorities[] (e.g. [\"c_suite\", \"vp\", \"director\"])\n"
-            "- include_similar_titles (boolean, default: true)\n\n"
-            "RULES:\n"
-            "1. Use ONLY the parameter names listed above\n"
-            "2. Keep filters simple - avoid complex combinations\n"
-            "3. Use arrays for multiple values\n"
-            "4. Don't use revenue_range, technology_uids, or other complex filters\n"
-            "5. Focus on basic location, title, and seniority filters\n"
-            "Return only valid JSON with keys: organization_filters, person_filters, and reasoning."
-        )
-    }
-    
-    user_message = {
-        "role": "user",
-        "content": prompt
-    }
 
-    if not OPENAI_API_KEY:
+
+    # Use the new OpenAI utility function
+    system_prompt = (
+        "You are an expert at converting user prompts into our internal database People Search API filter payloads. "
+        "Think step-by-step to infer any necessary organization filters, then person filters. "
+        "IMPORTANT: Keep filters SIMPLE and RELIABLE to avoid API errors. "
+        "Only use these exact People Search parameters:\n\n"
+        "Organization filters (arrays or integers):\n"
+        "- organization_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
+        "- q_organization_keyword_tags[] (e.g. [\"Software\", \"Technology\"])\n"
+        "- organization_num_employees_ranges[] (e.g. [\"1,10\", \"11,50\"])\n\n"
+        "Person filters:\n"
+        "- person_titles[] (e.g. [\"CEO\", \"CTO\", \"Sales Director\"])\n"
+        "- person_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
+        "- person_seniorities[] (e.g. [\"c_suite\", \"vp\", \"director\"])\n"
+        "- include_similar_titles (boolean, default: true)\n\n"
+        "RULES:\n"
+        "1. Use ONLY the parameter names listed above\n"
+        "2. Keep filters simple - avoid complex combinations\n"
+        "3. Use arrays for multiple values\n"
+        "4. Don't use revenue_range, technology_uids, or other complex filters\n"
+        "5. Focus on basic location, title, and seniority filters\n"
+        "Return only valid JSON with keys: organization_filters, person_filters, and reasoning."
+    )
+    
+    filters = call_openai_for_json(
+        prompt=prompt,
+        system_message=system_prompt,
+        model="gpt-3.5-turbo",
+        temperature=0,
+        max_tokens=500,
+        expected_keys=["organization_filters", "person_filters", "reasoning"]
+    )
+    
+    if not filters:
         return {
             "organization_filters": {},
             "person_filters": {},
-            "reasoning": "OpenAI API key not available. Cannot process prompt."
+            "reasoning": "OpenAI API key not available or request failed. Cannot process prompt."
         }
-    
-    try:
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[system_message, user_message],
-            temperature=0,
-            max_tokens=500,
-        )
-        content = response.choices[0].message.content
-        if content is None:
-            raise ValueError("OpenAI returned empty response")
-        filters = json.loads(content.strip())
         
-        # Validate keys exist and are correct types
-        if not isinstance(filters, dict):
-            raise ValueError("Response JSON is not a dictionary")
-        if "organization_filters" not in filters or "person_filters" not in filters or "reasoning" not in filters:
-            raise ValueError("Response JSON missing required keys")
-        
-        # Ensure filters are dictionaries, create empty ones if not
-        if not isinstance(filters["organization_filters"], dict):
-            filters["organization_filters"] = {}
-        if not isinstance(filters["person_filters"], dict):
-            filters["person_filters"] = {}
-        if not isinstance(filters["reasoning"], str):
-            filters["reasoning"] = "Generated filters based on prompt analysis"
-
-        # Post-processing to enforce correct types per our internal database People Search API
-        org_list_keys = [
-            "organization_locations",
-            "q_organization_keyword_tags",
-            "organization_num_employees_ranges"
-        ]
-        person_list_keys = [
-            "person_titles",
-            "person_locations",
-            "person_seniorities"
-        ]
-
-        for key in org_list_keys:
-            if key in filters["organization_filters"]:
-                if not isinstance(filters["organization_filters"][key], list):
-                    filters["organization_filters"][key] = [filters["organization_filters"][key]]
-
-        for key in person_list_keys:
-            if key in filters["person_filters"]:
-                if not isinstance(filters["person_filters"][key], list):
-                    filters["person_filters"][key] = [filters["person_filters"][key]]
-
-        if "include_similar_titles" not in filters["person_filters"]:
-            filters["person_filters"]["include_similar_titles"] = True
-
-        return filters
-        
-    except (Exception, json.JSONDecodeError, ValueError) as e:
-        # Return empty filters and empty reasoning on error
+    # Validate keys exist and are correct types
+    if not isinstance(filters, dict):
         return {
             "organization_filters": {},
             "person_filters": {},
-            "reasoning": f"Error processing prompt: {str(e)}"
+            "reasoning": "Response JSON is not a dictionary"
         }
+    if "organization_filters" not in filters or "person_filters" not in filters or "reasoning" not in filters:
+        return {
+            "organization_filters": {},
+            "person_filters": {},
+            "reasoning": "Response JSON missing required keys"
+        }
+    
+    # Ensure filters are dictionaries, create empty ones if not
+    if not isinstance(filters["organization_filters"], dict):
+        filters["organization_filters"] = {}
+    if not isinstance(filters["person_filters"], dict):
+        filters["person_filters"] = {}
+    if not isinstance(filters["reasoning"], str):
+        filters["reasoning"] = "Generated filters based on prompt analysis"
+
+    # Post-processing to enforce correct types per our internal database People Search API
+    org_list_keys = [
+        "organization_locations",
+        "q_organization_keyword_tags",
+        "organization_num_employees_ranges"
+    ]
+    person_list_keys = [
+        "person_titles",
+        "person_locations",
+        "person_seniorities"
+    ]
+
+    for key in org_list_keys:
+        if key in filters["organization_filters"]:
+            if not isinstance(filters["organization_filters"][key], list):
+                filters["organization_filters"][key] = [filters["organization_filters"][key]]
+
+    for key in person_list_keys:
+        if key in filters["person_filters"]:
+            if not isinstance(filters["person_filters"][key], list):
+                filters["person_filters"][key] = [filters["person_filters"][key]]
+
+    if "include_similar_titles" not in filters["person_filters"]:
+        filters["person_filters"]["include_similar_titles"] = True
+
+    return filters
 
 def simulate_behavioral_data(filters: dict) -> dict:
     """
@@ -227,43 +213,31 @@ def simulate_behavioral_data(filters: dict) -> dict:
     Returns:
         dict: Simulated behavioral data with relevant insights
     """
-    try:
-        # Use AI to generate realistic behavioral insights based on the filters
-        system_message = {
-            "role": "system",
-            "content": (
-                "You are an expert at analyzing B2B behavioral data. Based on the given Apollo API filters, "
-                "generate realistic behavioral insights that would be typical for companies and people matching these criteria. "
-                "Focus on engagement patterns, technology adoption trends, decision-making behaviors, and market dynamics. "
-                "Return a JSON object with behavioral insights and supporting data points."
-            )
-        }
-        
-        user_message = {
-            "role": "user",
-            "content": f"Generate behavioral insights for these our internal database filters: {json.dumps(filters, indent=2)}"
-        }
-        
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[system_message, user_message],
-            temperature=0.3,
-            max_tokens=800,
-        )
-        
-        content = response.choices[0].message.content
-        if content is None:
-            raise ValueError("OpenAI returned empty response")
-        behavioral_data = json.loads(content.strip())
-        
-        return behavioral_data
-        
-    except Exception as e:
+    system_prompt = (
+        "You are an expert at analyzing B2B behavioral data. Based on the given Apollo API filters, "
+        "generate realistic behavioral insights that would be typical for companies and people matching these criteria. "
+        "Focus on engagement patterns, technology adoption trends, decision-making behaviors, and market dynamics. "
+        "Return a JSON object with behavioral insights and supporting data points."
+    )
+    
+    prompt = f"Generate behavioral insights for these our internal database filters: {json.dumps(filters, indent=2)}"
+    
+    behavioral_data = call_openai_for_json(
+        prompt=prompt,
+        system_message=system_prompt,
+        model="gpt-3.5-turbo",
+        temperature=0.3,
+        max_tokens=800
+    )
+    
+    if not behavioral_data:
         return {
-            "error": f"Failed to simulate behavioral data: {str(e)}",
+            "error": "Failed to simulate behavioral data",
             "insights": [],
             "data_points": []
         }
+    
+    return behavioral_data
 
 if __name__ == "__main__":
     example_prompt = (
