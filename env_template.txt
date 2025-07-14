@@ -1,0 +1,15 @@
+# Supabase Database Configuration
+SUPABASE_USER=your_supabase_user
+SUPABASE_PASSWORD=2ndSight@2023
+SUPABASE_HOST=your_supabase_host
+SUPABASE_PORT=5432
+SUPABASE_DBNAME=your_supabase_dbname
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# Apollo API Configuration
+INTERNAL_DATABASE_API_KEY=your_apollo_api_key
+
+# Bright Data Configuration
+BRIGHT_DATA_API_KEY=your_bright_data_api_key 

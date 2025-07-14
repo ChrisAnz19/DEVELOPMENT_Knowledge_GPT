@@ -30,6 +30,7 @@ from prompt_formatting import parse_prompt_to_internal_database_filters, simulat
 from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
 from assess_and_return import select_top_candidates
+from database import init_database, store_search_to_database, get_search_from_database, get_recent_searches_from_database, delete_search_from_database
 
 app = FastAPI(
     title="Knowledge_GPT API",
@@ -70,7 +71,14 @@ class HealthResponse(BaseModel):
     timestamp: str
     version: str
 
-# In-memory storage for search results (in production, use Redis or database)
+# Initialize database on startup
+print("🔌 Initializing database connection...")
+if init_database():
+    print("✅ Database initialized successfully!")
+else:
+    print("⚠️  Database initialization failed - will use in-memory storage")
+
+# In-memory storage for search results (fallback if database is unavailable)
 search_results = {}
 
 # JSON file storage for persistent data
@@ -127,6 +135,12 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 @app.get("/api/search/{request_id}", response_model=SearchResponse)
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
+    # Try database first
+    db_result = get_search_from_database(request_id)
+    if db_result:
+        return SearchResponse(**db_result)
+    
+    # Fallback to in-memory storage
     if request_id not in search_results:
         raise HTTPException(status_code=404, detail="Search request not found")
     
@@ -135,6 +149,23 @@ async def get_search_result(request_id: str):
 @app.get("/api/search")
 async def list_searches():
     """List all search requests"""
+    # Try database first
+    db_searches = get_recent_searches_from_database(limit=50)
+    if db_searches:
+        return {
+            "searches": [
+                {
+                    "request_id": search["request_id"],
+                    "status": search["status"],
+                    "prompt": search["prompt"],
+                    "created_at": search["created_at"],
+                    "candidate_count": search.get("candidate_count", 0)
+                }
+                for search in db_searches
+            ]
+        }
+    
+    # Fallback to in-memory storage
     return {
         "searches": [
             {
@@ -146,6 +177,28 @@ async def list_searches():
             for result in search_results.values()
         ]
     }
+
+@app.get("/api/database/stats")
+async def get_database_stats():
+    """Get database statistics"""
+    try:
+        from database import db_manager
+        if db_manager.connection:
+            db_manager.cursor.execute("SELECT COUNT(*) as total_searches FROM searches")
+            total_searches = db_manager.cursor.fetchone()['total_searches']
+            
+            db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM candidates")
+            total_candidates = db_manager.cursor.fetchone()['total_candidates']
+            
+            return {
+                "database_status": "connected",
+                "total_searches": total_searches,
+                "total_candidates": total_candidates
+            }
+        else:
+            return {"database_status": "disconnected"}
+    except Exception as e:
+        return {"database_status": "error", "error": str(e)}
 
 async def process_search(request_id: str, request: SearchRequest):
     """Background task to process the search"""
@@ -291,7 +344,17 @@ async def process_search(request_id: str, request: SearchRequest):
         result.status = "completed"
         result.completed_at = datetime.now(timezone.utc).isoformat()
         
-        # Save to JSON file for persistence
+        # Store in database
+        search_data = result.dict()
+        db_search_id = store_search_to_database(search_data)
+        
+        if db_search_id:
+            print(f"[{request_id}] Search stored in database with ID: {db_search_id}")
+        else:
+            print(f"[{request_id}] Failed to store in database, using in-memory storage")
+            search_results[request_id] = result
+        
+        # Save to JSON file for persistence (backup)
         save_search_to_json(request_id, result.dict())
         
         print(f"[{request_id}] Search completed successfully")
@@ -305,21 +368,25 @@ async def process_search(request_id: str, request: SearchRequest):
 @app.delete("/api/search/{request_id}")
 async def delete_search(request_id: str):
     """Delete a search request"""
+    # Try database first
+    if delete_search_from_database(request_id):
+        # Also delete the JSON file
+        try:
+            file_path = f"search_results/{request_id}.json"
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"[{request_id}] JSON file deleted: {file_path}")
+        except Exception as e:
+            print(f"[{request_id}] Failed to delete JSON file: {e}")
+        
+        return {"message": "Search request deleted from database"}
+    
+    # Fallback to in-memory storage
     if request_id not in search_results:
         raise HTTPException(status_code=404, detail="Search request not found")
     
     del search_results[request_id]
-    
-    # Also delete the JSON file
-    try:
-        file_path = f"search_results/{request_id}.json"
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"[{request_id}] JSON file deleted: {file_path}")
-    except Exception as e:
-        print(f"[{request_id}] Failed to delete JSON file: {e}")
-    
-    return {"message": "Search request deleted"}
+    return {"message": "Search request deleted from memory"}
 
 @app.get("/api/search/{request_id}/json")
 async def get_search_json(request_id: str):
