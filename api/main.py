@@ -40,13 +40,7 @@ app = FastAPI(
 # CORS middleware for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:3001", 
-        "https://your-frontend-domain.com",
-        "https://bolt-app.onrender.com",  # Add your Bolt app domain
-        "https://*.onrender.com"  # Allow all Render subdomains
-    ],
+    allow_origins=["*"],  # Allow all origins for testing and frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
