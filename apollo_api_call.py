@@ -22,10 +22,10 @@ def search_people_via_internal_database(filters: dict, page: int = 1, per_page: 
     }
 
     try:
-        response = requests.post("https://api.our-internal-database.com/api/v1/mixed_people/search", json=payload, headers=headers, timeout=30)
+        response = requests.post("https://api.apollo.io/api/v1/mixed_people/search", json=payload, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"⚠️  Our internal database API request failed: {e}")
+        print(f"⚠️  Apollo API request failed: {e}")
         return []
 
     data = response.json()
@@ -44,7 +44,7 @@ def search_people_via_internal_database(filters: dict, page: int = 1, per_page: 
         }
         try:
             enrich_response = requests.post(
-                "https://api.our-internal-database.com/api/v1/people/match",
+                "https://api.apollo.io/api/v1/people/match",
                 params=enrich_params,
                 headers=headers,
                 timeout=10
