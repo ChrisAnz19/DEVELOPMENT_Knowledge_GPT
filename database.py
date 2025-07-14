@@ -265,6 +265,8 @@ class DatabaseManager:
     def add_person_exclusion(self, email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
         """Add a person to the exclusion list for 30 days"""
         try:
+            if not self.connection or not self.cursor:
+                self.connect()
             self.cursor.execute("""
                 INSERT INTO people_exclusions (email, name, company, reason)
                 VALUES (%s, %s, %s, %s)
@@ -287,6 +289,8 @@ class DatabaseManager:
     def is_person_excluded(self, email: str) -> bool:
         """Check if a person is currently excluded (within 30 days)"""
         try:
+            if not self.connection or not self.cursor:
+                self.connect()
             self.cursor.execute("""
                 SELECT id FROM people_exclusions 
                 WHERE email = %s AND expires_at > CURRENT_TIMESTAMP
@@ -302,6 +306,8 @@ class DatabaseManager:
     def get_excluded_people(self) -> List[Dict[str, Any]]:
         """Get all currently excluded people"""
         try:
+            if not self.connection or not self.cursor:
+                self.connect()
             self.cursor.execute("""
                 SELECT email, name, company, excluded_at, expires_at, reason
                 FROM people_exclusions 

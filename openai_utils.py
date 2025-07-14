@@ -9,6 +9,7 @@ import json
 import openai
 from typing import Dict, List, Any, Optional, Union
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -119,31 +120,42 @@ def call_openai_with_retry(
     logger.error(f"OpenAI API call failed after {max_retries} attempts")
     return None
 
+def extract_json_from_response(response_text: str) -> Optional[dict]:
+    """
+    Extract the first valid JSON object from a string, even if extra data is present.
+    """
+    try:
+        # Find the first {...} block
+        match = re.search(r'(\{.*?\})', response_text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+    except Exception as e:
+        logger.error(f"Still failed to parse JSON: {e}")
+    return None
+
 def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
     """
-    Parse JSON response from OpenAI
-    
-    Args:
-        response: OpenAI response text that should contain JSON
-    
-    Returns:
-        Parsed JSON dict or None if parsing failed
+    Parse JSON response from OpenAI, robust to extra data or multiple JSON objects.
     """
     try:
         # Try to extract JSON from the response
         start_idx = response.find('{')
         end_idx = response.rfind('}') + 1
-        
         if start_idx != -1 and end_idx != 0:
             json_str = response[start_idx:end_idx]
-            return json.loads(json_str)
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                # Fallback to regex extraction
+                return extract_json_from_response(response)
         else:
             # If no JSON brackets found, try parsing the whole response
             return json.loads(response)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse JSON response: {e}")
         logger.debug(f"Response was: {response}")
-        return None
+        # Fallback to regex extraction
+        return extract_json_from_response(response)
 
 def call_openai_for_json(
     prompt: str,
