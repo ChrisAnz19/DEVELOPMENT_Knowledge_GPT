@@ -144,7 +144,13 @@ async def get_search_result(request_id: str):
     try:
         db_result = get_search_from_database(request_id)
         if db_result:
-            return SearchResponse(**db_result)
+            # Fetch candidates from people table using search id
+            search_id = db_result.get("id")
+            candidates = get_people_for_search(search_id) if search_id else []
+            # Build response dict
+            response_data = dict(db_result)
+            response_data["candidates"] = candidates
+            return SearchResponse(**response_data)
         # Fallback to in-memory storage
         if request_id in search_results:
             return search_results[request_id]
@@ -362,6 +368,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 
                 enhanced_candidates.append(enhanced_candidate)
             
+            # Do NOT store candidates in searches table
             result.candidates = enhanced_candidates
             
         except Exception as e:
@@ -392,6 +399,9 @@ async def process_search(request_id: str, request: SearchRequest):
         
         # Store in database (primary storage)
         search_data = result.dict()
+        # Remove candidates before storing in searches
+        if "candidates" in search_data:
+            del search_data["candidates"]
         db_search_id = store_search_to_database(search_data)
         if db_search_id:
             logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
