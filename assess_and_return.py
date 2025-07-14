@@ -24,25 +24,23 @@ def select_top_candidates(user_prompt: str, people: list) -> list:
         })
     
     system_prompt = (
-        "You are an expert at evaluating candidate fit based on behavioral data from website visits and online activity. "
+        "You are an expert at evaluating candidate fit based on simulated behavioral data from website visits and online activity. "
         "You have access to a trillion rows of website visit data per month across 450k top domains and tens of millions of websites. "
         "You will receive a user request and a JSON array of up to three people, each with name, title, company, email, and linkedin_url. "
         "First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request. "
         "Then select the two with the highest probabilities. "
-        "For each of these two, provide 2-3 specific behavioral reasons why they were selected based on their online activity patterns. "
-        "These reasons should be based on website visit data and behavioral patterns that CANNOT be determined from LinkedIn alone, such as: "
-        "- Specific website visits to competitor or industry sites "
-        "- Time spent on particular product pages or pricing pages "
-        "- Multiple visits to job boards or career sites "
-        "- Engagement with specific content (whitepapers, case studies, webinars) "
-        "- Research patterns on technology comparison sites "
-        "- Browsing behavior on industry-specific forums or communities "
-        "- Search patterns and keyword research activity "
-        "- Time spent on specific product categories or solutions "
-        "- Return visits to particular vendor or service provider websites "
-        "- Engagement with specific marketing content or campaigns "
-        "Use their LinkedIn profile only as guidance for the TYPES of reasons to generate (e.g., if they're in sales, focus on sales-related behavioral patterns). "
-        "Make these reasons specific and realistic, as if you have actual behavioral data showing their website visits and online activities. "
+        "For each of these two, provide 2-3 specific, plausible, and realistic behavioral reasons why they were selected, "
+        "based on their simulated online activity patterns. These reasons MUST be based on simulated website visit data and behavioral patterns that CANNOT be determined from LinkedIn alone, such as: "
+        "- Visited the pricing page of Marketo three times in the last month "
+        "- Downloaded a whitepaper on marketing automation trends from HubSpot "
+        "- Spent 20 minutes on the Salesforce integration documentation "
+        "- Attended a webinar on B2B lead generation hosted by Demandbase "
+        "- Searched for 'best marketing automation tools 2024' on G2 "
+        "- Compared features of Pardot and Eloqua on a review site "
+        "- Multiple visits to competitor product pages "
+        "- Engaged with case studies about SaaS marketing solutions "
+        "Do NOT use generic phrases like 'selected based on title and company fit' or 'profile indicates relevant experience.' "
+        "Make these reasons specific, plausible, and realistic, as if you have actual behavioral data showing their website visits and online activities. "
         "IMPORTANT: Return ONLY valid JSON, inside a single markdown code block (triple backticks, json). No extra text, no explanation, no comments. The response must be a list of exactly two objects with keys: name, title, company, email, accuracy, reasons."
     )
     
@@ -57,6 +55,24 @@ def select_top_candidates(user_prompt: str, people: list) -> list:
         max_tokens=800,
         expected_keys=["name", "title", "company", "email", "accuracy", "reasons"]
     )
+    
+    # Post-processing: warn if generic reasons are returned
+    def is_generic_reason(reason):
+        generic_phrases = [
+            "selected based on title and company fit",
+            "profile indicates relevant experience",
+            "relevant experience",
+            "title and company fit",
+            "selected based on title",
+            "selected based on company"
+        ]
+        return any(phrase in reason.lower() for phrase in generic_phrases)
+    
+    if result and isinstance(result, list):
+        for candidate in result:
+            reasons = candidate.get("reasons", [])
+            if any(is_generic_reason(r) for r in reasons):
+                print("[Assessment] Warning: Generic reason detected in OpenAI output:", reasons)
     
     if not result:
         print("[Assessment] OpenAI API call failed, using fallback logic")
