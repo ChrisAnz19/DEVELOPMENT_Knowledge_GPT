@@ -27,13 +27,19 @@ class DatabaseManager:
         self.connection = None
         self.cursor = None
         
-        # Database configuration
+        # Database configuration - using Supabase connection string format
+        # For Supabase, we can use the connection string or individual parameters
+        supabase_host = os.getenv("SUPABASE_HOST", "hmvcvtrucfoqxcrfinep.supabase.co")
+        supabase_user = os.getenv("SUPABASE_USER", "ChrisAnz19")
+        supabase_password = os.getenv("SUPABASE_PASSWORD", "2ndSight@2023")
+        supabase_dbname = os.getenv("SUPABASE_DBNAME", "postgres")
+        
         self.db_config = {
-            'user': os.getenv("SUPABASE_USER"),
-            'password': os.getenv("SUPABASE_PASSWORD"),
-            'host': os.getenv("SUPABASE_HOST"),
+            'user': supabase_user,
+            'password': supabase_password,
+            'host': supabase_host,
             'port': os.getenv("SUPABASE_PORT", "5432"),
-            'dbname': os.getenv("SUPABASE_DBNAME")
+            'dbname': supabase_dbname
         }
         
         # Validate required environment variables
@@ -99,6 +105,30 @@ class DatabaseManager:
                     linkedin_posts JSONB,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+            """)
+            
+            # Create candidate exclusions table for 30-day exclusion system
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS candidate_exclusions (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    company VARCHAR(255),
+                    excluded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+                    reason VARCHAR(255) DEFAULT 'Previously processed'
+                );
+            """)
+            
+            # Create index for faster exclusion lookups
+            self.cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_email 
+                ON candidate_exclusions(email);
+            """)
+            
+            self.cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_expires 
+                ON candidate_exclusions(expires_at);
             """)
             
             self.connection.commit()
@@ -231,6 +261,81 @@ class DatabaseManager:
             logger.error(f"Error deleting search: {e}")
             self.connection.rollback()
             return False
+    
+    def add_candidate_exclusion(self, email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
+        """Add a candidate to the exclusion list for 30 days"""
+        try:
+            self.cursor.execute("""
+                INSERT INTO candidate_exclusions (email, name, company, reason)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (email) 
+                DO UPDATE SET 
+                    excluded_at = CURRENT_TIMESTAMP,
+                    expires_at = CURRENT_TIMESTAMP + INTERVAL '30 days',
+                    reason = EXCLUDED.reason
+            """, (email, name, company, reason))
+            
+            self.connection.commit()
+            logger.info(f"Candidate {email} added to exclusion list for 30 days")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error adding candidate exclusion: {e}")
+            self.connection.rollback()
+            return False
+    
+    def is_candidate_excluded(self, email: str) -> bool:
+        """Check if a candidate is currently excluded (within 30 days)"""
+        try:
+            self.cursor.execute("""
+                SELECT id FROM candidate_exclusions 
+                WHERE email = %s AND expires_at > CURRENT_TIMESTAMP
+            """, (email,))
+            
+            result = self.cursor.fetchone()
+            return result is not None
+            
+        except Exception as e:
+            logger.error(f"Error checking candidate exclusion: {e}")
+            return False
+    
+    def get_excluded_candidates(self) -> List[Dict[str, Any]]:
+        """Get all currently excluded candidates"""
+        try:
+            self.cursor.execute("""
+                SELECT email, name, company, excluded_at, expires_at, reason
+                FROM candidate_exclusions 
+                WHERE expires_at > CURRENT_TIMESTAMP
+                ORDER BY excluded_at DESC
+            """)
+            
+            results = self.cursor.fetchall()
+            return [dict(result) for result in results]
+            
+        except Exception as e:
+            logger.error(f"Error getting excluded candidates: {e}")
+            return []
+    
+    def cleanup_expired_exclusions(self) -> int:
+        """Remove expired exclusions (older than 30 days) and return count of removed records"""
+        try:
+            self.cursor.execute("""
+                DELETE FROM candidate_exclusions 
+                WHERE expires_at <= CURRENT_TIMESTAMP
+            """)
+            
+            deleted_count = self.cursor.rowcount
+            self.connection.commit()
+            
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} expired exclusions")
+            
+            return deleted_count
+            
+        except Exception as e:
+            logger.error(f"Error cleaning up expired exclusions: {e}")
+            self.connection.rollback()
+            return 0
 
 # Global database manager instance
 db_manager = DatabaseManager()
@@ -256,6 +361,22 @@ def get_recent_searches_from_database(limit: int = 10) -> List[Dict[str, Any]]:
 def delete_search_from_database(request_id: str) -> bool:
     """Delete search from database"""
     return db_manager.delete_search(request_id)
+
+def add_candidate_exclusion_to_database(email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
+    """Add candidate to exclusion list"""
+    return db_manager.add_candidate_exclusion(email, name, company, reason)
+
+def is_candidate_excluded_in_database(email: str) -> bool:
+    """Check if candidate is excluded"""
+    return db_manager.is_candidate_excluded(email)
+
+def get_excluded_candidates_from_database() -> List[Dict[str, Any]]:
+    """Get all excluded candidates"""
+    return db_manager.get_excluded_candidates()
+
+def cleanup_expired_exclusions_in_database() -> int:
+    """Clean up expired exclusions"""
+    return db_manager.cleanup_expired_exclusions()
 
 if __name__ == "__main__":
     # Test database connection

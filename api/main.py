@@ -30,7 +30,17 @@ from prompt_formatting import parse_prompt_to_internal_database_filters, simulat
 from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import scrape_linkedin_profiles, scrape_linkedin_posts
 from assess_and_return import select_top_candidates
-from database import init_database, store_search_to_database, get_search_from_database, get_recent_searches_from_database, delete_search_from_database
+from database import (
+    init_database, store_search_to_database, get_search_from_database, 
+    get_recent_searches_from_database, delete_search_from_database,
+    add_candidate_exclusion_to_database, is_candidate_excluded_in_database,
+    get_excluded_candidates_from_database, cleanup_expired_exclusions_in_database
+)
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Knowledge_GPT API",
@@ -72,13 +82,13 @@ class HealthResponse(BaseModel):
     version: str
 
 # Initialize database on startup
-print("🔌 Initializing database connection...")
+logger.info("🔌 Initializing database connection...")
 if init_database():
-    print("✅ Database initialized successfully!")
+    logger.info("✅ Database initialized successfully!")
 else:
-    print("⚠️  Database initialization failed - will use in-memory storage")
+    logger.warning("⚠️  Database initialization failed - will use in-memory storage as fallback")
 
-# In-memory storage for search results (fallback if database is unavailable)
+# In-memory storage for fallback only
 search_results = {}
 
 # JSON file storage for persistent data
@@ -89,9 +99,9 @@ def save_search_to_json(request_id: str, data: dict):
         file_path = f"search_results/{request_id}.json"
         with open(file_path, "w") as f:
             json.dump(data, f, indent=2, default=str)
-        print(f"[{request_id}] Search result saved to {file_path}")
+        logger.info(f"[{request_id}] Search result saved to {file_path}")
     except Exception as e:
-        print(f"[{request_id}] Failed to save to JSON: {e}")
+        logger.error(f"[{request_id}] Failed to save to JSON: {e}")
 
 def load_search_from_json(request_id: str) -> Optional[dict]:
     """Load search result from JSON file"""
@@ -102,7 +112,7 @@ def load_search_from_json(request_id: str) -> Optional[dict]:
     except FileNotFoundError:
         return None
     except Exception as e:
-        print(f"[{request_id}] Failed to load from JSON: {e}")
+        logger.error(f"[{request_id}] Failed to load from JSON: {e}")
         return None
 
 @app.get("/", response_model=HealthResponse)
@@ -120,36 +130,33 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
     request_id = str(uuid.uuid4())
     
     # Initialize search result
-    search_results[request_id] = SearchResponse(
+    search_result = SearchResponse(
         request_id=request_id,
         status="processing",
         prompt=request.prompt,
         created_at=datetime.now(timezone.utc).isoformat()
     )
+    search_results[request_id] = search_result  # fallback only
     
     # Start background processing
     background_tasks.add_task(process_search, request_id, request)
     
-    return search_results[request_id]
+    return search_result
 
 @app.get("/api/search/{request_id}", response_model=SearchResponse)
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
-    # Try database first
     db_result = get_search_from_database(request_id)
     if db_result:
         return SearchResponse(**db_result)
-    
     # Fallback to in-memory storage
-    if request_id not in search_results:
-        raise HTTPException(status_code=404, detail="Search request not found")
-    
-    return search_results[request_id]
+    if request_id in search_results:
+        return search_results[request_id]
+    raise HTTPException(status_code=404, detail="Search request not found")
 
 @app.get("/api/search")
 async def list_searches():
     """List all search requests"""
-    # Try database first
     db_searches = get_recent_searches_from_database(limit=50)
     if db_searches:
         return {
@@ -164,7 +171,6 @@ async def list_searches():
                 for search in db_searches
             ]
         }
-    
     # Fallback to in-memory storage
     return {
         "searches": [
@@ -190,15 +196,45 @@ async def get_database_stats():
             db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM candidates")
             total_candidates = db_manager.cursor.fetchone()['total_candidates']
             
+            db_manager.cursor.execute("SELECT COUNT(*) as total_exclusions FROM candidate_exclusions WHERE expires_at > CURRENT_TIMESTAMP")
+            total_exclusions = db_manager.cursor.fetchone()['total_exclusions']
+            
             return {
                 "database_status": "connected",
                 "total_searches": total_searches,
-                "total_candidates": total_candidates
+                "total_candidates": total_candidates,
+                "total_exclusions": total_exclusions
             }
         else:
             return {"database_status": "disconnected"}
     except Exception as e:
         return {"database_status": "error", "error": str(e)}
+
+@app.get("/api/exclusions")
+async def get_exclusions():
+    """Get all currently excluded candidates"""
+    try:
+        exclusions = get_excluded_candidates_from_database()
+        return {
+            "exclusions": exclusions,
+            "count": len(exclusions)
+        }
+    except Exception as e:
+        logger.error(f"Error getting exclusions: {e}")
+        return {"exclusions": [], "count": 0, "error": str(e)}
+
+@app.post("/api/exclusions/cleanup")
+async def cleanup_exclusions():
+    """Clean up expired exclusions"""
+    try:
+        cleaned_count = cleanup_expired_exclusions_in_database()
+        return {
+            "message": f"Cleaned up {cleaned_count} expired exclusions",
+            "cleaned_count": cleaned_count
+        }
+    except Exception as e:
+        logger.error(f"Error cleaning up exclusions: {e}")
+        return {"error": str(e)}
 
 async def process_search(request_id: str, request: SearchRequest):
     """Background task to process the search"""
@@ -206,7 +242,7 @@ async def process_search(request_id: str, request: SearchRequest):
         result = search_results[request_id]
         
         # Step 1: Generate our internal database filters
-        print(f"[{request_id}] Generating our internal database filters...")
+        logger.info(f"[{request_id}] Generating our internal database filters...")
         filters = parse_prompt_to_internal_database_filters(request.prompt)
         
         if filters["reasoning"].startswith("Error"):
@@ -216,17 +252,34 @@ async def process_search(request_id: str, request: SearchRequest):
             return
         
         result.filters = filters
-        print(f"[{request_id}] Filters generated successfully")
+        logger.info(f"[{request_id}] Filters generated successfully")
         
         # Step 2: Search our internal database for people
-        print(f"[{request_id}] Searching our internal database...")
+        logger.info(f"[{request_id}] Searching our internal database...")
         try:
             people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
-            print(f"[{request_id}] Found {len(people)} people")
+            logger.info(f"[{request_id}] Found {len(people)} people")
+            
+            # Filter out excluded candidates (30-day exclusion)
+            if people:
+                original_count = len(people)
+                filtered_people = []
+                excluded_count = 0
+                
+                for person in people:
+                    email = person.get("email", "")
+                    if email and is_candidate_excluded_in_database(email):
+                        excluded_count += 1
+                        logger.info(f"[{request_id}] Excluded {email} (previously processed within 30 days)")
+                    else:
+                        filtered_people.append(person)
+                
+                people = filtered_people
+                logger.info(f"[{request_id}] Filtered out {excluded_count} excluded candidates, {len(people)} remaining")
             
             if not people:
                 # Fall back to behavioral simulation
-                print(f"[{request_id}] No people found, simulating behavioral data...")
+                logger.info(f"[{request_id}] No people found, simulating behavioral data...")
                 behavioral_data = simulate_behavioral_data(filters)
                 result.behavioral_data = behavioral_data
                 result.status = "completed"
@@ -234,7 +287,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 return
                 
         except Exception as e:
-            print(f"[{request_id}] Our internal database API error: {e}")
+            logger.error(f"[{request_id}] Our internal database API error: {e}")
             # Fall back to behavioral simulation
             behavioral_data = simulate_behavioral_data(filters)
             result.behavioral_data = behavioral_data
@@ -244,7 +297,7 @@ async def process_search(request_id: str, request: SearchRequest):
         
         # Step 3: Scrape LinkedIn profiles (if enabled)
         if request.include_linkedin:
-            print(f"[{request_id}] Scraping LinkedIn profiles...")
+            logger.info(f"[{request_id}] Scraping LinkedIn profiles...")
             linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
             
             if linkedin_urls:
@@ -261,11 +314,11 @@ async def process_search(request_id: str, request: SearchRequest):
                     enriched_people.append(person)
                 
                 people = enriched_people
-                print(f"[{request_id}] LinkedIn profiles scraped")
+                logger.info(f"[{request_id}] LinkedIn profiles scraped")
         
         # Step 4: Scrape LinkedIn posts (if enabled)
         if request.include_posts and request.include_linkedin:
-            print(f"[{request_id}] Scraping LinkedIn posts...")
+            logger.info(f"[{request_id}] Scraping LinkedIn posts...")
             for person in people[:2]:  # Only scrape posts for top 2 candidates
                 profile = person.get("linkedin_profile", {})
                 posts = profile.get("posts", [])
@@ -277,10 +330,10 @@ async def process_search(request_id: str, request: SearchRequest):
                         person["linkedin_posts"] = posts_data
                     await asyncio.sleep(1)  # Rate limiting
             
-            print(f"[{request_id}] LinkedIn posts scraped")
+            logger.info(f"[{request_id}] LinkedIn posts scraped")
         
         # Step 5: Assess and select top candidates
-        print(f"[{request_id}] Assessing candidates...")
+        logger.info(f"[{request_id}] Assessing candidates...")
         try:
             top_candidates = select_top_candidates(request.prompt, people)
             
@@ -319,7 +372,7 @@ async def process_search(request_id: str, request: SearchRequest):
             result.candidates = enhanced_candidates
             
         except Exception as e:
-            print(f"[{request_id}] Assessment error: {e}")
+            logger.error(f"[{request_id}] Assessment error: {e}")
             # Fall back to basic results
             result.candidates = [
                 {
@@ -337,30 +390,38 @@ async def process_search(request_id: str, request: SearchRequest):
             ]
         
         # Step 6: Generate behavioral data
-        print(f"[{request_id}] Generating behavioral data...")
+        logger.info(f"[{request_id}] Generating behavioral data...")
         behavioral_data = simulate_behavioral_data(filters)
         result.behavioral_data = behavioral_data
         
         result.status = "completed"
         result.completed_at = datetime.now(timezone.utc).isoformat()
         
-        # Store in database
+        # Store in database (primary storage)
         search_data = result.dict()
         db_search_id = store_search_to_database(search_data)
-        
         if db_search_id:
-            print(f"[{request_id}] Search stored in database with ID: {db_search_id}")
+            logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
+            
+            # Add candidates to exclusion list for 30 days
+            if result.candidates:
+                for candidate in result.candidates:
+                    email = candidate.get("email", "")
+                    name = candidate.get("name", "")
+                    company = candidate.get("company", "")
+                    if email and name:
+                        add_candidate_exclusion_to_database(email, name, company)
+                        logger.info(f"[{request_id}] Added {email} to 30-day exclusion list")
         else:
-            print(f"[{request_id}] Failed to store in database, using in-memory storage")
+            logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
             search_results[request_id] = result
         
-        # Save to JSON file for persistence (backup)
+        # Save to JSON file for persistence (optional backup)
         save_search_to_json(request_id, result.dict())
-        
-        print(f"[{request_id}] Search completed successfully")
+        logger.info(f"[{request_id}] Search completed successfully")
         
     except Exception as e:
-        print(f"[{request_id}] Unexpected error: {e}")
+        logger.error(f"[{request_id}] Unexpected error: {e}")
         result.status = "failed"
         result.error = str(e)
         result.completed_at = datetime.now(timezone.utc).isoformat()
@@ -368,25 +429,21 @@ async def process_search(request_id: str, request: SearchRequest):
 @app.delete("/api/search/{request_id}")
 async def delete_search(request_id: str):
     """Delete a search request"""
-    # Try database first
     if delete_search_from_database(request_id):
         # Also delete the JSON file
         try:
             file_path = f"search_results/{request_id}.json"
             if os.path.exists(file_path):
                 os.remove(file_path)
-                print(f"[{request_id}] JSON file deleted: {file_path}")
+                logger.info(f"[{request_id}] JSON file deleted: {file_path}")
         except Exception as e:
-            print(f"[{request_id}] Failed to delete JSON file: {e}")
-        
+            logger.warning(f"[{request_id}] Failed to delete JSON file: {e}")
         return {"message": "Search request deleted from database"}
-    
     # Fallback to in-memory storage
-    if request_id not in search_results:
-        raise HTTPException(status_code=404, detail="Search request not found")
-    
-    del search_results[request_id]
-    return {"message": "Search request deleted from memory"}
+    if request_id in search_results:
+        del search_results[request_id]
+        return {"message": "Search request deleted from memory"}
+    raise HTTPException(status_code=404, detail="Search request not found")
 
 @app.get("/api/search/{request_id}/json")
 async def get_search_json(request_id: str):
