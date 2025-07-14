@@ -12,7 +12,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def store_search_to_database(search_data):
-    return supabase.table("searches").insert(search_data).execute()
+    # Insert search and return the new search id
+    res = supabase.table("searches").insert(search_data).execute()
+    if hasattr(res, 'data') and res.data:
+        # Return the inserted search's id
+        return res.data[0].get('id')
+    return None
 
 def get_search_from_database(request_id):
     res = supabase.table("searches").select("*").eq("request_id", request_id).single().execute()
@@ -22,29 +27,40 @@ def get_recent_searches_from_database(limit=10):
     res = supabase.table("searches").select("*").order("created_at", desc=True).limit(limit).execute()
     return res.data
 
-def delete_search_from_database(request_id):
-    return supabase.table("searches").delete().eq("request_id", request_id).execute()
+def store_people_to_database(people, search_id):
+    # Insert each person with the search_id
+    for person in people:
+        person["search_id"] = search_id
+    if people:
+        supabase.table("people").insert(people).execute()
 
-def add_person_exclusion_to_database(email, name, company=None, reason="Previously processed"):
-    exclusion = {
-        "email": email,
-        "name": name,
-        "company": company,
-        "reason": reason
-    }
-    return supabase.table("people_exclusions").insert(exclusion).execute()
-
-def is_person_excluded_in_database(email):
-    res = supabase.table("people_exclusions").select("*").eq("email", email).execute()
-    return bool(res.data)
-
-def get_excluded_people_from_database():
-    res = supabase.table("people_exclusions").select("*").execute()
+def get_people_for_search(search_id):
+    res = supabase.table("people").select("*").eq("search_id", search_id).execute()
     return res.data
 
-def cleanup_expired_exclusions_in_database():
-    # Not supported directly; would need a custom function or manual cleanup
-    return 0
+def is_person_excluded_in_database(email, days=30):
+    # Check if a person with this email exists in the people table within the last N days
+    from datetime import datetime, timedelta
+    import pytz
+    now = datetime.now(pytz.UTC)
+    cutoff = now - timedelta(days=days)
+    res = supabase.table("people").select("created_at").eq("email", email).execute()
+    if hasattr(res, 'data') and res.data:
+        for row in res.data:
+            created_at = row.get("created_at")
+            if created_at:
+                try:
+                    created_at_dt = datetime.fromisoformat(created_at)
+                    if created_at_dt > cutoff:
+                        return True
+                except Exception:
+                    continue
+    return False
+
+def delete_search_from_database(request_id):
+    # Delete search and cascade to people
+    supabase.table("searches").delete().eq("request_id", request_id).execute()
+    return True
 
 if __name__ == "__main__":
     # Test database connection

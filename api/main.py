@@ -33,8 +33,7 @@ from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
-    add_person_exclusion_to_database, is_person_excluded_in_database,
-    get_excluded_people_from_database, cleanup_expired_exclusions_in_database
+    store_people_to_database, get_people_for_search, is_person_excluded_in_database
 )
 import logging
 
@@ -188,52 +187,47 @@ async def list_searches():
 async def get_database_stats():
     """Get database statistics"""
     try:
-        # Query Supabase for counts
         from supabase_client import supabase
-        # Total searches
         searches_res = supabase.table("searches").select("id", count="exact").execute()
         total_searches = searches_res.count if hasattr(searches_res, 'count') else None
-        # Total candidates
         people_res = supabase.table("people").select("id", count="exact").execute()
         total_candidates = people_res.count if hasattr(people_res, 'count') else None
-        # Total exclusions (not expired)
-        exclusions_res = supabase.table("people_exclusions").select("id", count="exact").gt("expires_at", "now()").execute()
-        total_exclusions = exclusions_res.count if hasattr(exclusions_res, 'count') else None
         return {
             "database_status": "connected",
             "total_searches": total_searches,
-            "total_candidates": total_candidates,
-            "total_exclusions": total_exclusions
+            "total_candidates": total_candidates
         }
     except Exception as e:
         logger.error(f"Database stats error: {e}")
         return {"database_status": "error", "error": str(e)}
 
-@app.get("/api/exclusions")
-async def get_exclusions():
-    """Get all currently excluded people"""
-    try:
-        exclusions = get_excluded_people_from_database()
-        return {
-            "exclusions": exclusions,
-            "count": len(exclusions)
-        }
-    except Exception as e:
-        logger.error(f"Error getting exclusions: {e}")
-        return {"exclusions": [], "count": 0, "error": str(e)}
+@app.delete("/api/search/{request_id}")
+async def delete_search(request_id: str):
+    """Delete a search request"""
+    if delete_search_from_database(request_id):
+        # Also delete the JSON file
+        try:
+            file_path = f"search_results/{request_id}.json"
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"[{request_id}] JSON file deleted: {file_path}")
+        except Exception as e:
+            logger.warning(f"[{request_id}] Failed to delete JSON file: {e}")
+        return {"message": "Search request deleted from database"}
+    # Fallback to in-memory storage
+    if request_id in search_results:
+        del search_results[request_id]
+        return {"message": "Search request deleted from memory"}
+    raise HTTPException(status_code=404, detail="Search request not found")
 
-@app.post("/api/exclusions/cleanup")
-async def cleanup_exclusions():
-    """Clean up expired exclusions"""
-    try:
-        cleaned_count = cleanup_expired_exclusions_in_database()
-        return {
-            "message": f"Cleaned up {cleaned_count} expired exclusions",
-            "cleaned_count": cleaned_count
-        }
-    except Exception as e:
-        logger.error(f"Error cleaning up exclusions: {e}")
-        return {"error": str(e)}
+@app.get("/api/search/{request_id}/json")
+async def get_search_json(request_id: str):
+    """Get search result as JSON file (for frontend consumption)"""
+    json_data = load_search_from_json(request_id)
+    if json_data is None:
+        raise HTTPException(status_code=404, detail="Search result not found")
+    
+    return json_data
 
 async def process_search(request_id: str, request: SearchRequest):
     """Background task to process the search"""
@@ -259,22 +253,17 @@ async def process_search(request_id: str, request: SearchRequest):
             people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
             logger.info(f"[{request_id}] Found {len(people)} people")
             
-            # Filter out excluded people (30-day exclusion)
+            # Filter out excluded people (already in people table within 30 days)
             if people:
-                original_count = len(people)
                 filtered_people = []
-                excluded_count = 0
-                
                 for person in people:
                     email = person.get("email", "")
                     if email and is_person_excluded_in_database(email):
-                        excluded_count += 1
-                        logger.info(f"[{request_id}] Excluded {email} (previously processed within 30 days)")
+                        logger.info(f"[{request_id}] Excluded {email} (already processed within 30 days)")
                     else:
                         filtered_people.append(person)
-                
                 people = filtered_people
-                logger.info(f"[{request_id}] Filtered out {excluded_count} excluded people, {len(people)} remaining")
+                logger.info(f"[{request_id}] Filtered, {len(people)} remaining")
             
             if not people:
                 # Fall back to behavioral simulation
@@ -402,15 +391,10 @@ async def process_search(request_id: str, request: SearchRequest):
         if db_search_id:
             logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
             
-            # Add people to exclusion list for 30 days
+            # Store people in people table
             if result.candidates:
-                for person in result.candidates:
-                    email = person.get("email", "")
-                    name = person.get("name", "")
-                    company = person.get("company", "")
-                    if email and name:
-                        add_person_exclusion_to_database(email, name, company)
-                        logger.info(f"[{request_id}] Added {email} to 30-day exclusion list")
+                store_people_to_database(result.candidates, db_search_id)
+                logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
         else:
             logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
             search_results[request_id] = result
@@ -424,34 +408,6 @@ async def process_search(request_id: str, request: SearchRequest):
         result.status = "failed"
         result.error = str(e)
         result.completed_at = datetime.now(timezone.utc).isoformat()
-
-@app.delete("/api/search/{request_id}")
-async def delete_search(request_id: str):
-    """Delete a search request"""
-    if delete_search_from_database(request_id):
-        # Also delete the JSON file
-        try:
-            file_path = f"search_results/{request_id}.json"
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                logger.info(f"[{request_id}] JSON file deleted: {file_path}")
-        except Exception as e:
-            logger.warning(f"[{request_id}] Failed to delete JSON file: {e}")
-        return {"message": "Search request deleted from database"}
-    # Fallback to in-memory storage
-    if request_id in search_results:
-        del search_results[request_id]
-        return {"message": "Search request deleted from memory"}
-    raise HTTPException(status_code=404, detail="Search request not found")
-
-@app.get("/api/search/{request_id}/json")
-async def get_search_json(request_id: str):
-    """Get search result as JSON file (for frontend consumption)"""
-    json_data = load_search_from_json(request_id)
-    if json_data is None:
-        raise HTTPException(status_code=404, detail="Search result not found")
-    
-    return json_data
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
