@@ -148,8 +148,13 @@ async def get_search_result(request_id: str):
         # Fallback to in-memory storage
         if request_id in search_results:
             return search_results[request_id]
+        logger.warning(f"No search found in database for request_id: {request_id}")
         raise HTTPException(status_code=404, detail="Search request not found")
     except Exception as e:
+        # Handle Supabase 406 error (no rows)
+        if isinstance(e, dict) and e.get('code') == 'PGRST116':
+            logger.warning(f"Supabase: No search found for request_id: {request_id}")
+            raise HTTPException(status_code=404, detail="Search request not found")
         logger.error(f"Error retrieving search result for {request_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
