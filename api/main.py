@@ -73,6 +73,30 @@ class HealthResponse(BaseModel):
 # In-memory storage for search results (in production, use Redis or database)
 search_results = {}
 
+# JSON file storage for persistent data
+def save_search_to_json(request_id: str, data: dict):
+    """Save search result to JSON file for persistence"""
+    try:
+        os.makedirs("search_results", exist_ok=True)
+        file_path = f"search_results/{request_id}.json"
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=2, default=str)
+        print(f"[{request_id}] Search result saved to {file_path}")
+    except Exception as e:
+        print(f"[{request_id}] Failed to save to JSON: {e}")
+
+def load_search_from_json(request_id: str) -> Optional[dict]:
+    """Load search result from JSON file"""
+    try:
+        file_path = f"search_results/{request_id}.json"
+        with open(file_path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        print(f"[{request_id}] Failed to load from JSON: {e}")
+        return None
+
 @app.get("/", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
@@ -206,7 +230,41 @@ async def process_search(request_id: str, request: SearchRequest):
         print(f"[{request_id}] Assessing candidates...")
         try:
             top_candidates = select_top_candidates(request.prompt, people)
-            result.candidates = top_candidates
+            
+            # Enhance candidates with profile photos and additional data
+            enhanced_candidates = []
+            for candidate in top_candidates:
+                # Find the corresponding person data
+                person_data = next((p for p in people if p.get("name") == candidate.get("name")), {})
+                
+                enhanced_candidate = {
+                    "name": candidate.get("name", "Unknown"),
+                    "title": candidate.get("title", "Unknown"),
+                    "company": candidate.get("company", person_data.get("organization_name", "Unknown")),
+                    "email": candidate.get("email", "Not available"),
+                    "accuracy": candidate.get("accuracy", 0),
+                    "reasons": candidate.get("reasons", []),
+                    "linkedin_url": person_data.get("linkedin_url"),
+                    "profile_photo_url": None,  # Will be populated from LinkedIn data
+                    "location": person_data.get("location"),
+                    "linkedin_profile": person_data.get("linkedin_profile", {}),
+                    "linkedin_posts": person_data.get("linkedin_posts", [])
+                }
+                
+                # Extract profile photo URL from LinkedIn data
+                linkedin_profile = person_data.get("linkedin_profile", {})
+                if linkedin_profile:
+                    # Check various possible photo field names
+                    photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
+                    for field in photo_fields:
+                        if linkedin_profile.get(field):
+                            enhanced_candidate["profile_photo_url"] = linkedin_profile[field]
+                            break
+                
+                enhanced_candidates.append(enhanced_candidate)
+            
+            result.candidates = enhanced_candidates
+            
         except Exception as e:
             print(f"[{request_id}] Assessment error: {e}")
             # Fall back to basic results
@@ -217,7 +275,10 @@ async def process_search(request_id: str, request: SearchRequest):
                     "company": person.get("organization_name", "Unknown"),
                     "email": person.get("email", "Not available"),
                     "accuracy": 85 - (i * 10),
-                    "reasons": ["Selected based on title and company fit"]
+                    "reasons": ["Selected based on title and company fit"],
+                    "linkedin_url": person.get("linkedin_url"),
+                    "profile_photo_url": None,
+                    "location": person.get("location")
                 }
                 for i, person in enumerate(people[:request.max_candidates])
             ]
@@ -229,6 +290,10 @@ async def process_search(request_id: str, request: SearchRequest):
         
         result.status = "completed"
         result.completed_at = datetime.now(timezone.utc).isoformat()
+        
+        # Save to JSON file for persistence
+        save_search_to_json(request_id, result.dict())
+        
         print(f"[{request_id}] Search completed successfully")
         
     except Exception as e:
@@ -244,7 +309,26 @@ async def delete_search(request_id: str):
         raise HTTPException(status_code=404, detail="Search request not found")
     
     del search_results[request_id]
+    
+    # Also delete the JSON file
+    try:
+        file_path = f"search_results/{request_id}.json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[{request_id}] JSON file deleted: {file_path}")
+    except Exception as e:
+        print(f"[{request_id}] Failed to delete JSON file: {e}")
+    
     return {"message": "Search request deleted"}
+
+@app.get("/api/search/{request_id}/json")
+async def get_search_json(request_id: str):
+    """Get search result as JSON file (for frontend consumption)"""
+    json_data = load_search_from_json(request_id)
+    if json_data is None:
+        raise HTTPException(status_code=404, detail="Search result not found")
+    
+    return json_data
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
