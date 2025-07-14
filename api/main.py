@@ -166,7 +166,7 @@ async def get_search_result(request_id: str):
 
 @app.get("/api/search")
 async def list_searches():
-    """List all search requests"""
+    """List all search requests (candidate_count removed)"""
     db_searches = get_recent_searches_from_database(limit=50)
     if db_searches:
         return {
@@ -176,7 +176,7 @@ async def list_searches():
                     "status": search["status"],
                     "prompt": search["prompt"],
                     "created_at": search["created_at"],
-                    "candidate_count": search.get("candidate_count", 0)
+                    # candidate_count removed
                 }
                 for search in db_searches
             ]
@@ -334,43 +334,53 @@ async def process_search(request_id: str, request: SearchRequest):
         # Step 5: Assess and select top candidates
         logger.info(f"[{request_id}] Assessing candidates...")
         try:
-            top_candidates = select_top_candidates(request.prompt, people)
-            
-            # Enhance candidates with profile photos and additional data
+            # Pass behavioral_data to select_top_candidates
+            bd = result.behavioral_data if hasattr(result, 'behavioral_data') and result.behavioral_data is not None else {}
+            top_candidates = select_top_candidates(request.prompt, people, behavioral_data=bd)
+            # Enhanced merging logic: match by email (preferred), then name+company
             enhanced_candidates = []
             for candidate in top_candidates:
-                # Find the corresponding person data
-                person_data = next((p for p in people if p.get("name") == candidate.get("name")), {})
-                
+                # Try to find the corresponding person data by email, then by name+company
+                person_data = None
+                if candidate.get("email"):
+                    person_data = next((p for p in people if p.get("email") == candidate.get("email")), None)
+                if not person_data and candidate.get("name") and candidate.get("company"):
+                    person_data = next((p for p in people if p.get("name") == candidate.get("name") and p.get("organization_name", p.get("company")) == candidate.get("company")), None)
+                if not person_data:
+                    person_data = {}
+                # Always prefer enriched data for company and photo
+                company = candidate.get("company") or person_data.get("organization_name") or person_data.get("company") or "Unknown"
+                photo_url = None
+                linkedin_profile = person_data.get("linkedin_profile", {})
+                if linkedin_profile:
+                    photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
+                    for field in photo_fields:
+                        if linkedin_profile.get(field):
+                            photo_url = linkedin_profile[field]
+                            break
+                if not photo_url:
+                    photo_url = person_data.get("profile_photo_url")
+                # Log what will be stored
+                logger.info(f"[Candidate Storage] Name: {candidate.get('name')}, Email: {candidate.get('email')}, Company: {company}, Photo: {photo_url}, Reasons: {candidate.get('reasons')}")
+                if not company or company == "Unknown":
+                    logger.warning(f"[Candidate Storage] Missing company for {candidate.get('name')} ({candidate.get('email')})")
+                if not photo_url:
+                    logger.warning(f"[Candidate Storage] Missing photo URL for {candidate.get('name')} ({candidate.get('email')})")
                 enhanced_candidate = {
                     "name": candidate.get("name", "Unknown"),
-                    "title": candidate.get("title", "Unknown"),
-                    "company": candidate.get("company", person_data.get("organization_name", "Unknown")),
+                    "title": candidate.get("title", person_data.get("title", "Unknown")),
+                    "company": company,
                     "email": candidate.get("email", "Not available"),
                     "accuracy": candidate.get("accuracy", 0),
                     "reasons": candidate.get("reasons", []),
                     "linkedin_url": person_data.get("linkedin_url"),
-                    "profile_photo_url": None,  # Will be populated from LinkedIn data
+                    "profile_photo_url": photo_url,
                     "location": person_data.get("location"),
-                    "linkedin_profile": person_data.get("linkedin_profile", {}),
+                    "linkedin_profile": linkedin_profile,
                     "linkedin_posts": person_data.get("linkedin_posts", [])
                 }
-                
-                # Extract profile photo URL from LinkedIn data
-                linkedin_profile = person_data.get("linkedin_profile", {})
-                if linkedin_profile:
-                    # Check various possible photo field names
-                    photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
-                    for field in photo_fields:
-                        if linkedin_profile.get(field):
-                            enhanced_candidate["profile_photo_url"] = linkedin_profile[field]
-                            break
-                
                 enhanced_candidates.append(enhanced_candidate)
-            
-            # Do NOT store candidates in searches table
             result.candidates = enhanced_candidates
-            
         except Exception as e:
             logger.error(f"[{request_id}] Assessment error: {e}")
             # Fall back to basic results
