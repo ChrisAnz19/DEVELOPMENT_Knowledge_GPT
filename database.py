@@ -27,7 +27,7 @@ def get_recent_searches_from_database(limit=10):
     res = supabase.table("searches").select("*").order("created_at", desc=True).limit(limit).execute()
     return res.data
 
-def store_people_to_database(people, search_id):
+def store_people_to_database(search_id, people):
     # Insert each person with the search_id
     for person in people:
         person["search_id"] = search_id
