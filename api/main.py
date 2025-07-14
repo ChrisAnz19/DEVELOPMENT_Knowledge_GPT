@@ -33,8 +33,8 @@ from assess_and_return import select_top_candidates
 from database import (
     init_database, store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
-    add_candidate_exclusion_to_database, is_candidate_excluded_in_database,
-    get_excluded_candidates_from_database, cleanup_expired_exclusions_in_database
+    add_person_exclusion_to_database, is_person_excluded_in_database,
+    get_excluded_people_from_database, cleanup_expired_exclusions_in_database
 )
 import logging
 
@@ -196,7 +196,7 @@ async def get_database_stats():
             db_manager.cursor.execute("SELECT COUNT(*) as total_candidates FROM people")
             total_candidates = db_manager.cursor.fetchone()['total_candidates']
             
-            db_manager.cursor.execute("SELECT COUNT(*) as total_exclusions FROM candidate_exclusions WHERE expires_at > CURRENT_TIMESTAMP")
+            db_manager.cursor.execute("SELECT COUNT(*) as total_exclusions FROM people_exclusions WHERE expires_at > CURRENT_TIMESTAMP")
             total_exclusions = db_manager.cursor.fetchone()['total_exclusions']
             
             return {
@@ -212,9 +212,9 @@ async def get_database_stats():
 
 @app.get("/api/exclusions")
 async def get_exclusions():
-    """Get all currently excluded candidates"""
+    """Get all currently excluded people"""
     try:
-        exclusions = get_excluded_candidates_from_database()
+        exclusions = get_excluded_people_from_database()
         return {
             "exclusions": exclusions,
             "count": len(exclusions)
@@ -260,7 +260,7 @@ async def process_search(request_id: str, request: SearchRequest):
             people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
             logger.info(f"[{request_id}] Found {len(people)} people")
             
-            # Filter out excluded candidates (30-day exclusion)
+            # Filter out excluded people (30-day exclusion)
             if people:
                 original_count = len(people)
                 filtered_people = []
@@ -268,14 +268,14 @@ async def process_search(request_id: str, request: SearchRequest):
                 
                 for person in people:
                     email = person.get("email", "")
-                    if email and is_candidate_excluded_in_database(email):
+                    if email and is_person_excluded_in_database(email):
                         excluded_count += 1
                         logger.info(f"[{request_id}] Excluded {email} (previously processed within 30 days)")
                     else:
                         filtered_people.append(person)
                 
                 people = filtered_people
-                logger.info(f"[{request_id}] Filtered out {excluded_count} excluded candidates, {len(people)} remaining")
+                logger.info(f"[{request_id}] Filtered out {excluded_count} excluded people, {len(people)} remaining")
             
             if not people:
                 # Fall back to behavioral simulation
@@ -403,14 +403,14 @@ async def process_search(request_id: str, request: SearchRequest):
         if db_search_id:
             logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
             
-            # Add candidates to exclusion list for 30 days
+            # Add people to exclusion list for 30 days
             if result.candidates:
-                for candidate in result.candidates:
-                    email = candidate.get("email", "")
-                    name = candidate.get("name", "")
-                    company = candidate.get("company", "")
+                for person in result.candidates:
+                    email = person.get("email", "")
+                    name = person.get("name", "")
+                    company = person.get("company", "")
                     if email and name:
-                        add_candidate_exclusion_to_database(email, name, company)
+                        add_person_exclusion_to_database(email, name, company)
                         logger.info(f"[{request_id}] Added {email} to 30-day exclusion list")
         else:
             logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")

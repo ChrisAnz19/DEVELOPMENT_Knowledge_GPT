@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS people (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for 30-day candidate exclusion system
-CREATE TABLE IF NOT EXISTS candidate_exclusions (
+-- Table for 30-day people exclusion system
+CREATE TABLE IF NOT EXISTS people_exclusions (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS candidate_exclusions (
 -- Indexes for faster lookups
 CREATE INDEX IF NOT EXISTS idx_searches_request_id ON searches(request_id);
 CREATE INDEX IF NOT EXISTS idx_people_search_id ON people(search_id);
-CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_email ON candidate_exclusions(email);
-CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_expires ON candidate_exclusions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_people_exclusions_email ON people_exclusions(email);
+CREATE INDEX IF NOT EXISTS idx_people_exclusions_expires ON people_exclusions(expires_at);
 
 -- Optional: Add some sample data for testing
 -- INSERT INTO searches (request_id, prompt, status, created_at, completed_at) 

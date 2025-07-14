@@ -107,9 +107,9 @@ class DatabaseManager:
                 );
             """)
             
-            # Create candidate exclusions table for 30-day exclusion system
+            # Create people exclusions table for 30-day exclusion system
             self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS candidate_exclusions (
+                CREATE TABLE IF NOT EXISTS people_exclusions (
                     id SERIAL PRIMARY KEY,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     name VARCHAR(255) NOT NULL,
@@ -122,13 +122,13 @@ class DatabaseManager:
             
             # Create index for faster exclusion lookups
             self.cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_email 
-                ON candidate_exclusions(email);
+                CREATE INDEX IF NOT EXISTS idx_people_exclusions_email 
+                ON people_exclusions(email);
             """)
             
             self.cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_candidate_exclusions_expires 
-                ON candidate_exclusions(expires_at);
+                CREATE INDEX IF NOT EXISTS idx_people_exclusions_expires 
+                ON people_exclusions(expires_at);
             """)
             
             self.connection.commit()
@@ -262,11 +262,11 @@ class DatabaseManager:
             self.connection.rollback()
             return False
     
-    def add_candidate_exclusion(self, email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
-        """Add a candidate to the exclusion list for 30 days"""
+    def add_person_exclusion(self, email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
+        """Add a person to the exclusion list for 30 days"""
         try:
             self.cursor.execute("""
-                INSERT INTO candidate_exclusions (email, name, company, reason)
+                INSERT INTO people_exclusions (email, name, company, reason)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (email) 
                 DO UPDATE SET 
@@ -276,19 +276,19 @@ class DatabaseManager:
             """, (email, name, company, reason))
             
             self.connection.commit()
-            logger.info(f"Candidate {email} added to exclusion list for 30 days")
+            logger.info(f"Person {email} added to exclusion list for 30 days")
             return True
             
         except Exception as e:
-            logger.error(f"Error adding candidate exclusion: {e}")
+            logger.error(f"Error adding person exclusion: {e}")
             self.connection.rollback()
             return False
     
-    def is_candidate_excluded(self, email: str) -> bool:
-        """Check if a candidate is currently excluded (within 30 days)"""
+    def is_person_excluded(self, email: str) -> bool:
+        """Check if a person is currently excluded (within 30 days)"""
         try:
             self.cursor.execute("""
-                SELECT id FROM candidate_exclusions 
+                SELECT id FROM people_exclusions 
                 WHERE email = %s AND expires_at > CURRENT_TIMESTAMP
             """, (email,))
             
@@ -296,15 +296,15 @@ class DatabaseManager:
             return result is not None
             
         except Exception as e:
-            logger.error(f"Error checking candidate exclusion: {e}")
+            logger.error(f"Error checking person exclusion: {e}")
             return False
     
-    def get_excluded_candidates(self) -> List[Dict[str, Any]]:
-        """Get all currently excluded candidates"""
+    def get_excluded_people(self) -> List[Dict[str, Any]]:
+        """Get all currently excluded people"""
         try:
             self.cursor.execute("""
                 SELECT email, name, company, excluded_at, expires_at, reason
-                FROM candidate_exclusions 
+                FROM people_exclusions 
                 WHERE expires_at > CURRENT_TIMESTAMP
                 ORDER BY excluded_at DESC
             """)
@@ -313,14 +313,14 @@ class DatabaseManager:
             return [dict(result) for result in results]
             
         except Exception as e:
-            logger.error(f"Error getting excluded candidates: {e}")
+            logger.error(f"Error getting excluded people: {e}")
             return []
     
     def cleanup_expired_exclusions(self) -> int:
         """Remove expired exclusions (older than 30 days) and return count of removed records"""
         try:
             self.cursor.execute("""
-                DELETE FROM candidate_exclusions 
+                DELETE FROM people_exclusions 
                 WHERE expires_at <= CURRENT_TIMESTAMP
             """)
             
@@ -362,17 +362,17 @@ def delete_search_from_database(request_id: str) -> bool:
     """Delete search from database"""
     return db_manager.delete_search(request_id)
 
-def add_candidate_exclusion_to_database(email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
-    """Add candidate to exclusion list"""
-    return db_manager.add_candidate_exclusion(email, name, company, reason)
+def add_person_exclusion_to_database(email: str, name: str, company: str = None, reason: str = "Previously processed") -> bool:
+    """Add person to exclusion list"""
+    return db_manager.add_person_exclusion(email, name, company, reason)
 
-def is_candidate_excluded_in_database(email: str) -> bool:
-    """Check if candidate is excluded"""
-    return db_manager.is_candidate_excluded(email)
+def is_person_excluded_in_database(email: str) -> bool:
+    """Check if person is excluded"""
+    return db_manager.is_person_excluded(email)
 
-def get_excluded_candidates_from_database() -> List[Dict[str, Any]]:
-    """Get all excluded candidates"""
-    return db_manager.get_excluded_candidates()
+def get_excluded_people_from_database() -> List[Dict[str, Any]]:
+    """Get all excluded people"""
+    return db_manager.get_excluded_people()
 
 def cleanup_expired_exclusions_in_database() -> int:
     """Clean up expired exclusions"""
