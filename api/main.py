@@ -414,20 +414,13 @@ async def process_search(request_id: str, request: SearchRequest):
         result.status = "completed"
         result.completed_at = datetime.now(timezone.utc).isoformat()
 
-        # --- PATCH: Only write to Supabase after all processing is complete ---
-        # Ensure company is set from organization.name if available
+        # --- PATCH: Always set company from organization.name if present ---
         if result.candidates:
             for candidate in result.candidates:
-                if (
-                    not candidate.get("company") or candidate.get("company") == "Unknown"
-                ):
-                    org = candidate.get("organization")
-                    if isinstance(org, dict) and org.get("name"):
-                        candidate["company"] = org["name"]
-                    elif isinstance(org, str):
-                        candidate["company"] = org
-                    elif candidate.get("organization_name"):
-                        candidate["company"] = candidate["organization_name"]
+                org = candidate.get("organization")
+                if isinstance(org, dict) and org.get("name"):
+                    candidate["company"] = org["name"]
+        # --- PATCH: Only write to Supabase after all processing is complete ---
         # Store in database (primary storage)
         search_data = result.dict()
         # Remove candidates before storing in searches
