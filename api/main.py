@@ -427,6 +427,10 @@ async def process_search(request_id: str, request: SearchRequest):
             
             # Store people in people table
             if result.candidates:
+                # Ensure company is set from organization.name if available
+                for candidate in result.candidates:
+                    if (not candidate.get("company") or candidate.get("company") == "Unknown") and candidate.get("organization") and candidate["organization"].get("name"):
+                        candidate["company"] = candidate["organization"]["name"]
                 store_people_to_database(db_search_id, result.candidates)
                 logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
         else:
