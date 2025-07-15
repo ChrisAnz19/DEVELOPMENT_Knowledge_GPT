@@ -28,7 +28,7 @@ if not os.getenv('OPENAI_API_KEY'):
 
 from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
 from apollo_api_call import search_people_via_internal_database
-from linkedin_scraping import scrape_linkedin_profiles
+from linkedin_scraping import async_scrape_linkedin_profiles
 from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
@@ -299,8 +299,7 @@ async def process_search(request_id: str, request: SearchRequest):
             linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
             
             if linkedin_urls:
-                profile_data = scrape_linkedin_profiles(linkedin_urls)
-                
+                profile_data = await async_scrape_linkedin_profiles(linkedin_urls)
                 # Merge profile data with our internal database data
                 enriched_people = []
                 for i, person in enumerate(people):
@@ -310,7 +309,6 @@ async def process_search(request_id: str, request: SearchRequest):
                         elif isinstance(profile_data, dict) and str(i) in profile_data:
                             person["linkedin_profile"] = profile_data[str(i)]
                     enriched_people.append(person)
-                
                 people = enriched_people
                 logger.info(f"[{request_id}] LinkedIn profiles scraped")
         

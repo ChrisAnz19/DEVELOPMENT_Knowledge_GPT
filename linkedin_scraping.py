@@ -1,7 +1,9 @@
 import os
-import requests
 import json
 import sys
+import asyncio
+import httpx
+import time
 
 # Load API key from environment variables or secrets.json with graceful error handling
 SCRAPING_DOG_API_KEY = os.getenv("SCRAPING_DOG_API_KEY")
@@ -14,38 +16,34 @@ if not SCRAPING_DOG_API_KEY:
         print(f"⚠️  Warning: Could not load ScrapingDog API key: {e}")
         print("   LinkedIn scraping will be disabled. Set SCRAPING_DOG_API_KEY environment variable or create secrets.json.")
 
-
-def scrape_linkedin_profiles(urls):
+async def async_scrape_linkedin_profiles(urls, delay=1.5, max_retries=3):
     """
-    Scrape LinkedIn profile data via ScrapingDog API.
+    Async scrape LinkedIn profile data via ScrapingDog API with throttling and exponential backoff.
     Args:
         urls (list of str): LinkedIn profile URLs to scrape.
+        delay (float): Delay in seconds between requests.
+        max_retries (int): Max number of retries per request.
     Returns:
         list of dict: Scraped profile data for each URL.
     """
     if not SCRAPING_DOG_API_KEY:
         print("⚠️  LinkedIn scraping disabled - no API key available")
         return []
-    
     if not urls:
         print("⚠️  No LinkedIn URLs provided")
         return []
-    
-    print(f"🔍 Scraping {len(urls)} LinkedIn profiles with ScrapingDog API...")
-    
+    print(f"🔍 Scraping {len(urls)} LinkedIn profiles with ScrapingDog API (async)...")
     results = []
-    for i, url in enumerate(urls, 1):
-        try:
+    async with httpx.AsyncClient(timeout=60) as client:
+        for i, url in enumerate(urls, 1):
             # Extract username from LinkedIn URL
             if "linkedin.com/in/" in url:
                 username = url.split("linkedin.com/in/")[1].split("/")[0].split("?")[0]
             else:
                 print(f"⚠️  Invalid LinkedIn URL format: {url}")
+                results.append({"error": "Invalid LinkedIn URL", "url": url})
                 continue
-            
             print(f"📊 Scraping profile {i}/{len(urls)}: {username}")
-            
-            # ScrapingDog API endpoint
             api_url = "https://api.scrapingdog.com/linkedin"
             params = {
                 "api_key": SCRAPING_DOG_API_KEY,
@@ -53,37 +51,42 @@ def scrape_linkedin_profiles(urls):
                 "linkId": username,
                 "premium": "false"
             }
-            
-            response = requests.get(api_url, params=params, timeout=60)
-            response.raise_for_status()
-            
-            profile_data = response.json()
-            
-            # Check if we got valid data
-            if profile_data and isinstance(profile_data, list) and len(profile_data) > 0:
-                print(f"✅ Successfully scraped profile for {username}")
-                results.append(profile_data[0])  # Take the first result
-            elif profile_data and isinstance(profile_data, dict):
-                print(f"✅ Successfully scraped profile for {username}")
-                results.append(profile_data)
+            attempt = 0
+            while attempt <= max_retries:
+                try:
+                    resp = await client.get(api_url, params=params)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        print(f"✅ Successfully scraped profile for {username}")
+                        results.append(data[0] if isinstance(data, list) and data else data)
+                        break
+                    elif resp.status_code in (429, 500, 502, 503, 504):
+                        # Retry with exponential backoff
+                        wait = delay * (2 ** attempt)
+                        print(f"⏳ Retry {attempt+1}/{max_retries} for {username} after {wait:.1f}s (status {resp.status_code})")
+                        await asyncio.sleep(wait)
+                        attempt += 1
+                    else:
+                        print(f"⚠️  Failed for {username}: {resp.status_code} {resp.text}")
+                        results.append({"error": f"HTTP {resp.status_code}", "url": url})
+                        break
+                except Exception as e:
+                    wait = delay * (2 ** attempt)
+                    print(f"⚠️  Exception for {username}: {e}. Retry {attempt+1}/{max_retries} after {wait:.1f}s")
+                    await asyncio.sleep(wait)
+                    attempt += 1
             else:
-                print(f"⚠️  Invalid response for {username}: {profile_data}")
-                
-        except requests.exceptions.RequestException as e:
-            print(f"⚠️  Request failed for {url}: {e}")
-        except Exception as e:
-            print(f"⚠️  Error scraping {url}: {e}")
-    
+                print(f"❌ Failed to scrape {username} after {max_retries} retries.")
+                results.append({"error": "Max retries exceeded", "url": url})
+            await asyncio.sleep(delay)  # Throttle between requests
     print(f"✅ Completed LinkedIn scraping: {len(results)} profiles scraped successfully")
     return results
 
-
 if __name__ == "__main__":
-    # Test the scraper
+    import asyncio
     if len(sys.argv) > 1:
         urls = json.loads(sys.argv[1])
     else:
         urls = json.loads(input("Enter JSON array of LinkedIn URLs: "))
-
-    results = scrape_linkedin_profiles(urls)
+    results = asyncio.run(async_scrape_linkedin_profiles(urls))
     print(json.dumps(results, indent=2))
