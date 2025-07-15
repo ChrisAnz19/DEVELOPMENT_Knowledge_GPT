@@ -5,11 +5,45 @@ Handles Supabase connection and operations for storing search results and candid
 """
 
 import logging
-from supabase_client import supabase
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+try:
+    from supabase_client import supabase
+except Exception as e:
+    logger.error(f"Failed to import supabase client: {e}")
+    # Create a dummy supabase object to prevent import errors
+    class DummySupabase:
+        def table(self, name):
+            return DummyTable()
+    
+    class DummyTable:
+        def select(self, *args, **kwargs):
+            return self
+        def insert(self, data):
+            return self
+        def delete(self):
+            return self
+        def eq(self, field, value):
+            return self
+        def order(self, field, desc=False):
+            return self
+        def limit(self, limit):
+            return self
+        def single(self):
+            return self
+        def execute(self):
+            return DummyResult()
+    
+    class DummyResult:
+        def __init__(self):
+            self.data = []
+            self.count = 0
+    
+    supabase = DummySupabase()
 
 def store_search_to_database(search_data):
     # Insert search and return the new search id
@@ -61,6 +95,31 @@ def delete_search_from_database(request_id):
     # Delete search and cascade to people
     supabase.table("searches").delete().eq("request_id", request_id).execute()
     return True
+
+def get_current_exclusions(days=30):
+    """Return a list of people (email, name, company, created_at) in the people table within the last N days."""
+    from datetime import datetime, timedelta
+    import pytz
+    now = datetime.now(pytz.UTC)
+    cutoff = now - timedelta(days=days)
+    res = supabase.table("people").select("email, name, company, created_at").execute()
+    exclusions = []
+    if hasattr(res, 'data') and res.data:
+        for row in res.data:
+            created_at = row.get("created_at")
+            if created_at:
+                try:
+                    created_at_dt = datetime.fromisoformat(created_at)
+                    if created_at_dt > cutoff:
+                        exclusions.append({
+                            "email": row.get("email"),
+                            "name": row.get("name"),
+                            "company": row.get("company"),
+                            "created_at": created_at
+                        })
+                except Exception:
+                    continue
+    return exclusions
 
 if __name__ == "__main__":
     # Test database connection

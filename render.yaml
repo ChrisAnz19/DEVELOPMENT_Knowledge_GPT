@@ -14,5 +14,9 @@ services:
         sync: false
       - key: SCRAPING_DOG_API_KEY
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
     healthCheckPath: /
     autoDeploy: true 
