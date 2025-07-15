@@ -332,8 +332,18 @@ async def process_search(request_id: str, request: SearchRequest):
                 if not person_data:
                     person_data = {}
                 # Always prefer enriched data for company and photo
-                company = candidate.get("company") or person_data.get("organization_name") or person_data.get("company") or "Unknown"
-                photo_url = None
+                company = (
+                    candidate.get("company")
+                    or person_data.get("organization_name")
+                    or (person_data.get("organization", {}).get("name") if person_data.get("organization") else None)
+                    or person_data.get("company")
+                    or "Unknown"
+                )
+                photo_url = (
+                    person_data.get("profile_photo_url")
+                    or person_data.get("photo_url")
+                    or None
+                )
                 location = person_data.get("location")
                 linkedin_profile = person_data.get("linkedin_profile", {})
                 
