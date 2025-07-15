@@ -55,15 +55,18 @@ def store_search_to_database(search_data):
 
 def get_search_from_database(request_id):
     try:
-        res = supabase.table("searches").select("*").eq("request_id", request_id).single().execute()
-        return res.data
+        # Use a more explicit query structure to avoid 406 errors
+        res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").eq("request_id", request_id).execute()
+        if hasattr(res, 'data') and res.data:
+            return res.data[0]  # Return the first (and should be only) result
+        return None
     except Exception as e:
         # If no rows found or other error, return None
         logger.debug(f"No search found for request_id {request_id}: {e}")
         return None
 
 def get_recent_searches_from_database(limit=10):
-    res = supabase.table("searches").select("*").order("created_at", desc=True).limit(limit).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").order("created_at", desc=True).limit(limit).execute()
     return res.data
 
 def store_people_to_database(search_id, people):
@@ -86,7 +89,7 @@ def store_people_to_database(search_id, people):
         supabase.table("people").insert(filtered_people).execute()
 
 def get_people_for_search(search_id):
-    res = supabase.table("people").select("*").eq("search_id", search_id).execute()
+    res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, created_at").eq("search_id", search_id).execute()
     return res.data
 
 def is_person_excluded_in_database(email, days=30):
@@ -146,14 +149,14 @@ if __name__ == "__main__":
     # The direct calls to the new functions are added.
     
     # Test a simple query
-    res = supabase.table("searches").select("*").limit(1).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, created_at").limit(1).execute()
     if res.data:
         print(f"⏰ Current database time: {res.data[0]['created_at']}")
     else:
         print("No data found in searches table.")
         
     # Show table structure
-    res = supabase.table("searches").select("*").limit(1).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, created_at").limit(1).execute()
     if res.data:
         print("\n📋 Database Tables:")
         print(f"  - Table: searches")
