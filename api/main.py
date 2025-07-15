@@ -7,6 +7,7 @@ import json
 import asyncio
 from datetime import datetime, timezone
 import uuid
+import time
 
 # Import the existing Knowledge_GPT modules
 import sys
@@ -28,12 +29,13 @@ if not os.getenv('OPENAI_API_KEY'):
 
 from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
 from apollo_api_call import search_people_via_internal_database
-# from linkedin_scraping import async_scrape_linkedin_profiles
+from linkedin_scraping import async_scrape_linkedin_profiles
 from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
-    store_people_to_database, get_people_for_search, is_person_excluded_in_database
+    store_people_to_database, get_people_for_search, is_person_excluded_in_database,
+    get_current_exclusions
 )
 import logging
 
@@ -240,6 +242,16 @@ async def get_search_json(request_id: str):
     
     return json_data
 
+@app.get("/api/exclusions")
+async def get_exclusions():
+    """Get list of currently excluded people (within last 30 days)"""
+    try:
+        exclusions = get_current_exclusions(days=30)
+        return {"exclusions": exclusions}
+    except Exception as e:
+        logger.error(f"Error retrieving exclusions: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
 async def process_search(request_id: str, request: SearchRequest):
     """Background task to process the search"""
     try:
@@ -295,23 +307,27 @@ async def process_search(request_id: str, request: SearchRequest):
             return
         
         # Step 3: Scrape LinkedIn profiles (if enabled)
-        # if request.include_linkedin:
-        #     logger.info(f"[{request_id}] Scraping LinkedIn profiles...")
-        #     linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
-        #     if linkedin_urls:
-        #         profile_data = await async_scrape_linkedin_profiles(linkedin_urls)
-        #         # Merge profile data with our internal database data
-        #         enriched_people = []
-        #         for i, person in enumerate(people):
-        #             if person.get("linkedin_url") and profile_data:
-        #                 if isinstance(profile_data, list) and i < len(profile_data):
-        #                     person["linkedin_profile"] = profile_data[i]
-        #                 elif isinstance(profile_data, dict) and str(i) in profile_data:
-        #                     person["linkedin_profile"] = profile_data[str(i)]
-        #             enriched_people.append(person)
-        #         people = enriched_people
-        #         logger.info(f"[{request_id}] LinkedIn profiles scraped")
+        if request.include_linkedin:
+            logger.info(f"[{request_id}] Scraping LinkedIn profiles...")
+            linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
+            if linkedin_urls:
+                profile_data = await async_scrape_linkedin_profiles(linkedin_urls)
+                # Merge profile data with our internal database data
+                enriched_people = []
+                for i, person in enumerate(people):
+                    if person.get("linkedin_url") and profile_data:
+                        if isinstance(profile_data, list) and i < len(profile_data):
+                            person["linkedin_profile"] = profile_data[i]
+                        elif isinstance(profile_data, dict) and str(i) in profile_data:
+                            person["linkedin_profile"] = profile_data[str(i)]
+                    enriched_people.append(person)
+                people = enriched_people
+                logger.info(f"[{request_id}] LinkedIn profiles scraped")
         
+        # Filter out candidates without a company before assessment
+        people = [p for p in people if p.get("company")]
+        logger.info(f"[{request_id}] Excluded candidates without company. {len(people)} remaining.")
+
         # Step 5: Assess and select top candidates
         logger.info(f"[{request_id}] Assessing candidates...")
         try:
@@ -377,6 +393,7 @@ async def process_search(request_id: str, request: SearchRequest):
                     logger.warning(f"[Candidate Storage] Missing company for {candidate.get('name')} ({candidate.get('email')})")
                 if not photo_url:
                     logger.warning(f"[Candidate Storage] Missing photo URL for {candidate.get('name')} ({candidate.get('email')})")
+                # Always include the full LinkedIn profile data in the candidate
                 enhanced_candidate = {
                     "name": candidate.get("name", "Unknown"),
                     "title": candidate.get("title", person_data.get("title", "Unknown")),
@@ -387,8 +404,13 @@ async def process_search(request_id: str, request: SearchRequest):
                     "linkedin_url": person_data.get("linkedin_url"),
                     "profile_photo_url": photo_url,
                     "location": location,
-                    "linkedin_profile": linkedin_profile
+                    "linkedin_profile": linkedin_profile  # <-- always include full profile
                 }
+                # If there are any extra fields in linkedin_profile, add them at the top level for convenience
+                if linkedin_profile:
+                    for k, v in linkedin_profile.items():
+                        if k not in enhanced_candidate:
+                            enhanced_candidate[k] = v
                 enhanced_candidates.append(enhanced_candidate)
             result.candidates = enhanced_candidates
         except Exception as e:
@@ -423,14 +445,28 @@ async def process_search(request_id: str, request: SearchRequest):
                 if isinstance(org, dict) and org.get("name"):
                     candidate["company"] = org["name"]
         # --- PATCH: Only write to Supabase after all processing is complete ---
-        # Store in database (primary storage)
+        # Store in database (primary storage) with retry mechanism
         search_data = result.dict()
         # Remove candidates before storing in searches
         if "candidates" in search_data:
             del search_data["candidates"]
-        db_search_id = store_search_to_database(search_data)
+        max_retries = 3
+        db_search_id = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                db_search_id = store_search_to_database(search_data)
+                if db_search_id:
+                    logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id} (attempt {attempt})")
+                    break
+                else:
+                    logger.error(f"[{request_id}] Attempt {attempt}: Failed to store in database (no ID returned)")
+            except Exception as e:
+                logger.error(f"[{request_id}] Attempt {attempt}: Exception during store_search_to_database: {e}")
+            if attempt < max_retries:
+                wait = 2 ** (attempt - 1)
+                logger.info(f"[{request_id}] Retrying database storage in {wait}s...")
+                time.sleep(wait)
         if db_search_id:
-            logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
             if result.candidates:
                 try:
                     store_people_to_database(db_search_id, result.candidates)
@@ -438,7 +474,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 except Exception as e:
                     logger.error(f"[{request_id}] Failed to store candidates: {e}")
         else:
-            logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
+            logger.critical(f"[{request_id}] All attempts to store search in database failed. Using in-memory storage.")
             search_results[request_id] = result
         # Save to JSON file for persistence (optional backup)
         save_search_to_json(request_id, result.dict())
