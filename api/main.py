@@ -411,10 +411,23 @@ async def process_search(request_id: str, request: SearchRequest):
         logger.info(f"[{request_id}] Generating behavioral data...")
         behavioral_data = simulate_behavioral_data(filters)
         result.behavioral_data = behavioral_data
-        
         result.status = "completed"
         result.completed_at = datetime.now(timezone.utc).isoformat()
-        
+
+        # --- PATCH: Only write to Supabase after all processing is complete ---
+        # Ensure company is set from organization.name if available
+        if result.candidates:
+            for candidate in result.candidates:
+                if (
+                    not candidate.get("company") or candidate.get("company") == "Unknown"
+                ):
+                    org = candidate.get("organization")
+                    if isinstance(org, dict) and org.get("name"):
+                        candidate["company"] = org["name"]
+                    elif isinstance(org, str):
+                        candidate["company"] = org
+                    elif candidate.get("organization_name"):
+                        candidate["company"] = candidate["organization_name"]
         # Store in database (primary storage)
         search_data = result.dict()
         # Remove candidates before storing in searches
@@ -423,21 +436,7 @@ async def process_search(request_id: str, request: SearchRequest):
         db_search_id = store_search_to_database(search_data)
         if db_search_id:
             logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
-            
-            # Store people in people table
             if result.candidates:
-                # Ensure company is set from organization.name, organization_name, or organization (if string)
-                for candidate in result.candidates:
-                    if (
-                        not candidate.get("company") or candidate.get("company") == "Unknown"
-                    ):
-                        org = candidate.get("organization")
-                        if isinstance(org, dict) and org.get("name"):
-                            candidate["company"] = org["name"]
-                        elif isinstance(org, str):
-                            candidate["company"] = org
-                        elif candidate.get("organization_name"):
-                            candidate["company"] = candidate["organization_name"]
                 try:
                     store_people_to_database(db_search_id, result.candidates)
                     logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
@@ -446,7 +445,6 @@ async def process_search(request_id: str, request: SearchRequest):
         else:
             logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
             search_results[request_id] = result
-        
         # Save to JSON file for persistence (optional backup)
         save_search_to_json(request_id, result.dict())
         logger.info(f"[{request_id}] Search completed successfully")
