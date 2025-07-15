@@ -24,6 +24,8 @@ if not os.getenv('OPENAI_API_KEY'):
             os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
             os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '')
             os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '')
+            os.environ['SUPABASE_URL'] = secrets.get('supabase_url', '')
+            os.environ['SUPABASE_KEY'] = secrets.get('supabase_key', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
