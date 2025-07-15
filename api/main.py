@@ -154,12 +154,13 @@ async def get_search_result(request_id: str):
         if request_id in search_results:
             return search_results[request_id]
         logger.warning(f"No search found in database for request_id: {request_id}")
-        raise HTTPException(status_code=404, detail="Search request not found")
+        # Return 202 if still processing
+        return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
     except Exception as e:
         # Handle Supabase 406 error (no rows)
         if isinstance(e, dict) and e.get('code') == 'PGRST116':
             logger.warning(f"Supabase: No search found for request_id: {request_id}")
-            raise HTTPException(status_code=404, detail="Search request not found")
+            return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
         logger.error(f"Error retrieving search result for {request_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
 
@@ -425,12 +426,23 @@ async def process_search(request_id: str, request: SearchRequest):
             
             # Store people in people table
             if result.candidates:
-                # Ensure company is set from organization.name if available
+                # Ensure company is set from organization.name, organization_name, or organization (if string)
                 for candidate in result.candidates:
-                    if (not candidate.get("company") or candidate.get("company") == "Unknown") and candidate.get("organization") and candidate["organization"].get("name"):
-                        candidate["company"] = candidate["organization"]["name"]
-                store_people_to_database(db_search_id, result.candidates)
-                logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
+                    if (
+                        not candidate.get("company") or candidate.get("company") == "Unknown"
+                    ):
+                        org = candidate.get("organization")
+                        if isinstance(org, dict) and org.get("name"):
+                            candidate["company"] = org["name"]
+                        elif isinstance(org, str):
+                            candidate["company"] = org
+                        elif candidate.get("organization_name"):
+                            candidate["company"] = candidate["organization_name"]
+                try:
+                    store_people_to_database(db_search_id, result.candidates)
+                    logger.info(f"[{request_id}] Stored {len(result.candidates)} candidates in people table")
+                except Exception as e:
+                    logger.error(f"[{request_id}] Failed to store candidates: {e}")
         else:
             logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
             search_results[request_id] = result
