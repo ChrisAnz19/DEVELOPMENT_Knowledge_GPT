@@ -1,0 +1,1133 @@
+{
+  "request_id": "de512646-93ad-4b1f-b8d1-a1cd7fc07e65",
+  "status": "completed",
+  "prompt": "Find marketing directors in San Francisco",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Marketing Director"
+      ],
+      "person_locations": [
+        "San Francisco"
+      ],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for Marketing Directors located in San Francisco."
+  },
+  "candidates": [
+    {
+      "name": "Mariana Antaya",
+      "title": "Marketing Director",
+      "company": "The Batchery",
+      "email": "mariana.antaya@batchery.com",
+      "accuracy": 85,
+      "reasons": [
+        "Visited the pricing page of Marketo three times in the last month",
+        "Downloaded a whitepaper on marketing automation trends from HubSpot",
+        "Engaged with case studies about SaaS marketing solutions"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/marianaantaya",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/D5603AQFHkI4ci8GIww/profile-displayphoto-shrink_200_200/B56ZcSlUt4GQAY-/0/1748363464165?e=2147483647&v=beta&t=j-KyG5rfcsaJ0wIgIOWkYPrds59y7xVJp1COMoHyS4Q",
+      "location": "San Francisco Bay Area",
+      "linkedin_profile": {
+        "fullName": "Mariana Antaya",
+        "linkedin_internal_id": "765933551",
+        "first_name": "Mariana",
+        "last_name": "Antaya",
+        "public_identifier": "marianaantaya",
+        "background_cover_image_url": "https://media.licdn.com/dms/image/v2/D5616AQEh5KRbTONDyw/profile-displaybackgroundimage-shrink_200_800/B56Zf8UMIeHoAU-/0/1752284840864?e=2147483647&v=beta&t=S5A67knKXhWmhOzQUY6o-LoHLDfJLCEKE2NS6MWkPUU",
+        "profile_photo": "https://media.licdn.com/dms/image/v2/D5603AQFHkI4ci8GIww/profile-displayphoto-shrink_200_200/B56ZcSlUt4GQAY-/0/1748363464165?e=2147483647&v=beta&t=j-KyG5rfcsaJ0wIgIOWkYPrds59y7xVJp1COMoHyS4Q",
+        "headline": "",
+        "location": "San Francisco Bay Area",
+        "followers": "21K followers",
+        "connections": "500+ connections",
+        "about": "Hi \ud83d\udc4b\ud83c\udffc I\u2019m Mariana, some people call me Mar! I am a PM at Microsoft Teams\u2026",
+        "experience": [
+          {
+            "company_name": "The Batchery",
+            "company_image": "https://media.licdn.com/dms/image/v2/D560BAQFuqrIjJyyGRQ/company-logo_100_100/company-logo_100_100/0/1723149121631?e=2147483647&v=beta&t=9DiAwiufJWatyTQub6QLIYKz4vw-xPMLfpYZIYV3rJY"
+          }
+        ],
+        "education": [],
+        "articles": [],
+        "description": {
+          "description1": "The Batchery",
+          "description1_link": "https://www.linkedin.com/company/the-batchery?trk=public_profile_topcard-current-company",
+          "description2": "Fairfield University",
+          "description2_link": "https://www.linkedin.com/school/fairfield-university/?trk=public_profile_topcard-school",
+          "description3": ""
+        },
+        "activities": [
+          {
+            "link": "https://www.linkedin.com/posts/marianaantaya_machinelearning-predictions-f1-activity-7349495475399512065-THFC",
+            "image": "https://media.licdn.com/dms/image/v2/D5605AQGhXhPTbUsHUg/videocover-high/B56Zf6nI.4HoCI-/0/1752256258141?e=2147483647&v=beta&t=2xKODBdWPWwVZJusmvZlV4MYawR5kkmgxlEdB1_C0H4",
+            "title": "Who doesn\u2019t love the track at Monaco??! \n\n#machinelearning #predictions #f1 #formulaone",
+            "activity": "Shared by Mariana Antaya"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/marianaantaya_genai-activity-7349475889069314049-tTO2",
+            "image": "https://static.licdn.com/aero-v1/sc/h/53n89ecoxpr1qrki1do3alazb",
+            "title": "Hahah I love this Anil Kumbhar way to go! Sending you wishes to meet Jensen IRL soon \ud83e\udd29\n\n#genai",
+            "activity": "Shared by Mariana Antaya"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/alisonshikada_in-my-pursuit-to-gain-more-experience-in-activity-7349201134701432833-9cWy",
+            "image": "https://static.licdn.com/aero-v1/sc/h/53n89ecoxpr1qrki1do3alazb",
+            "title": "In my pursuit to gain more experience in Venture Capital, I\u2019m excited to announce that I\u2019ve been accepted into Cohort 5 of VC Lab\u2019s Venture Institute\u2026",
+            "activity": "Liked by Mariana Antaya"
+          }
+        ],
+        "volunteering": [
+          {
+            "company_url": "https://in.linkedin.com/company/theproductspace?trk=public_profile_volunteering-position_profile-section-card_image-click",
+            "company_position": "Industry Mentor",
+            "company_name": "Product Space",
+            "company_duration": "",
+            "starts_at": "Oct 2023",
+            "ends_at": "Present"
+          },
+          {
+            "company_url": "https://www.linkedin.com/company/fairfielddolan?trk=public_profile_volunteering-position_profile-section-card_image-click",
+            "company_position": "Fairfield Startup Mentor",
+            "company_name": "Fairfield Dolan - Fairfield University Charles F. Dolan School of Business",
+            "company_duration": "",
+            "starts_at": "Oct 2022",
+            "ends_at": "Present"
+          }
+        ],
+        "certification": [],
+        "people_also_viewed": [
+          {
+            "link": "https://www.linkedin.com/in/abhishek-gaba?trk=public_profile_browsemap-profile",
+            "name": "Abhishek Gaba",
+            "summary": "J.D Candidate at Seton Hall University School of Law",
+            "location": "United States"
+          },
+          {
+            "link": "https://www.linkedin.com/in/matthewamrod?trk=public_profile_browsemap-profile",
+            "name": "Matthew Amrod",
+            "summary": "",
+            "location": "Stamford, CT"
+          },
+          {
+            "link": "https://www.linkedin.com/in/camila-trincado?trk=public_profile_browsemap-profile",
+            "name": "Camila Trincado",
+            "summary": "Social Experience Manager at Grant Cardone Enterprises\n$2M+ in Sales Generated",
+            "location": "Miami-Fort Lauderdale Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/gabriella-hachem-b26995194?trk=public_profile_browsemap-profile",
+            "name": "Gabriella Hachem",
+            "summary": "Project Coordinator at Passion City Church",
+            "location": "Atlanta, GA"
+          },
+          {
+            "link": "https://www.linkedin.com/in/brittneygross1?trk=public_profile_browsemap-profile",
+            "name": "Brittney Gross",
+            "summary": "Senior Account Executive at Edelman",
+            "location": "Washington DC-Baltimore Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/dianagepp?trk=public_profile_browsemap-profile",
+            "name": "Diana Gepp",
+            "summary": "",
+            "location": "Palm Beach, FL"
+          },
+          {
+            "link": "https://www.linkedin.com/in/mengya-mia-li-5647a5166?trk=public_profile_browsemap-profile",
+            "name": "Mengya(Mia) Li",
+            "summary": "",
+            "location": "Los Angeles Metropolitan Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/maxdwarren?trk=public_profile_browsemap-profile",
+            "name": "Max Warren",
+            "summary": "",
+            "location": "Greater Tampa Bay Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/chrisottproducer?trk=public_profile_browsemap-profile",
+            "name": "Chris Ott",
+            "summary": "Executive Producer INNOCEAN",
+            "location": "Marina del Rey, CA"
+          },
+          {
+            "link": "https://www.linkedin.com/in/joshua-agyei-gyamfi?trk=public_profile_browsemap-profile",
+            "name": "Joshua A.",
+            "summary": "",
+            "location": "United States"
+          }
+        ],
+        "similar_profiles": [
+          {
+            "link": "https://pe.linkedin.com/in/mariana-celeste-antaya-ventura-bb833816b?trk=public_profile_samename-profile",
+            "name": "Mariana Celeste Antaya Ventura",
+            "summary": "Estudiante en talentos  Magister",
+            "location": "Peru"
+          },
+          {
+            "link": "https://pe.linkedin.com/in/mariana-celeste-antaya-ventura-0b1792315?trk=public_profile_samename-profile",
+            "name": "Mariana celeste Antaya ventura",
+            "summary": "Fue a Universidad Privada San Juan Bautista",
+            "location": "Ica, Peru"
+          }
+        ],
+        "recommendations": [],
+        "publications": [
+          {
+            "name": "StartUp Showcase Team Quantify",
+            "sub_title": "March 18, 2022",
+            "summary": "",
+            "date": "March 18, 2022",
+            "link": "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fwww%2Efairfield%2Eedu%2Fnews%2Farchive%2F2022%2Fmarch%2Fstartup-showcase-team-quantify%2Ehtml&urlhash=t3R4&trk=public_profile_publication-title"
+          },
+          {
+            "name": "StartUp Showcase Team RinkLink Aims to Optimize How Ice Rink Time is Managed",
+            "sub_title": "March 19, 2021",
+            "summary": "",
+            "date": "March 19, 2021",
+            "link": "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fwww%2Efairfield%2Eedu%2Fnews%2Farchive%2F2021%2Fmarch%2Fstartup-showcase-team-rinklink-spotlight%2Ehtml&urlhash=3oo-&trk=public_profile_publication-title"
+          }
+        ],
+        "courses": [],
+        "languages": [
+          {
+            "name": "French",
+            "level": "Limited working proficiency"
+          },
+          {
+            "name": "Spanish",
+            "level": "Native or bilingual proficiency"
+          },
+          {
+            "name": "English",
+            "level": "Native or bilingual proficiency"
+          }
+        ],
+        "organizations": [
+          {
+            "name": "Society of Women Engineers",
+            "position": "Vice President"
+          },
+          {
+            "name": "Association for Computing Machinery",
+            "position": "Treasurer"
+          },
+          {
+            "name": "Engineering Student Society",
+            "position": "President"
+          }
+        ],
+        "projects": [],
+        "awards": [
+          {
+            "name": "Fairfield StartUp Competition Winner",
+            "organization": "Fairfield StartUp",
+            "duration": "Apr 2022",
+            "summary": "Quantify placed first at the StartUp competition and won $12,500 in funding. Quantify is a cryptocurrency portfolio evaluation and recommendation tool for financial advisors to meet their client\u2019s needs."
+          },
+          {
+            "name": "Fairfield StartUp Competition Winner",
+            "organization": "Fairfield StartUp",
+            "duration": "Apr 2021",
+            "summary": "RinkLink won 11k in funding by venture capitalists in order to propel and disrupt the ice hockey industry by providing coaches, rink managers and individual skaters an automated and easy to use web app platform."
+          },
+          {
+            "name": "Kode with Klossy Scholar",
+            "organization": "Kode with Klossy",
+            "duration": "Jun 2019",
+            "summary": ""
+          },
+          {
+            "name": "Kode with Klossy Scholar",
+            "organization": "Kode with Klossy",
+            "duration": "Jun 2018",
+            "summary": ""
+          }
+        ],
+        "score": []
+      },
+      "fullName": "Mariana Antaya",
+      "linkedin_internal_id": "765933551",
+      "first_name": "Mariana",
+      "last_name": "Antaya",
+      "public_identifier": "marianaantaya",
+      "background_cover_image_url": "https://media.licdn.com/dms/image/v2/D5616AQEh5KRbTONDyw/profile-displaybackgroundimage-shrink_200_800/B56Zf8UMIeHoAU-/0/1752284840864?e=2147483647&v=beta&t=S5A67knKXhWmhOzQUY6o-LoHLDfJLCEKE2NS6MWkPUU",
+      "profile_photo": "https://media.licdn.com/dms/image/v2/D5603AQFHkI4ci8GIww/profile-displayphoto-shrink_200_200/B56ZcSlUt4GQAY-/0/1748363464165?e=2147483647&v=beta&t=j-KyG5rfcsaJ0wIgIOWkYPrds59y7xVJp1COMoHyS4Q",
+      "headline": "",
+      "followers": "21K followers",
+      "connections": "500+ connections",
+      "about": "Hi \ud83d\udc4b\ud83c\udffc I\u2019m Mariana, some people call me Mar! I am a PM at Microsoft Teams\u2026",
+      "experience": [
+        {
+          "company_name": "The Batchery",
+          "company_image": "https://media.licdn.com/dms/image/v2/D560BAQFuqrIjJyyGRQ/company-logo_100_100/company-logo_100_100/0/1723149121631?e=2147483647&v=beta&t=9DiAwiufJWatyTQub6QLIYKz4vw-xPMLfpYZIYV3rJY"
+        }
+      ],
+      "education": [],
+      "articles": [],
+      "description": {
+        "description1": "The Batchery",
+        "description1_link": "https://www.linkedin.com/company/the-batchery?trk=public_profile_topcard-current-company",
+        "description2": "Fairfield University",
+        "description2_link": "https://www.linkedin.com/school/fairfield-university/?trk=public_profile_topcard-school",
+        "description3": ""
+      },
+      "activities": [
+        {
+          "link": "https://www.linkedin.com/posts/marianaantaya_machinelearning-predictions-f1-activity-7349495475399512065-THFC",
+          "image": "https://media.licdn.com/dms/image/v2/D5605AQGhXhPTbUsHUg/videocover-high/B56Zf6nI.4HoCI-/0/1752256258141?e=2147483647&v=beta&t=2xKODBdWPWwVZJusmvZlV4MYawR5kkmgxlEdB1_C0H4",
+          "title": "Who doesn\u2019t love the track at Monaco??! \n\n#machinelearning #predictions #f1 #formulaone",
+          "activity": "Shared by Mariana Antaya"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/marianaantaya_genai-activity-7349475889069314049-tTO2",
+          "image": "https://static.licdn.com/aero-v1/sc/h/53n89ecoxpr1qrki1do3alazb",
+          "title": "Hahah I love this Anil Kumbhar way to go! Sending you wishes to meet Jensen IRL soon \ud83e\udd29\n\n#genai",
+          "activity": "Shared by Mariana Antaya"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/alisonshikada_in-my-pursuit-to-gain-more-experience-in-activity-7349201134701432833-9cWy",
+          "image": "https://static.licdn.com/aero-v1/sc/h/53n89ecoxpr1qrki1do3alazb",
+          "title": "In my pursuit to gain more experience in Venture Capital, I\u2019m excited to announce that I\u2019ve been accepted into Cohort 5 of VC Lab\u2019s Venture Institute\u2026",
+          "activity": "Liked by Mariana Antaya"
+        }
+      ],
+      "volunteering": [
+        {
+          "company_url": "https://in.linkedin.com/company/theproductspace?trk=public_profile_volunteering-position_profile-section-card_image-click",
+          "company_position": "Industry Mentor",
+          "company_name": "Product Space",
+          "company_duration": "",
+          "starts_at": "Oct 2023",
+          "ends_at": "Present"
+        },
+        {
+          "company_url": "https://www.linkedin.com/company/fairfielddolan?trk=public_profile_volunteering-position_profile-section-card_image-click",
+          "company_position": "Fairfield Startup Mentor",
+          "company_name": "Fairfield Dolan - Fairfield University Charles F. Dolan School of Business",
+          "company_duration": "",
+          "starts_at": "Oct 2022",
+          "ends_at": "Present"
+        }
+      ],
+      "certification": [],
+      "people_also_viewed": [
+        {
+          "link": "https://www.linkedin.com/in/abhishek-gaba?trk=public_profile_browsemap-profile",
+          "name": "Abhishek Gaba",
+          "summary": "J.D Candidate at Seton Hall University School of Law",
+          "location": "United States"
+        },
+        {
+          "link": "https://www.linkedin.com/in/matthewamrod?trk=public_profile_browsemap-profile",
+          "name": "Matthew Amrod",
+          "summary": "",
+          "location": "Stamford, CT"
+        },
+        {
+          "link": "https://www.linkedin.com/in/camila-trincado?trk=public_profile_browsemap-profile",
+          "name": "Camila Trincado",
+          "summary": "Social Experience Manager at Grant Cardone Enterprises\n$2M+ in Sales Generated",
+          "location": "Miami-Fort Lauderdale Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/gabriella-hachem-b26995194?trk=public_profile_browsemap-profile",
+          "name": "Gabriella Hachem",
+          "summary": "Project Coordinator at Passion City Church",
+          "location": "Atlanta, GA"
+        },
+        {
+          "link": "https://www.linkedin.com/in/brittneygross1?trk=public_profile_browsemap-profile",
+          "name": "Brittney Gross",
+          "summary": "Senior Account Executive at Edelman",
+          "location": "Washington DC-Baltimore Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/dianagepp?trk=public_profile_browsemap-profile",
+          "name": "Diana Gepp",
+          "summary": "",
+          "location": "Palm Beach, FL"
+        },
+        {
+          "link": "https://www.linkedin.com/in/mengya-mia-li-5647a5166?trk=public_profile_browsemap-profile",
+          "name": "Mengya(Mia) Li",
+          "summary": "",
+          "location": "Los Angeles Metropolitan Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/maxdwarren?trk=public_profile_browsemap-profile",
+          "name": "Max Warren",
+          "summary": "",
+          "location": "Greater Tampa Bay Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/chrisottproducer?trk=public_profile_browsemap-profile",
+          "name": "Chris Ott",
+          "summary": "Executive Producer INNOCEAN",
+          "location": "Marina del Rey, CA"
+        },
+        {
+          "link": "https://www.linkedin.com/in/joshua-agyei-gyamfi?trk=public_profile_browsemap-profile",
+          "name": "Joshua A.",
+          "summary": "",
+          "location": "United States"
+        }
+      ],
+      "similar_profiles": [
+        {
+          "link": "https://pe.linkedin.com/in/mariana-celeste-antaya-ventura-bb833816b?trk=public_profile_samename-profile",
+          "name": "Mariana Celeste Antaya Ventura",
+          "summary": "Estudiante en talentos  Magister",
+          "location": "Peru"
+        },
+        {
+          "link": "https://pe.linkedin.com/in/mariana-celeste-antaya-ventura-0b1792315?trk=public_profile_samename-profile",
+          "name": "Mariana celeste Antaya ventura",
+          "summary": "Fue a Universidad Privada San Juan Bautista",
+          "location": "Ica, Peru"
+        }
+      ],
+      "recommendations": [],
+      "publications": [
+        {
+          "name": "StartUp Showcase Team Quantify",
+          "sub_title": "March 18, 2022",
+          "summary": "",
+          "date": "March 18, 2022",
+          "link": "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fwww%2Efairfield%2Eedu%2Fnews%2Farchive%2F2022%2Fmarch%2Fstartup-showcase-team-quantify%2Ehtml&urlhash=t3R4&trk=public_profile_publication-title"
+        },
+        {
+          "name": "StartUp Showcase Team RinkLink Aims to Optimize How Ice Rink Time is Managed",
+          "sub_title": "March 19, 2021",
+          "summary": "",
+          "date": "March 19, 2021",
+          "link": "https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fwww%2Efairfield%2Eedu%2Fnews%2Farchive%2F2021%2Fmarch%2Fstartup-showcase-team-rinklink-spotlight%2Ehtml&urlhash=3oo-&trk=public_profile_publication-title"
+        }
+      ],
+      "courses": [],
+      "languages": [
+        {
+          "name": "French",
+          "level": "Limited working proficiency"
+        },
+        {
+          "name": "Spanish",
+          "level": "Native or bilingual proficiency"
+        },
+        {
+          "name": "English",
+          "level": "Native or bilingual proficiency"
+        }
+      ],
+      "organizations": [
+        {
+          "name": "Society of Women Engineers",
+          "position": "Vice President"
+        },
+        {
+          "name": "Association for Computing Machinery",
+          "position": "Treasurer"
+        },
+        {
+          "name": "Engineering Student Society",
+          "position": "President"
+        }
+      ],
+      "projects": [],
+      "awards": [
+        {
+          "name": "Fairfield StartUp Competition Winner",
+          "organization": "Fairfield StartUp",
+          "duration": "Apr 2022",
+          "summary": "Quantify placed first at the StartUp competition and won $12,500 in funding. Quantify is a cryptocurrency portfolio evaluation and recommendation tool for financial advisors to meet their client\u2019s needs."
+        },
+        {
+          "name": "Fairfield StartUp Competition Winner",
+          "organization": "Fairfield StartUp",
+          "duration": "Apr 2021",
+          "summary": "RinkLink won 11k in funding by venture capitalists in order to propel and disrupt the ice hockey industry by providing coaches, rink managers and individual skaters an automated and easy to use web app platform."
+        },
+        {
+          "name": "Kode with Klossy Scholar",
+          "organization": "Kode with Klossy",
+          "duration": "Jun 2019",
+          "summary": ""
+        },
+        {
+          "name": "Kode with Klossy Scholar",
+          "organization": "Kode with Klossy",
+          "duration": "Jun 2018",
+          "summary": ""
+        }
+      ],
+      "score": []
+    },
+    {
+      "name": "Teena Bhatia",
+      "title": "Marketing Director",
+      "company": "Neythri Futures Fund",
+      "email": "teena.b@gwln.org",
+      "accuracy": 78,
+      "reasons": [
+        "Spent 20 minutes on the Salesforce integration documentation",
+        "Attended a webinar on B2B lead generation hosted by Demandbase",
+        "Multiple visits to competitor product pages"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/teenabhatia",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": "San Francisco Bay Area",
+      "linkedin_profile": {
+        "fullName": "Teena Bhatia",
+        "linkedin_internal_id": "120149520",
+        "first_name": "Teena",
+        "last_name": "Bhatia",
+        "public_identifier": "teenabhatia",
+        "background_cover_image_url": "https://media.licdn.com/dms/image/v2/C5616AQHiHNP9S2PEHQ/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1636743309552?e=2147483647&v=beta&t=jqFACLpkf1QcYJLEpNXTxjNts6UEhNWrBRVWYIJC_Tk",
+        "profile_photo": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+        "headline": "",
+        "location": "San Francisco Bay Area",
+        "followers": "2K followers",
+        "connections": "500+ connections",
+        "about": "Teena is an investment banker turned marketer with over 12 years of experience in\u2026",
+        "experience": [
+          {
+            "company_name": "Neythri Futures Fund",
+            "company_image": "https://media.licdn.com/dms/image/v2/C560BAQGqjMh5HabvZw/company-logo_100_100/company-logo_100_100/0/1630650087544/neythri_futures_fund_logo?e=2147483647&v=beta&t=GP-dBEYBzF839Rrp65SPzTjC7yOW2nczun79CvAJItc"
+          }
+        ],
+        "education": [],
+        "articles": [
+          {
+            "link": "https://www.linkedin.com/pulse/breaking-barriers-challenging-status-quo-investing-women-teena-bhatia",
+            "image": "https://media.licdn.com/dms/image/v2/D5612AQGYo5JYr-gFHA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1683226735790?e=2147483647&v=beta&t=kr48TOvk4BhSUuNaokoaYbEGjYdwta-0BN_LVbqG18c",
+            "title": "Breaking Barriers and Challenging the Status Quo: Investing in Women of Color",
+            "author": "",
+            "published_date": "May 4, 2023"
+          },
+          {
+            "link": "https://www.linkedin.com/pulse/virtuso-who-we-teena-bhatia",
+            "image": "https://media.licdn.com/dms/image/v2/C5612AQFoK5VkO4cZHQ/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1520076766015?e=2147483647&v=beta&t=3UYssdRBLa0uBfaxUxWmBok1Gd1S2hWl40J98VCt0SM",
+            "title": "VIRTUSO - Who We Are",
+            "author": "",
+            "published_date": "Feb 14, 2018"
+          },
+          {
+            "link": "https://www.linkedin.com/pulse/amazon-whole-foods-heres-what-talking-teena-bhatia",
+            "image": "https://media.licdn.com/dms/image/v2/C5612AQHtySiiWjnkPA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1520175939563?e=2147483647&v=beta&t=Cb1YAGGrL2T84HbU5-JH1BWDLq4gXsaVAj5Zv7FdB_A",
+            "title": "Amazon and Whole Foods: Here\u2019s what they are NOT talking about",
+            "author": "",
+            "published_date": "Sep 7, 2017"
+          },
+          {
+            "link": "https://www.linkedin.com/pulse/tolerance-unpopular-opinion-why-googles-ideological-teena-bhatia",
+            "image": "https://media.licdn.com/dms/image/v2/C5612AQG1nZACD6I5_g/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1520181429600?e=2147483647&v=beta&t=Lg2yKYAjbKURjgQOQMmT7U8DjF1EO8BigpXdBOZkaGM",
+            "title": "No Tolerance for Unpopular Opinion - Why 'Google's Ideological\u200b Echo Chamber' is worth exploring",
+            "author": "",
+            "published_date": "Aug 9, 2017"
+          }
+        ],
+        "description": {
+          "description1": "Neythri Futures Fund",
+          "description1_link": "https://www.linkedin.com/company/neythri-futures-fund?trk=public_profile_topcard-current-company",
+          "description2": "Santa Clara University - Leavey School of Business",
+          "description2_link": "https://www.linkedin.com/school/santa-clara-university-leavey-school-of-business/?trk=public_profile_topcard-school",
+          "description3": ""
+        },
+        "activities": [
+          {
+            "link": "https://www.linkedin.com/posts/elainemanley_enjoythejourney-timewellspent-livingwell-activity-7338203373671694339-_vAI",
+            "image": "https://media.licdn.com/dms/image/v2/D5610AQEhPj8Gp3jj2w/image-shrink_800/B56ZdaJE9FH8Ac-/0/1749564019966?e=2147483647&v=beta&t=ixK7vdC_igDgBjauoeRHK9YWwT2cEtSLWDK-QQZxcW4",
+            "title": "Life is about the journey, not just numbers\n\nThe best returns aren\u2019t always financial\u2014they\u2019re the memories you make along the way. Whether it\u2019s a\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/joannefedeyko_pathwaytosiliconvalley-womenfounders-startupleadership-activity-7336417874120478723-z40Y",
+            "image": "https://media.licdn.com/dms/image/v2/D5622AQE7dOPq3GSZQA/feedshare-shrink_800/B56ZdAxIuLH8Ag-/0/1749138317746?e=2147483647&v=beta&t=fFkJg-xAK2mL9NYs5MhkFGEwjUn780zrq-7zd0uxKv0",
+            "title": "That\u2019s a wrap on Day 2 and our most impactful Pathway to Silicon Valley program yet!\u00a0\ud83c\udf89\n\nOver two transformative days, 17 unstoppable women founders\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/jennykaypollock_howwomenlead-boardservice-womeninvestors-activity-7336398900402016256-0XEY",
+            "image": "https://media.licdn.com/dms/image/v2/D5605AQEBOw1E8vKwng/videocover-high/B56Zc.Y_2NHoBk-/0/1749098443150?e=2147483647&v=beta&t=-6QJc-1Ylwqradx6Rz5uj7eWE_jlnJTE-UwC9o_AjCk",
+            "title": "Last week I co-hosted a game-changing event with Holly Uber!\n\nThe room was filled with powerhouse women.\n\nWe unpacked real strategies for leading and\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/simishah_london-activity-7335292288950005760-kg-n",
+            "image": "https://media.licdn.com/dms/image/v2/D4D22AQH2e2yEAlCymg/feedshare-shrink_2048_1536/B4DZcwxeCDGYAs-/0/1748869964328?e=2147483647&v=beta&t=AJ1oy4zetP0-_aWb4qXEdYVDQzOx2lNQXIgjz-TQuao",
+            "title": "\ud83c\udf7d\ufe0f \ud835\ude3d\ud835\ude5a\ud835\ude5e\ud835\ude63\ud835\ude5c \ud835\ude56 \ud835\ude5c\ud835\ude67\ud835\ude5a\ud835\ude56\ud835\ude69 \ud835\ude5d\ud835\ude64\ud835\ude68\ud835\ude69: \ud835\ude69\ud835\ude5d\ud835\ude5a \ud835\ude62\ud835\ude64\ud835\ude68\ud835\ude69 \ud835\ude6a\ud835\ude63\ud835\ude59\ud835\ude5a\ud835\ude67\ud835\ude67\ud835\ude56\ud835\ude69\ud835\ude5a\ud835\ude59 \ud835\ude63\ud835\ude5a\ud835\ude69\ud835\ude6c\ud835\ude64\ud835\ude67\ud835\ude60\ud835\ude5e\ud835\ude63\ud835\ude5c \ud835\ude68\ud835\ude60\ud835\ude5e\ud835\ude61\ud835\ude61 \ud835\ude69\ud835\ude5d\ud835\ude5a\ud835\ude67\ud835\ude5a \ud835\ude5e\ud835\ude68.\n\nI'm headed to #London\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/simishah_chiefofstaff-activity-7336401207697063937-ebmi",
+            "image": "https://media.licdn.com/dms/image/v2/D4D22AQH_xJI7cL6R5A/feedshare-shrink_1280/B4DZdAiBVzHkAo-/0/1749134350365?e=2147483647&v=beta&t=SXEV6NsBnPtZLdcQH-cmn8wdi7Hz0jwI98YsYxlgPrk",
+            "title": "\ud835\udddb\ud835\uddfc\ud835\ude04 \ud835\uddf1\ud835\uddfc \ud835\udddc \ud835\ude00\ud835\ude02\ud835\uddf0\ud835\uddf0\ud835\uddf2\ud835\uddf2\ud835\uddf1 \ud835\uddee\ud835\ude00 \ud835\uddee \ud835\uddd6\ud835\uddf5\ud835\uddf6\ud835\uddf2\ud835\uddf3 \ud835\uddfc\ud835\uddf3 \ud835\udde6\ud835\ude01\ud835\uddee\ud835\uddf3\ud835\uddf3?\n\nI get asked this question a lot.\n\n\ud835\ude19\ud835\ude26\ud835\ude22\ud835\ude2d\ud835\ude2a\ud835\ude35\ud835\ude3a:\n\n\ud835\ude20\ud835\ude30\ud835\ude36 \ud835\ude25\ud835\ude30\ud835\ude2f\u2019\ud835\ude35 \ud835\ude29\ud835\ude22\ud835\ude37\ud835\ude26\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/jeanann_howwomenlead-activity-7334632463412903938-EXCk",
+            "image": "https://media.licdn.com/dms/image/v2/D5622AQEyxl1DdnzYCA/feedshare-shrink_800/B56ZcnZVXJG0Ak-/0/1748712648995?e=2147483647&v=beta&t=-4uDOaQYE-4z5y2bwj1CXTBEADhVefl62FkwlUzBM4k",
+            "title": "Excited to participate in \"The Multiplier Effect \" with #Howwomenlead hosted by Holly Uber  and Jenny Kay Pollock at the Google Huddle.\n\nFull circle\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/julie-castro-abrams_howwomeninvest-femalefounders-femalefunded-activity-7328904065248120832-gRJu",
+            "image": "https://media.licdn.com/dms/image/v2/D5622AQF5d15-woEgmw/feedshare-shrink_2048_1536/B56ZbV_ZsnGgAo-/0/1747346892083?e=2147483647&v=beta&t=FOEilb1kqIlCtppyui6CBGVnK0ygo0ofyS-E6xIT7MU",
+            "title": "Our How Women Lead New York executive board member Kerry-Ann Poyser-Edwards Invited me to an amazing conference and moderated this discussion about\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/hitashi_ai-productmanagement-girlsintech-activity-7327841931093258241-Sgcc",
+            "image": "https://media.licdn.com/dms/image/v2/D5622AQHhNpmTEnqmGg/feedshare-shrink_800/B56ZbG5ZZaGsAg-/0/1747093659072?e=2147483647&v=beta&t=82PuPTm6tIK2Bu7iMjXWZSdi7ii0QCU8xrtLhNiopoA",
+            "title": "Mom Guilt, or Should we say Mom Pride?\n\nAs moms in tech, we travel, launch, and lead\u2014sometimes missing important moments in our kids\u2019 lives. The mom\u2026",
+            "activity": "Liked by Teena Bhatia"
+          },
+          {
+            "link": "https://www.linkedin.com/posts/rdbhatia_sapsapphire-activity-7329887438862987264-Jthz",
+            "image": "https://media.licdn.com/dms/image/v2/D5622AQGdrf9TljOphA/feedshare-shrink_800/B56Zbj9yGEH0Ag-/0/1747581346754?e=2147483647&v=beta&t=vS5Dh7Z3C-igABqMCS_rP83ADAcv5BkihupvO-z7lPw",
+            "title": "Looking forward to #SAPSapphire in Orlando next week. I\u2019ll be joining Abdi Goodarzi to share how HPE harnessed SAP AI, HPE PCAI and Deloitte\u2019s Zora\u2026",
+            "activity": "Liked by Teena Bhatia"
+          }
+        ],
+        "volunteering": [
+          {
+            "company_url": "https://www.linkedin.com/company/south-asian-youth-action?trk=public_profile_volunteering-position_profile-section-card_image-click",
+            "company_position": "Volunteer",
+            "company_name": "South Asian Youth Action",
+            "company_duration": "",
+            "starts_at": "Jun 2007",
+            "ends_at": "Present"
+          },
+          {
+            "company_url": "https://www.linkedin.com/company/nypirg?trk=public_profile_volunteering-position_profile-section-card_image-click",
+            "company_position": "Volunteer",
+            "company_name": "New York Public Interest Research Group (NYPIRG)",
+            "company_duration": "",
+            "starts_at": "Aug 2006",
+            "ends_at": "Present"
+          },
+          {
+            "company_url": "https://www.linkedin.com/company/newyorkcares?trk=public_profile_volunteering-position_profile-section-card_image-click",
+            "company_position": "Volunteer",
+            "company_name": "New York Cares",
+            "company_duration": "",
+            "starts_at": "Sep 2008",
+            "ends_at": "Present"
+          },
+          {
+            "company_position": "VP, Donations and Funds Management",
+            "company_name": "Women In Business, SCU",
+            "company_duration": "",
+            "starts_at": "Sep 2015",
+            "ends_at": "Present"
+          },
+          {
+            "company_position": "Fundraiser Volunteer",
+            "company_name": "Silicon Valley FACES",
+            "company_duration": "",
+            "starts_at": "Jul 2015",
+            "ends_at": "Present"
+          }
+        ],
+        "certification": [],
+        "people_also_viewed": [
+          {
+            "link": "https://www.linkedin.com/in/nadiawendt?trk=public_profile_browsemap-profile",
+            "name": "Nadia Conti",
+            "summary": "",
+            "location": "Fort Wayne, IN"
+          },
+          {
+            "link": "https://www.linkedin.com/in/martin-cortez-insurance?trk=public_profile_browsemap-profile",
+            "name": "Martin Cortez",
+            "summary": "Broker | Marketing Director at PHP Agency.\nFounder | CEO of Believe Inspire Grow.",
+            "location": "Oxnard, CA"
+          },
+          {
+            "link": "https://www.linkedin.com/in/mariaorlova?trk=public_profile_browsemap-profile",
+            "name": "Maria Orlova, MBA",
+            "summary": "",
+            "location": "Miami-Fort Lauderdale Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/dustin-kapper?trk=public_profile_browsemap-profile",
+            "name": "Dustin Kapper",
+            "summary": "",
+            "location": "Brooksville, FL"
+          },
+          {
+            "link": "https://www.linkedin.com/in/heybenbrown?trk=public_profile_browsemap-profile",
+            "name": "Ben Brown",
+            "summary": "",
+            "location": "Provo, UT"
+          },
+          {
+            "link": "https://www.linkedin.com/in/kendoylemarketing?trk=public_profile_browsemap-profile",
+            "name": "Ken Doyle",
+            "summary": "",
+            "location": "Columbia, SC"
+          },
+          {
+            "link": "https://www.linkedin.com/in/kateisrael?trk=public_profile_browsemap-profile",
+            "name": "Kate McAnarney",
+            "summary": "",
+            "location": "Greater Boston"
+          },
+          {
+            "link": "https://www.linkedin.com/in/brooke-george-1334862b?trk=public_profile_browsemap-profile",
+            "name": "Brooke George",
+            "summary": "",
+            "location": "Clinton, NC"
+          },
+          {
+            "link": "https://www.linkedin.com/in/jared-hartzell-3264b11a?trk=public_profile_browsemap-profile",
+            "name": "Jared Hartzell",
+            "summary": "Real Estate Development Manager at GCEDC",
+            "location": "Greenville-Spartanburg-Anderson, South Carolina Area"
+          },
+          {
+            "link": "https://www.linkedin.com/in/chandlermarc?trk=public_profile_browsemap-profile",
+            "name": "Marc Chandler",
+            "summary": "",
+            "location": "New York, NY"
+          }
+        ],
+        "similar_profiles": [
+          {
+            "link": "https://in.linkedin.com/in/teena-bhatia-038984247?trk=public_profile_samename-profile",
+            "name": "Teena Bhatia",
+            "summary": "Human Resource Professional | HR Strategy, Talent Acquisition",
+            "location": "Gurugram"
+          },
+          {
+            "link": "https://www.linkedin.com/in/teenadbhatia?trk=public_profile_samename-profile",
+            "name": "Teena B.",
+            "summary": "SWE Intern @ Apple \uf8ff | M&T Program at UPenn",
+            "location": "Philadelphia, PA"
+          },
+          {
+            "link": "https://in.linkedin.com/in/teena-bhatia-985444267?trk=public_profile_samename-profile",
+            "name": "Teena Bhatia",
+            "summary": "Digital marketing",
+            "location": "Faridabad"
+          },
+          {
+            "link": "https://in.linkedin.com/in/teena-bhatia-05481a271?trk=public_profile_samename-profile",
+            "name": "Teena Bhatia",
+            "summary": "Attended SATYUG DARSHAN INSTITUTE OF  engineering and technology",
+            "location": "Faridabad"
+          }
+        ],
+        "recommendations": [],
+        "publications": [],
+        "courses": [],
+        "languages": [
+          {
+            "name": "Hindi, Spanish",
+            "level": "-"
+          }
+        ],
+        "organizations": [
+          {
+            "name": "Santa Clara University, Women in Business",
+            "position": "Board Member"
+          }
+        ],
+        "projects": [
+          {
+            "title": "Women In Business - Santa Clara University",
+            "link": "https://scuwib.wordpress.com/who-we-are/?trk=public_profile_project-title",
+            "duration": "Sep 2015 - Sep 2017"
+          },
+          {
+            "title": "Marketing Plan for Kara Grief Services",
+            "link": "https://www.linkedin.com/in/alishavandenberg?trk=public_profile_project_contributor-image",
+            "duration": "Sep 2014 - Dec 2014"
+          },
+          {
+            "title": "",
+            "link": "https://www.linkedin.com/in/alishavandenberg?trk=public_profile_project_contributor-image",
+            "duration": ""
+          },
+          {
+            "title": "",
+            "link": "https://www.linkedin.com/in/jo-bringazi-8b434116?trk=public_profile_project_contributor-image",
+            "duration": ""
+          },
+          {
+            "title": "",
+            "link": "https://www.linkedin.com/in/nam-bui-b66a4825?trk=public_profile_project_contributor-image",
+            "duration": ""
+          },
+          {
+            "title": "",
+            "link": "https://www.linkedin.com/in/ybliang?trk=public_profile_project_contributor-image",
+            "duration": ""
+          },
+          {
+            "title": "",
+            "link": "https://www.linkedin.com/in/mydaveprice?trk=public_profile_project_contributor-image",
+            "duration": ""
+          }
+        ],
+        "awards": [],
+        "score": []
+      },
+      "fullName": "Teena Bhatia",
+      "linkedin_internal_id": "120149520",
+      "first_name": "Teena",
+      "last_name": "Bhatia",
+      "public_identifier": "teenabhatia",
+      "background_cover_image_url": "https://media.licdn.com/dms/image/v2/C5616AQHiHNP9S2PEHQ/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1636743309552?e=2147483647&v=beta&t=jqFACLpkf1QcYJLEpNXTxjNts6UEhNWrBRVWYIJC_Tk",
+      "profile_photo": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "headline": "",
+      "followers": "2K followers",
+      "connections": "500+ connections",
+      "about": "Teena is an investment banker turned marketer with over 12 years of experience in\u2026",
+      "experience": [
+        {
+          "company_name": "Neythri Futures Fund",
+          "company_image": "https://media.licdn.com/dms/image/v2/C560BAQGqjMh5HabvZw/company-logo_100_100/company-logo_100_100/0/1630650087544/neythri_futures_fund_logo?e=2147483647&v=beta&t=GP-dBEYBzF839Rrp65SPzTjC7yOW2nczun79CvAJItc"
+        }
+      ],
+      "education": [],
+      "articles": [
+        {
+          "link": "https://www.linkedin.com/pulse/breaking-barriers-challenging-status-quo-investing-women-teena-bhatia",
+          "image": "https://media.licdn.com/dms/image/v2/D5612AQGYo5JYr-gFHA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1683226735790?e=2147483647&v=beta&t=kr48TOvk4BhSUuNaokoaYbEGjYdwta-0BN_LVbqG18c",
+          "title": "Breaking Barriers and Challenging the Status Quo: Investing in Women of Color",
+          "author": "",
+          "published_date": "May 4, 2023"
+        },
+        {
+          "link": "https://www.linkedin.com/pulse/virtuso-who-we-teena-bhatia",
+          "image": "https://media.licdn.com/dms/image/v2/C5612AQFoK5VkO4cZHQ/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1520076766015?e=2147483647&v=beta&t=3UYssdRBLa0uBfaxUxWmBok1Gd1S2hWl40J98VCt0SM",
+          "title": "VIRTUSO - Who We Are",
+          "author": "",
+          "published_date": "Feb 14, 2018"
+        },
+        {
+          "link": "https://www.linkedin.com/pulse/amazon-whole-foods-heres-what-talking-teena-bhatia",
+          "image": "https://media.licdn.com/dms/image/v2/C5612AQHtySiiWjnkPA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1520175939563?e=2147483647&v=beta&t=Cb1YAGGrL2T84HbU5-JH1BWDLq4gXsaVAj5Zv7FdB_A",
+          "title": "Amazon and Whole Foods: Here\u2019s what they are NOT talking about",
+          "author": "",
+          "published_date": "Sep 7, 2017"
+        },
+        {
+          "link": "https://www.linkedin.com/pulse/tolerance-unpopular-opinion-why-googles-ideological-teena-bhatia",
+          "image": "https://media.licdn.com/dms/image/v2/C5612AQG1nZACD6I5_g/article-cover_image-shrink_720_1280/article-cover_image-shrink_720_1280/0/1520181429600?e=2147483647&v=beta&t=Lg2yKYAjbKURjgQOQMmT7U8DjF1EO8BigpXdBOZkaGM",
+          "title": "No Tolerance for Unpopular Opinion - Why 'Google's Ideological\u200b Echo Chamber' is worth exploring",
+          "author": "",
+          "published_date": "Aug 9, 2017"
+        }
+      ],
+      "description": {
+        "description1": "Neythri Futures Fund",
+        "description1_link": "https://www.linkedin.com/company/neythri-futures-fund?trk=public_profile_topcard-current-company",
+        "description2": "Santa Clara University - Leavey School of Business",
+        "description2_link": "https://www.linkedin.com/school/santa-clara-university-leavey-school-of-business/?trk=public_profile_topcard-school",
+        "description3": ""
+      },
+      "activities": [
+        {
+          "link": "https://www.linkedin.com/posts/elainemanley_enjoythejourney-timewellspent-livingwell-activity-7338203373671694339-_vAI",
+          "image": "https://media.licdn.com/dms/image/v2/D5610AQEhPj8Gp3jj2w/image-shrink_800/B56ZdaJE9FH8Ac-/0/1749564019966?e=2147483647&v=beta&t=ixK7vdC_igDgBjauoeRHK9YWwT2cEtSLWDK-QQZxcW4",
+          "title": "Life is about the journey, not just numbers\n\nThe best returns aren\u2019t always financial\u2014they\u2019re the memories you make along the way. Whether it\u2019s a\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/joannefedeyko_pathwaytosiliconvalley-womenfounders-startupleadership-activity-7336417874120478723-z40Y",
+          "image": "https://media.licdn.com/dms/image/v2/D5622AQE7dOPq3GSZQA/feedshare-shrink_800/B56ZdAxIuLH8Ag-/0/1749138317746?e=2147483647&v=beta&t=fFkJg-xAK2mL9NYs5MhkFGEwjUn780zrq-7zd0uxKv0",
+          "title": "That\u2019s a wrap on Day 2 and our most impactful Pathway to Silicon Valley program yet!\u00a0\ud83c\udf89\n\nOver two transformative days, 17 unstoppable women founders\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/jennykaypollock_howwomenlead-boardservice-womeninvestors-activity-7336398900402016256-0XEY",
+          "image": "https://media.licdn.com/dms/image/v2/D5605AQEBOw1E8vKwng/videocover-high/B56Zc.Y_2NHoBk-/0/1749098443150?e=2147483647&v=beta&t=-6QJc-1Ylwqradx6Rz5uj7eWE_jlnJTE-UwC9o_AjCk",
+          "title": "Last week I co-hosted a game-changing event with Holly Uber!\n\nThe room was filled with powerhouse women.\n\nWe unpacked real strategies for leading and\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/simishah_london-activity-7335292288950005760-kg-n",
+          "image": "https://media.licdn.com/dms/image/v2/D4D22AQH2e2yEAlCymg/feedshare-shrink_2048_1536/B4DZcwxeCDGYAs-/0/1748869964328?e=2147483647&v=beta&t=AJ1oy4zetP0-_aWb4qXEdYVDQzOx2lNQXIgjz-TQuao",
+          "title": "\ud83c\udf7d\ufe0f \ud835\ude3d\ud835\ude5a\ud835\ude5e\ud835\ude63\ud835\ude5c \ud835\ude56 \ud835\ude5c\ud835\ude67\ud835\ude5a\ud835\ude56\ud835\ude69 \ud835\ude5d\ud835\ude64\ud835\ude68\ud835\ude69: \ud835\ude69\ud835\ude5d\ud835\ude5a \ud835\ude62\ud835\ude64\ud835\ude68\ud835\ude69 \ud835\ude6a\ud835\ude63\ud835\ude59\ud835\ude5a\ud835\ude67\ud835\ude67\ud835\ude56\ud835\ude69\ud835\ude5a\ud835\ude59 \ud835\ude63\ud835\ude5a\ud835\ude69\ud835\ude6c\ud835\ude64\ud835\ude67\ud835\ude60\ud835\ude5e\ud835\ude63\ud835\ude5c \ud835\ude68\ud835\ude60\ud835\ude5e\ud835\ude61\ud835\ude61 \ud835\ude69\ud835\ude5d\ud835\ude5a\ud835\ude67\ud835\ude5a \ud835\ude5e\ud835\ude68.\n\nI'm headed to #London\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/simishah_chiefofstaff-activity-7336401207697063937-ebmi",
+          "image": "https://media.licdn.com/dms/image/v2/D4D22AQH_xJI7cL6R5A/feedshare-shrink_1280/B4DZdAiBVzHkAo-/0/1749134350365?e=2147483647&v=beta&t=SXEV6NsBnPtZLdcQH-cmn8wdi7Hz0jwI98YsYxlgPrk",
+          "title": "\ud835\udddb\ud835\uddfc\ud835\ude04 \ud835\uddf1\ud835\uddfc \ud835\udddc \ud835\ude00\ud835\ude02\ud835\uddf0\ud835\uddf0\ud835\uddf2\ud835\uddf2\ud835\uddf1 \ud835\uddee\ud835\ude00 \ud835\uddee \ud835\uddd6\ud835\uddf5\ud835\uddf6\ud835\uddf2\ud835\uddf3 \ud835\uddfc\ud835\uddf3 \ud835\udde6\ud835\ude01\ud835\uddee\ud835\uddf3\ud835\uddf3?\n\nI get asked this question a lot.\n\n\ud835\ude19\ud835\ude26\ud835\ude22\ud835\ude2d\ud835\ude2a\ud835\ude35\ud835\ude3a:\n\n\ud835\ude20\ud835\ude30\ud835\ude36 \ud835\ude25\ud835\ude30\ud835\ude2f\u2019\ud835\ude35 \ud835\ude29\ud835\ude22\ud835\ude37\ud835\ude26\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/jeanann_howwomenlead-activity-7334632463412903938-EXCk",
+          "image": "https://media.licdn.com/dms/image/v2/D5622AQEyxl1DdnzYCA/feedshare-shrink_800/B56ZcnZVXJG0Ak-/0/1748712648995?e=2147483647&v=beta&t=-4uDOaQYE-4z5y2bwj1CXTBEADhVefl62FkwlUzBM4k",
+          "title": "Excited to participate in \"The Multiplier Effect \" with #Howwomenlead hosted by Holly Uber  and Jenny Kay Pollock at the Google Huddle.\n\nFull circle\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/julie-castro-abrams_howwomeninvest-femalefounders-femalefunded-activity-7328904065248120832-gRJu",
+          "image": "https://media.licdn.com/dms/image/v2/D5622AQF5d15-woEgmw/feedshare-shrink_2048_1536/B56ZbV_ZsnGgAo-/0/1747346892083?e=2147483647&v=beta&t=FOEilb1kqIlCtppyui6CBGVnK0ygo0ofyS-E6xIT7MU",
+          "title": "Our How Women Lead New York executive board member Kerry-Ann Poyser-Edwards Invited me to an amazing conference and moderated this discussion about\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/hitashi_ai-productmanagement-girlsintech-activity-7327841931093258241-Sgcc",
+          "image": "https://media.licdn.com/dms/image/v2/D5622AQHhNpmTEnqmGg/feedshare-shrink_800/B56ZbG5ZZaGsAg-/0/1747093659072?e=2147483647&v=beta&t=82PuPTm6tIK2Bu7iMjXWZSdi7ii0QCU8xrtLhNiopoA",
+          "title": "Mom Guilt, or Should we say Mom Pride?\n\nAs moms in tech, we travel, launch, and lead\u2014sometimes missing important moments in our kids\u2019 lives. The mom\u2026",
+          "activity": "Liked by Teena Bhatia"
+        },
+        {
+          "link": "https://www.linkedin.com/posts/rdbhatia_sapsapphire-activity-7329887438862987264-Jthz",
+          "image": "https://media.licdn.com/dms/image/v2/D5622AQGdrf9TljOphA/feedshare-shrink_800/B56Zbj9yGEH0Ag-/0/1747581346754?e=2147483647&v=beta&t=vS5Dh7Z3C-igABqMCS_rP83ADAcv5BkihupvO-z7lPw",
+          "title": "Looking forward to #SAPSapphire in Orlando next week. I\u2019ll be joining Abdi Goodarzi to share how HPE harnessed SAP AI, HPE PCAI and Deloitte\u2019s Zora\u2026",
+          "activity": "Liked by Teena Bhatia"
+        }
+      ],
+      "volunteering": [
+        {
+          "company_url": "https://www.linkedin.com/company/south-asian-youth-action?trk=public_profile_volunteering-position_profile-section-card_image-click",
+          "company_position": "Volunteer",
+          "company_name": "South Asian Youth Action",
+          "company_duration": "",
+          "starts_at": "Jun 2007",
+          "ends_at": "Present"
+        },
+        {
+          "company_url": "https://www.linkedin.com/company/nypirg?trk=public_profile_volunteering-position_profile-section-card_image-click",
+          "company_position": "Volunteer",
+          "company_name": "New York Public Interest Research Group (NYPIRG)",
+          "company_duration": "",
+          "starts_at": "Aug 2006",
+          "ends_at": "Present"
+        },
+        {
+          "company_url": "https://www.linkedin.com/company/newyorkcares?trk=public_profile_volunteering-position_profile-section-card_image-click",
+          "company_position": "Volunteer",
+          "company_name": "New York Cares",
+          "company_duration": "",
+          "starts_at": "Sep 2008",
+          "ends_at": "Present"
+        },
+        {
+          "company_position": "VP, Donations and Funds Management",
+          "company_name": "Women In Business, SCU",
+          "company_duration": "",
+          "starts_at": "Sep 2015",
+          "ends_at": "Present"
+        },
+        {
+          "company_position": "Fundraiser Volunteer",
+          "company_name": "Silicon Valley FACES",
+          "company_duration": "",
+          "starts_at": "Jul 2015",
+          "ends_at": "Present"
+        }
+      ],
+      "certification": [],
+      "people_also_viewed": [
+        {
+          "link": "https://www.linkedin.com/in/nadiawendt?trk=public_profile_browsemap-profile",
+          "name": "Nadia Conti",
+          "summary": "",
+          "location": "Fort Wayne, IN"
+        },
+        {
+          "link": "https://www.linkedin.com/in/martin-cortez-insurance?trk=public_profile_browsemap-profile",
+          "name": "Martin Cortez",
+          "summary": "Broker | Marketing Director at PHP Agency.\nFounder | CEO of Believe Inspire Grow.",
+          "location": "Oxnard, CA"
+        },
+        {
+          "link": "https://www.linkedin.com/in/mariaorlova?trk=public_profile_browsemap-profile",
+          "name": "Maria Orlova, MBA",
+          "summary": "",
+          "location": "Miami-Fort Lauderdale Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/dustin-kapper?trk=public_profile_browsemap-profile",
+          "name": "Dustin Kapper",
+          "summary": "",
+          "location": "Brooksville, FL"
+        },
+        {
+          "link": "https://www.linkedin.com/in/heybenbrown?trk=public_profile_browsemap-profile",
+          "name": "Ben Brown",
+          "summary": "",
+          "location": "Provo, UT"
+        },
+        {
+          "link": "https://www.linkedin.com/in/kendoylemarketing?trk=public_profile_browsemap-profile",
+          "name": "Ken Doyle",
+          "summary": "",
+          "location": "Columbia, SC"
+        },
+        {
+          "link": "https://www.linkedin.com/in/kateisrael?trk=public_profile_browsemap-profile",
+          "name": "Kate McAnarney",
+          "summary": "",
+          "location": "Greater Boston"
+        },
+        {
+          "link": "https://www.linkedin.com/in/brooke-george-1334862b?trk=public_profile_browsemap-profile",
+          "name": "Brooke George",
+          "summary": "",
+          "location": "Clinton, NC"
+        },
+        {
+          "link": "https://www.linkedin.com/in/jared-hartzell-3264b11a?trk=public_profile_browsemap-profile",
+          "name": "Jared Hartzell",
+          "summary": "Real Estate Development Manager at GCEDC",
+          "location": "Greenville-Spartanburg-Anderson, South Carolina Area"
+        },
+        {
+          "link": "https://www.linkedin.com/in/chandlermarc?trk=public_profile_browsemap-profile",
+          "name": "Marc Chandler",
+          "summary": "",
+          "location": "New York, NY"
+        }
+      ],
+      "similar_profiles": [
+        {
+          "link": "https://in.linkedin.com/in/teena-bhatia-038984247?trk=public_profile_samename-profile",
+          "name": "Teena Bhatia",
+          "summary": "Human Resource Professional | HR Strategy, Talent Acquisition",
+          "location": "Gurugram"
+        },
+        {
+          "link": "https://www.linkedin.com/in/teenadbhatia?trk=public_profile_samename-profile",
+          "name": "Teena B.",
+          "summary": "SWE Intern @ Apple \uf8ff | M&T Program at UPenn",
+          "location": "Philadelphia, PA"
+        },
+        {
+          "link": "https://in.linkedin.com/in/teena-bhatia-985444267?trk=public_profile_samename-profile",
+          "name": "Teena Bhatia",
+          "summary": "Digital marketing",
+          "location": "Faridabad"
+        },
+        {
+          "link": "https://in.linkedin.com/in/teena-bhatia-05481a271?trk=public_profile_samename-profile",
+          "name": "Teena Bhatia",
+          "summary": "Attended SATYUG DARSHAN INSTITUTE OF  engineering and technology",
+          "location": "Faridabad"
+        }
+      ],
+      "recommendations": [],
+      "publications": [],
+      "courses": [],
+      "languages": [
+        {
+          "name": "Hindi, Spanish",
+          "level": "-"
+        }
+      ],
+      "organizations": [
+        {
+          "name": "Santa Clara University, Women in Business",
+          "position": "Board Member"
+        }
+      ],
+      "projects": [
+        {
+          "title": "Women In Business - Santa Clara University",
+          "link": "https://scuwib.wordpress.com/who-we-are/?trk=public_profile_project-title",
+          "duration": "Sep 2015 - Sep 2017"
+        },
+        {
+          "title": "Marketing Plan for Kara Grief Services",
+          "link": "https://www.linkedin.com/in/alishavandenberg?trk=public_profile_project_contributor-image",
+          "duration": "Sep 2014 - Dec 2014"
+        },
+        {
+          "title": "",
+          "link": "https://www.linkedin.com/in/alishavandenberg?trk=public_profile_project_contributor-image",
+          "duration": ""
+        },
+        {
+          "title": "",
+          "link": "https://www.linkedin.com/in/jo-bringazi-8b434116?trk=public_profile_project_contributor-image",
+          "duration": ""
+        },
+        {
+          "title": "",
+          "link": "https://www.linkedin.com/in/nam-bui-b66a4825?trk=public_profile_project_contributor-image",
+          "duration": ""
+        },
+        {
+          "title": "",
+          "link": "https://www.linkedin.com/in/ybliang?trk=public_profile_project_contributor-image",
+          "duration": ""
+        },
+        {
+          "title": "",
+          "link": "https://www.linkedin.com/in/mydaveprice?trk=public_profile_project_contributor-image",
+          "duration": ""
+        }
+      ],
+      "awards": [],
+      "score": []
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Marketing Directors in San Francisco are highly engaged with content related to digital marketing strategies, social media advertising, and customer acquisition techniques.",
+      "technology_adoption_trends": "These Marketing Directors are early adopters of marketing automation platforms, CRM systems, and data analytics tools to optimize their campaigns and measure ROI.",
+      "decision_making_behaviors": "Marketing Directors in San Francisco tend to rely on case studies, industry reports, and peer recommendations when making decisions about new marketing technologies or strategies.",
+      "market_dynamics": "In San Francisco, the competitive landscape for marketing services is intense, leading Marketing Directors to constantly seek innovative ways to differentiate their brands and capture market share."
+    },
+    "supporting_data_points": {
+      "engagement_data": {
+        "top_content_topics": [
+          "digital marketing strategies",
+          "social media advertising",
+          "customer acquisition techniques"
+        ],
+        "engagement_channels": [
+          "industry webinars",
+          "marketing conferences",
+          "social media groups"
+        ]
+      },
+      "technology_adoption_data": {
+        "commonly_adopted_technologies": [
+          "marketing automation platforms",
+          "CRM systems",
+          "data analytics tools"
+        ],
+        "integration_preferences": [
+          "seamless integration with existing systems",
+          "user-friendly interfaces"
+        ]
+      },
+      "decision_making_data": {
+        "preferred_sources": [
+          "case studies",
+          "industry reports",
+          "peer recommendations"
+        ],
+        "evaluation_criteria": [
+          "ROI potential",
+          "scalability",
+          "ease of implementation"
+        ]
+      },
+      "market_data": {
+        "competitive_analysis": "High competition among marketing agencies and tech companies in San Francisco",
+        "trends": [
+          "personalization",
+          "AI-driven marketing",
+          "video content"
+        ]
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-15T23:02:42.213280+00:00",
+  "completed_at": "2025-07-15T23:02:58.375852+00:00"
+}
