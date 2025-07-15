@@ -62,11 +62,23 @@ def get_recent_searches_from_database(limit=10):
     return res.data
 
 def store_people_to_database(search_id, people):
-    # Insert each person with the search_id
+    # Insert each person with the search_id, but only include fields that exist in the schema
+    schema_fields = {
+        'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
+        'profile_photo_url', 'location', 'accuracy', 'reasons', 
+        'linkedin_profile', 'linkedin_posts'
+    }
+    
+    filtered_people = []
     for person in people:
-        person["search_id"] = search_id
-    if people:
-        supabase.table("people").insert(people).execute()
+        filtered_person = {'search_id': search_id}
+        for field in schema_fields:
+            if field in person and person[field] is not None:
+                filtered_person[field] = person[field]
+        filtered_people.append(filtered_person)
+    
+    if filtered_people:
+        supabase.table("people").insert(filtered_people).execute()
 
 def get_people_for_search(search_id):
     res = supabase.table("people").select("*").eq("search_id", search_id).execute()

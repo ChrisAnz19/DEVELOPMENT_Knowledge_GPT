@@ -273,20 +273,25 @@ async def process_search(request_id: str, request: SearchRequest):
         # Step 2: Search our internal database for people
         logger.info(f"[{request_id}] Searching our internal database...")
         try:
+            logger.info(f"[{request_id}] Calling Apollo API with filters: {filters}")
             people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
-            logger.info(f"[{request_id}] Found {len(people)} people")
+            logger.info(f"[{request_id}] Found {len(people)} people from Apollo API")
             
             # Filter out excluded people (already in people table within 30 days)
             if people:
                 filtered_people = []
                 for person in people:
                     email = person.get("email", "")
+                    logger.info(f"[{request_id}] Checking exclusion for {email}")
                     if email and is_person_excluded_in_database(email):
                         logger.info(f"[{request_id}] Excluded {email} (already processed within 30 days)")
                     else:
                         filtered_people.append(person)
+                        logger.info(f"[{request_id}] Kept {email}")
                 people = filtered_people
                 logger.info(f"[{request_id}] Filtered, {len(people)} remaining")
+            else:
+                logger.warning(f"[{request_id}] No people returned from Apollo API")
             
             if not people:
                 # Fall back to behavioral simulation
@@ -325,7 +330,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 logger.info(f"[{request_id}] LinkedIn profiles scraped")
         
         # Filter out candidates without a company before assessment
-        people = [p for p in people if p.get("company")]
+        people = [p for p in people if p.get("company") or (p.get("organization") and p["organization"].get("name"))]
         logger.info(f"[{request_id}] Excluded candidates without company. {len(people)} remaining.")
 
         # Step 5: Assess and select top candidates
