@@ -337,6 +337,9 @@ async def process_search(request_id: str, request: SearchRequest):
                     or person_data.get("company")
                     or "Unknown"
                 )
+                # --- PATCH: Always set company from Apollo organization.name if present ---
+                if person_data.get("organization") and person_data["organization"].get("name"):
+                    company = person_data["organization"]["name"]
                 photo_url = (
                     person_data.get("profile_photo_url")
                     or person_data.get("photo_url")
