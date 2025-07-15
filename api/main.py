@@ -144,7 +144,7 @@ async def get_search_result(request_id: str):
     """Get search result by request ID"""
     try:
         db_result = get_search_from_database(request_id)
-        if db_result:
+        if db_result and isinstance(db_result, dict):
             # Fetch candidates from people table using search id
             search_id = db_result.get("id")
             candidates = get_people_for_search(search_id) if search_id else []
@@ -152,19 +152,26 @@ async def get_search_result(request_id: str):
             response_data = dict(db_result)
             response_data["candidates"] = candidates
             return SearchResponse(**response_data)
+        
         # Fallback to in-memory storage
         if request_id in search_results:
             return search_results[request_id]
-        logger.warning(f"No search found in database for request_id: {request_id}")
-        # Return 202 if still processing
-        return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
+        
+        # Check if search exists in JSON files
+        json_result = load_search_from_json(request_id)
+        if json_result:
+            return SearchResponse(**json_result)
+        
+        # If no search found anywhere, return 404
+        logger.warning(f"No search found for request_id: {request_id}")
+        raise HTTPException(status_code=404, detail=f"Search with ID {request_id} not found")
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
     except Exception as e:
-        # Handle Supabase 406 error (no rows)
-        if isinstance(e, dict) and e.get('code') == 'PGRST116':
-            logger.warning(f"Supabase: No search found for request_id: {request_id}")
-            return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
         logger.error(f"Error retrieving search result for {request_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/search")
 async def list_searches():

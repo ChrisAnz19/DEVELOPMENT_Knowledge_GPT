@@ -54,8 +54,13 @@ def store_search_to_database(search_data):
     return None
 
 def get_search_from_database(request_id):
-    res = supabase.table("searches").select("*").eq("request_id", request_id).single().execute()
-    return res.data
+    try:
+        res = supabase.table("searches").select("*").eq("request_id", request_id).single().execute()
+        return res.data
+    except Exception as e:
+        # If no rows found or other error, return None
+        logger.debug(f"No search found for request_id {request_id}: {e}")
+        return None
 
 def get_recent_searches_from_database(limit=10):
     res = supabase.table("searches").select("*").order("created_at", desc=True).limit(limit).execute()
