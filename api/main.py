@@ -64,7 +64,7 @@ app.add_middleware(
 # Pydantic models for request/response
 class SearchRequest(BaseModel):
     prompt: str
-    max_candidates: Optional[int] = 2
+    max_candidates: Optional[int] = 3
     include_linkedin: Optional[bool] = True
 
 class SearchResponse(BaseModel):
@@ -387,7 +387,7 @@ async def process_search(request_id: str, request: SearchRequest):
         logger.info(f"[{request_id}] Searching our internal database...")
         try:
             logger.info(f"[{request_id}] Calling Apollo API with filters: {filters}")
-            people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
+            people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 3)
             logger.info(f"[{request_id}] Found {len(people)} people from Apollo API")
             
             # Filter out excluded people (already in people table within 30 days)
