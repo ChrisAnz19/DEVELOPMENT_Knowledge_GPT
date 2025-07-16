@@ -122,6 +122,15 @@ async def health_check():
         version="1.0.0"
     )
 
+@app.get("/api/test")
+async def test_endpoint():
+    """Test endpoint for debugging frontend issues"""
+    return {
+        "message": "API is working",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "cors_test": "This should work from frontend"
+    }
+
 @app.post("/api/search", response_model=SearchResponse)
 async def create_search(request: SearchRequest, background_tasks: BackgroundTasks):
     """Create a new search request"""
@@ -145,34 +154,70 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
     try:
+        logger.info(f"Frontend request for search: {request_id}")
+        
+        # Add CORS headers explicitly for debugging
+        from fastapi.responses import Response
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        
         db_result = get_search_from_database(request_id)
+        logger.info(f"Database result for {request_id}: {db_result is not None}")
+        
         if db_result and isinstance(db_result, dict):
             # Fetch candidates from people table using search id
             search_id = db_result.get("id")
+            logger.info(f"Search ID from database: {search_id}")
+            
             candidates = get_people_for_search(search_id) if search_id else []
+            logger.info(f"Found {len(candidates)} candidates for search {search_id}")
+            
             # Build response dict
             response_data = dict(db_result)
             response_data["candidates"] = candidates
-            return SearchResponse(**response_data)
+            
+            # Validate the response data
+            try:
+                validated_response = SearchResponse(**response_data)
+                logger.info(f"Successfully validated response for {request_id}")
+                return validated_response
+            except Exception as validation_error:
+                logger.error(f"Validation error for {request_id}: {validation_error}")
+                # Return a simplified response if validation fails
+                return SearchResponse(
+                    request_id=request_id,
+                    status=db_result.get("status", "unknown"),
+                    prompt=db_result.get("prompt", ""),
+                    created_at=db_result.get("created_at", ""),
+                    candidates=candidates
+                )
         
         # Fallback to in-memory storage
         if request_id in search_results:
+            logger.info(f"Using in-memory result for {request_id}")
             return search_results[request_id]
         
         # Check if search exists in JSON files
         json_result = load_search_from_json(request_id)
         if json_result:
+            logger.info(f"Using JSON result for {request_id}")
             return SearchResponse(**json_result)
         
         # If no search found anywhere, return 404
         logger.warning(f"No search found for request_id: {request_id}")
         raise HTTPException(status_code=404, detail=f"Search with ID {request_id} not found")
         
-    except HTTPException:
+    except HTTPException as e:
         # Re-raise HTTP exceptions (like 404)
+        logger.info(f"HTTPException for {request_id}: {e}")
         raise
     except Exception as e:
         logger.error(f"Error retrieving search result for {request_id}: {e}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error details: {str(e)}")
+        # Return a more specific error message
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/search")
