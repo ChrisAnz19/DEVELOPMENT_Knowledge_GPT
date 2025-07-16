@@ -14,6 +14,12 @@ def search_people_via_internal_database(filters: dict, page: int = 1, per_page: 
     payload = {}
     payload.update(filters.get("organization_filters", {}))
     payload.update(filters.get("person_filters", {}))
+    
+    # Add US location filter to limit results to United States
+    if "person_filters" not in payload:
+        payload["person_filters"] = {}
+    payload["person_filters"]["locations"] = ["United States"]
+    
     payload["page"] = page
     payload["per_page"] = per_page
 
