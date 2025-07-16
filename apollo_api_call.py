@@ -52,9 +52,23 @@ def search_people_via_internal_database(filters: dict, page: int = 1, per_page: 
             )
             enrich_response.raise_for_status()
             enriched_person = enrich_response.json().get("person", {})
+            
+            # Extract profile photo URL from Apollo data
+            profile_photo_url = (
+                enriched_person.get("profile_picture_url") or
+                enriched_person.get("profile_photo_url") or
+                enriched_person.get("photo_url") or
+                None
+            )
+            
+            # Add profile photo URL to enriched person data
+            if profile_photo_url:
+                enriched_person["profile_photo_url"] = profile_photo_url
+                print(f"[Internal Database] Found profile photo: {profile_photo_url}")
+            
             if enriched_person.get("linkedin_url"):
                 enriched.append(enriched_person)
-                print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} ({enriched_person.get('linkedin_url')})")
+                print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} ({enriched_person.get('linkedin_url')}) - Photo: {'Yes' if profile_photo_url else 'No'}")
             else:
                 print(f"[Internal Database] Skipped (no LinkedIn): {enriched_person.get('name', 'Unknown')}")
         except Exception as e:

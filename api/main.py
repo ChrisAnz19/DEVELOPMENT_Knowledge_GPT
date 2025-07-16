@@ -485,6 +485,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 # --- PATCH: Always set company from Apollo organization.name if present ---
                 if person_data.get("organization") and person_data["organization"].get("name"):
                     company = person_data["organization"]["name"]
+                # Initialize photo URL from Apollo data first
                 photo_url = (
                     person_data.get("profile_photo_url")
                     or person_data.get("photo_url")
@@ -493,8 +494,8 @@ async def process_search(request_id: str, request: SearchRequest):
                 location = person_data.get("location")
                 linkedin_profile = person_data.get("linkedin_profile", {})
                 
-                # Extract data from ScrapingDog LinkedIn profile
-                if linkedin_profile:
+                # Extract data from ScrapingDog LinkedIn profile (if available)
+                if linkedin_profile and isinstance(linkedin_profile, dict):
                     # Extract company from description
                     description = linkedin_profile.get("description", {})
                     if description and isinstance(description, dict):
@@ -507,17 +508,25 @@ async def process_search(request_id: str, request: SearchRequest):
                     if linkedin_location and linkedin_location != "Unknown":
                         location = linkedin_location
                     
-                    # Extract profile photo
+                    # Extract profile photo - prioritize LinkedIn photo if available
                     photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
                     for field in photo_fields:
                         if linkedin_profile.get(field):
                             photo_url = linkedin_profile[field]
                             break
                 
+                # Final fallback for photo URL
                 if not photo_url:
-                    photo_url = person_data.get("profile_photo_url")
+                    photo_url = (
+                        person_data.get("profile_photo_url")
+                        or person_data.get("photo_url")
+                        or None
+                    )
                 # Log what will be stored
                 logger.info(f"[Candidate Storage] Name: {candidate.get('name')}, Email: {candidate.get('email')}, Company: {company}, Photo: {photo_url}, Reasons: {candidate.get('reasons')}")
+                logger.info(f"[Photo URL Debug] Final photo_url: {photo_url}")
+                logger.info(f"[Photo URL Debug] person_data photo fields: profile_photo_url={person_data.get('profile_photo_url')}, photo_url={person_data.get('photo_url')}")
+                logger.info(f"[Photo URL Debug] linkedin_profile available: {bool(linkedin_profile)}")
                 if not company or company == "Unknown":
                     logger.warning(f"[Candidate Storage] Missing company for {candidate.get('name')} ({candidate.get('email')})")
                 if not photo_url:
