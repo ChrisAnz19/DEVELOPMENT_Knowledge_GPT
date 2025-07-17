@@ -327,31 +327,45 @@ async def get_search_result(request_id: str):
                     search_data["candidates"] = candidates
                     logger.info(f"Found {len(candidates)} candidates for search {request_id}")
                     
-                    # If we have candidates, force the status to completed to stop polling
-                    if search_data.get("status") == "processing":
-                        logger.info(f"Forcing status to completed for search {request_id}")
-                        search_data["status"] = "completed"
-                        search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-                        
-                        # Update the database
+                    # ALWAYS force the status to completed when we have candidates
+                    logger.info(f"Forcing status to completed for search {request_id}")
+                    search_data["status"] = "completed"
+                    search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                    
+                    # Generate behavioral data if not already present
+                    if not search_data.get("behavioral_data"):
                         try:
-                            db_update = {
-                                "id": search_data["id"],
-                                "request_id": search_data["request_id"],
-                                "status": "completed",
-                                "completed_at": search_data["completed_at"]
-                            }
-                            store_search_to_database(db_update)
-                            logger.info(f"Updated search status to completed in database for {request_id}")
-                        except Exception as update_error:
-                            logger.error(f"Error updating search status: {str(update_error)}")
+                            from behavioral_metrics import enhance_behavioral_data
+                            behavioral_data = enhance_behavioral_data({}, candidates, search_data.get("prompt", ""))
+                            search_data["behavioral_data"] = behavioral_data
+                            
+                            # Update the database
+                            try:
+                                db_update = {
+                                    "id": search_data["id"],
+                                    "request_id": search_data["request_id"],
+                                    "status": "completed",
+                                    "behavioral_data": json.dumps(behavioral_data),
+                                    "completed_at": search_data["completed_at"]
+                                }
+                                store_search_to_database(db_update)
+                                logger.info(f"Updated search with behavioral data for {request_id}")
+                            except Exception as update_error:
+                                logger.error(f"Error updating search: {str(update_error)}")
+                        except Exception as be:
+                            logger.error(f"Error generating behavioral data: {str(be)}")
             else:
                 logger.warning(f"Cannot get candidates: search_db_id not found for request_id {request_id}")
         except Exception as e:
             logger.error(f"Error getting candidates for search {request_id}: {str(e)}")
             # Continue even if getting candidates fails
         
-        # Always return a response with candidates if available
+        # Always return a response with candidates if available and force status to completed
+        if "candidates" in search_data and search_data["candidates"]:
+            search_data["status"] = "completed"
+            if not search_data.get("completed_at"):
+                search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+        
         return search_data
         
     except HTTPException:
