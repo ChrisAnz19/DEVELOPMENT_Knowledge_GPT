@@ -232,7 +232,216 @@ class SearchResponse(BaseModel):
         # This provides flexibility for future changes
         logger.info("Behavioral data has custom format, allowing for flexibility")
         return True
-# Add routes here (not shown for brevity)
+# API Routes
+
+@app.get("/")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.post("/api/search")
+async def create_search(
+    request: SearchRequest,
+    background_tasks: BackgroundTasks
+):
+    """Create a new search request."""
+    try:
+        # Generate a unique request ID
+        request_id = str(uuid.uuid4())
+        
+        # Create a timestamp for the request
+        created_at = datetime.now(timezone.utc).isoformat()
+        
+        # Store the initial search request in the database
+        search_data = {
+            "request_id": request_id,
+            "status": "processing",
+            "prompt": request.prompt,
+            "created_at": created_at,
+            "completed_at": None
+        }
+        
+        # Store the search in the database
+        store_search_to_database(search_data)
+        
+        # Process the search in the background
+        background_tasks.add_task(
+            process_search,
+            request_id=request_id,
+            prompt=request.prompt,
+            max_candidates=request.max_candidates,
+            include_linkedin=request.include_linkedin
+        )
+        
+        # Return the initial response
+        return search_data
+        
+    except Exception as e:
+        logger.error(f"Error creating search: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating search: {str(e)}")
+
+@app.get("/api/search/{request_id}")
+async def get_search_result(request_id: str):
+    """Get the results of a specific search by request ID."""
+    try:
+        # Get the search from the database
+        search_data = get_search_from_database(request_id)
+        
+        if not search_data:
+            raise HTTPException(status_code=404, detail="Search not found")
+            
+        return search_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting search result: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting search result: {str(e)}")
+
+@app.get("/api/search")
+async def list_searches():
+    """Get a list of all searches with their status."""
+    try:
+        # Get recent searches from the database
+        searches = get_recent_searches_from_database()
+        
+        return {"searches": searches}
+        
+    except Exception as e:
+        logger.error(f"Error listing searches: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error listing searches: {str(e)}")
+
+@app.delete("/api/search/{request_id}")
+async def delete_search(request_id: str):
+    """Delete a specific search and its results."""
+    try:
+        # Delete the search from the database
+        delete_search_from_database(request_id)
+        
+        return {"message": "Search request deleted from database"}
+        
+    except Exception as e:
+        logger.error(f"Error deleting search: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting search: {str(e)}")
+
+@app.get("/api/search/{request_id}/json")
+async def get_search_json(request_id: str):
+    """Get the raw JSON data for a search (useful for debugging)."""
+    try:
+        # Get the search from the database
+        search_data = get_search_from_database(request_id)
+        
+        if not search_data:
+            raise HTTPException(status_code=404, detail="Search not found")
+            
+        return search_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting search JSON: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting search JSON: {str(e)}")
+
+@app.get("/api/database/stats")
+async def get_database_stats():
+    """Get database statistics."""
+    try:
+        # Get recent searches from the database
+        searches = get_recent_searches_from_database()
+        
+        # Get current exclusions
+        exclusions = get_current_exclusions()
+        
+        return {
+            "database_status": "connected",
+            "total_searches": len(searches),
+            "total_candidates": sum(len(search.get("candidates", [])) for search in searches if search.get("candidates"))
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting database stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting database stats: {str(e)}")
+
+@app.get("/api/exclusions")
+async def get_exclusions():
+    """Get all currently excluded people."""
+    try:
+        # Get current exclusions
+        exclusions = get_current_exclusions()
+        
+        return {
+            "exclusions": exclusions,
+            "count": len(exclusions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting exclusions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting exclusions: {str(e)}")
+
+# Background task for processing searches
+async def process_search(
+    request_id: str,
+    prompt: str,
+    max_candidates: int = 3,
+    include_linkedin: bool = True
+):
+    """Process a search request in the background."""
+    try:
+        # Update the search status to processing
+        search_data = get_search_from_database(request_id)
+        if not search_data:
+            logger.error(f"Search not found: {request_id}")
+            return
+            
+        # Parse the prompt to filters
+        filters = parse_prompt_to_internal_database_filters(prompt)
+        
+        # Search for people via the internal database
+        people = await search_people_via_internal_database(filters, max_candidates)
+        
+        # Scrape LinkedIn profiles if requested
+        if include_linkedin and people:
+            people = await async_scrape_linkedin_profiles(people)
+            
+        # Select top candidates
+        candidates = select_top_candidates(people, prompt, max_candidates)
+        
+        # Add profile photo URLs
+        for candidate in candidates:
+            linkedin_profile = candidate.get("linkedin_profile", {})
+            profile_photo_url = extract_profile_photo_url(candidate, linkedin_profile)
+            if profile_photo_url:
+                candidate["profile_photo_url"] = profile_photo_url
+        
+        # Store people in the database
+        store_people_to_database(candidates, request_id)
+        
+        # Update the search data
+        search_data["status"] = "completed"
+        search_data["filters"] = filters
+        search_data["candidates"] = candidates
+        search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+        
+        # Store the updated search in the database
+        store_search_to_database(search_data)
+        
+    except Exception as e:
+        logger.error(f"Error processing search: {str(e)}")
+        
+        # Update the search status to failed
+        try:
+            search_data = get_search_from_database(request_id)
+            if search_data:
+                search_data["status"] = "failed"
+                search_data["error"] = str(e)
+                search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                store_search_to_database(search_data)
+        except Exception as update_error:
+            logger.error(f"Error updating search status: {str(update_error)}")
 
 # Server startup code
 if __name__ == "__main__":
