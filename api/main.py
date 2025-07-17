@@ -290,13 +290,13 @@ async def create_search(
             }
         
         # Store the completed search request in the database
+        # Note: Don't include candidates in the search_data as it's not in the database schema
         search_data = {
             "request_id": request_id,
             "status": "completed",  # Set to completed immediately
             "prompt": request.prompt,
-            "filters": {"mock": "filters"},
-            "candidates": mock_candidates,
-            "behavioral_data": behavioral_data,
+            "filters": json.dumps({"mock": "filters"}),  # Convert to JSON string
+            "behavioral_data": json.dumps(behavioral_data),  # Convert to JSON string
             "created_at": created_at,
             "completed_at": completed_at
         }
@@ -304,8 +304,14 @@ async def create_search(
         # Store the search in the database
         store_search_to_database(search_data)
         
+        # For the API response, include the candidates
+        response_data = search_data.copy()
+        response_data["candidates"] = mock_candidates
+        response_data["filters"] = {"mock": "filters"}  # Convert back to dict
+        response_data["behavioral_data"] = behavioral_data  # Convert back to dict
+        
         # Return the completed response immediately
-        return search_data
+        return response_data
         
     except Exception as e:
         logger.error(f"Error creating search: {str(e)}")

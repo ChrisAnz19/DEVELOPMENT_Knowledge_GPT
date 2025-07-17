@@ -15,17 +15,17 @@ import json
 from typing import Dict, List, Optional, Any, Union
 import os
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Try to import OpenAI, but make it optional
 try:
     import openai
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    logging.warning("OpenAI package not available. AI-based metrics will be disabled.")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    logger.warning("OpenAI package not available. AI-based metrics will be disabled.")
 
 # Initialize OpenAI client
 try:
