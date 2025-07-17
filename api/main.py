@@ -232,8 +232,7 @@ class SearchResponse(BaseModel):
         # This provides flexibility for future changes
         logger.info("Behavioral data has custom format, allowing for flexibility")
         return True
-#
- Add routes here (not shown for brevity)
+# Add routes here (not shown for brevity)
 
 # Server startup code
 if __name__ == "__main__":
