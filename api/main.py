@@ -232,3 +232,19 @@ class SearchResponse(BaseModel):
         # This provides flexibility for future changes
         logger.info("Behavioral data has custom format, allowing for flexibility")
         return True
+#
+ Add routes here (not shown for brevity)
+
+# Server startup code
+if __name__ == "__main__":
+    # Get port from environment variable for Render deployment
+    port = int(os.environ.get("PORT", 8000))
+    
+    # Start the server
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port,
+        reload=False,
+        log_level="info"
+    )
