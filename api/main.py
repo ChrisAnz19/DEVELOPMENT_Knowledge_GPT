@@ -641,23 +641,22 @@ async def process_search(
         if processing_state["is_processing"]:
             # Mark as no longer processing to prevent duplicate updates
             processing_state["is_processing"] = False
-            
+
             # Update search data
             search_data["status"] = "completed"  # Set status to completed
             search_data["filters"] = json.dumps(filters)  # Convert to JSON string
             search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-            
+
             # Log the search data before storing
             logger.info(f"Updating search {request_id} to completed status")
-            
+
             try:
                 # Check if record exists by request_id
                 existing_record = get_search_from_database(request_id)
-                
                 if existing_record:
-                    # Update existing record
                     # Ensure we're using the correct primary key
                     search_data["id"] = existing_record["id"]
+                    logger.info(f"Upserting search with payload: {search_data}")
                     # Store the updated search in the database
                     result = store_search_to_database(search_data)
                     logger.info(f"Search update result: {result}")
