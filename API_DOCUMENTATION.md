@@ -80,7 +80,15 @@ Get the results of a specific search by request ID.
         "experience": [...],
         "education": [...]
       },
-      "linkedin_posts": []
+      "linkedin_posts": [],
+      "behavioral_data": {
+        "behavioral_insight": "Given the CMO's high engagement with comprehensive market research reports, performance benchmarks, and emerging technologies, their CMI is high, indicating a readiness to take action rather than mere curiosity. However, the examination of case studies suggests a high RBFS, revealing a sensitivity to risk and a desire for proven success. Their search for marketing transformations in similar organizations indicates a strong IAS, demonstrating alignment with their role and goals.\n\nEngagement strategy: Position your solution as cutting-edge yet well-vetted, demonstrating its proven success within similar organizations. Stress how it can enhance their marketing performance and put them at the forefront of the SaaS industry. Ensure all communication aligns with their role and goals as a CMO, reinforcing their identity and ambition to drive transformative change.",
+        "scores": {
+          "cmi": { "score": 85, "explanation": "The CMO's high score indicates a preference for direct, detailed, and technical communication. They are likely to appreciate in-depth discussions and data-driven insights in their communication." },
+          "rbfs": { "score": 75, "explanation": "The Chief Marketing Officer (CMO) shows a balanced approach to risk, needing moderate validation. They are likely open to exploring opportunities but also consider potential barriers before making decisions." },
+          "ias": { "score": 85, "explanation": "The CMO shows a high alignment with their professional role through in-depth market research and strategic analysis, indicating strong identification with their expertise. This high score suggests a high level of engagement in marketing strategies and industry trends." }
+        }
+      }
     }
   ],
   "created_at": "2024-01-15T10:30:00Z",
@@ -213,64 +221,60 @@ interface SearchResponse {
   prompt: string;
   filters?: object;
   candidates?: Candidate[];
-  behavioral_data?: BehavioralData; // <-- updated type
   error?: string;
   created_at: string;
   completed_at?: string;
 }
 ```
 
-### BehavioralData (AI-Generated)
+### Candidate (with individualized behavioral_data)
+```typescript
+interface Candidate {
+  id: string;
+  name: string;
+  title: string;
+  organization: object;
+  profile_photo_url?: string;
+  linkedin_url?: string;
+  linkedin_profile?: object;
+  // ...other fields...
+  behavioral_data: BehavioralData; // <-- individualized per candidate
+}
+```
+
+### BehavioralData (AI-Generated, per candidate)
 ```typescript
 interface BehavioralData {
-  behavioral_insight: string; // AI-generated summary/insight for the search
+  behavioral_insight: string; // AI-generated summary/insight for the candidate
   scores: {
-    cmi: { score: number; explanation: string }; // Communication Maturity Index
+    cmi: { score: number; explanation: string }; // Commitment Momentum Index
     rbfs: { score: number; explanation: string }; // Risk-Barrier Focus Score
     ias: { score: number; explanation: string }; // Identity Alignment Signal
   };
 }
 ```
 
-**Example behavioral_data:**
+**Example candidate object:**
 ```json
 {
-  "behavioral_insight": "Given the CMO's high engagement with comprehensive market research reports, performance benchmarks, and emerging technologies, their CMI is high, indicating a readiness to take action rather than mere curiosity. However, the examination of case studies suggests a high RBFS, revealing a sensitivity to risk and a desire for proven success. Their search for marketing transformations in similar organizations indicates a strong IAS, demonstrating alignment with their role and goals.\n\nEngagement strategy: Position your solution as cutting-edge yet well-vetted, demonstrating its proven success within similar organizations. Stress how it can enhance their marketing performance and put them at the forefront of the SaaS industry. Ensure all communication aligns with their role and goals as a CMO, reinforcing their identity and ambition to drive transformative change.",
-  "scores": {
-    "cmi": {
-      "score": 85,
-      "explanation": "The CMO's high score indicates a preference for direct, detailed, and technical communication. They are likely to appreciate in-depth discussions and data-driven insights in their communication."
-    },
-    "rbfs": {
-      "score": 75,
-      "explanation": "The Chief Marketing Officer (CMO) shows a balanced approach to risk, needing moderate validation. They are likely open to exploring opportunities but also consider potential barriers before making decisions."
-    },
-    "ias": {
-      "score": 85,
-      "explanation": "The CMO shows a high alignment with their professional role through in-depth market research and strategic analysis, indicating strong identification with their expertise. This high score suggests a high level of engagement in marketing strategies and industry trends."
+  "id": "12345",
+  "name": "Jane Doe",
+  "title": "Chief Marketing Officer",
+  "organization": { "name": "Acme Corp" },
+  "profile_photo_url": "https://...",
+  "linkedin_url": "https://linkedin.com/in/janedoe",
+  "behavioral_data": {
+    "behavioral_insight": "High CMI, moderate RBFS, strong IAS. Prefers direct, data-driven communication.",
+    "scores": {
+      "cmi": { "score": 85, "explanation": "Prefers direct, detailed, and technical communication." },
+      "rbfs": { "score": 75, "explanation": "Balanced approach to risk, needs moderate validation." },
+      "ias": { "score": 85, "explanation": "Strong identification with professional role." }
     }
   }
 }
 ```
 
-**Note:** The `behavioral_data` field is always present on completed searches and contains both a summary insight and detailed scores for CMI, RBFS, and IAS.
-
-### Candidate
-```typescript
-interface Candidate {
-  name: string;
-  title: string;
-  company: string;
-  email: string;
-  accuracy: number; // 0-100
-  reasons: string[];
-  linkedin_url?: string;
-  profile_photo_url?: string;
-  location?: string;
-  linkedin_profile?: object;
-  linkedin_posts?: object[];
-}
-```
+**Note:** The `behavioral_data` field is always present on each candidate in completed searches and contains both a summary insight and detailed scores for CMI, RBFS, and IAS.
 
 ## 🚀 Frontend Integration Examples
 

@@ -170,7 +170,6 @@ class SearchResponse(BaseModel):
     prompt: str
     filters: Optional[Dict[str, Any]] = None
     candidates: Optional[List[Dict[str, Any]]] = None
-    behavioral_data: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     created_at: str
     completed_at: Optional[str] = None
@@ -311,12 +310,9 @@ async def get_search_result(request_id: str):
                 logger.warning(f"Failed to parse filters JSON for search {request_id}")
                 search_data["filters"] = {}
         
-        if "behavioral_data" in search_data and isinstance(search_data["behavioral_data"], str):
-            try:
-                search_data["behavioral_data"] = json.loads(search_data["behavioral_data"])
-            except json.JSONDecodeError:
-                logger.warning(f"Failed to parse behavioral_data JSON for search {request_id}")
-                search_data["behavioral_data"] = {}
+        # Remove the top-level behavioral_data field
+        if "behavioral_data" in search_data:
+            del search_data["behavioral_data"]
         
         # Get candidates for this search
         try:
@@ -613,14 +609,7 @@ async def process_search(
                 # Continue with next candidate
 
         # Optionally, generate a summary behavioral_data for the search (using the first candidate or all candidates)
-        try:
-            if candidates:
-                search_data["behavioral_data"] = json.dumps(candidates[0]["behavioral_data"])  # Or use a summary if desired
-            else:
-                search_data["behavioral_data"] = json.dumps({})
-        except Exception as be:
-            logger.error(f"Error generating search-level behavioral data: {str(be)}")
-            search_data["behavioral_data"] = json.dumps({})
+        # This block is removed as per the edit hint.
         
         # Update the search data only if we're still processing
         if processing_state["is_processing"]:
