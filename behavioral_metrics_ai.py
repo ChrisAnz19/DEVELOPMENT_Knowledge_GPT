@@ -2,12 +2,16 @@
 Behavioral Metrics AI Module
 
 This module provides AI-powered behavioral metrics for analyzing prospect behavior:
-- Communication Maturity Index (CMI)
+- Commitment Momentum Index (CMI): Forward motion vs. idle curiosity—i.e., is the person merely researching or already lining up next steps?
+  - Rising share of visits to execution pages (application portals, term-sheet checklists, checkout/pricing, “how to switch…” articles)
+  - Shorter intervals between sessions on the same topic
+  - Peak in late-night or mobile hits (signals personal, off-hours prioritization)
+  High CMI means decision is moving from “thinking about it” to “doing it.” Timing outreach to this upswing dramatically lifts response rates.
 - Risk-Barrier Focus Score (RBFS)
 - Identity Alignment Signal (IAS)
 
 These metrics provide deeper insights into prospect behavior, helping users better understand
-communication preferences, risk sensitivity, and professional identity alignment.
+commitment momentum, risk sensitivity, and professional identity alignment.
 """
 
 import logging
@@ -116,14 +120,12 @@ def generate_cmi_score_ai(
     candidate_data: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
-    Generates a Communication Maturity Index score using AI based on the prospect's role and data.
-    
-    Args:
-        role: The prospect's job title
-        candidate_data: Optional additional data about the candidate
-        
-    Returns:
-        A dictionary with score and explanation
+    Generates a Commitment Momentum Index (CMI) score using AI based on the prospect's role and data.
+    CMI: Forward motion vs. idle curiosity—i.e., is the person merely researching or already lining up next steps?
+    - Rising share of visits to execution pages (application portals, term-sheet checklists, checkout/pricing, “how to switch…” articles)
+    - Shorter intervals between sessions on the same topic
+    - Peak in late-night or mobile hits (signals personal, off-hours prioritization)
+    High CMI means decision is moving from “thinking about it” to “doing it.” Timing outreach to this upswing dramatically lifts response rates.
     """
     try:
         if not openai_client:
@@ -135,21 +137,22 @@ def generate_cmi_score_ai(
         
         # Create the prompt for the AI
         system_prompt = """
-        You are an expert in communication psychology and behavioral analysis. Your task is to generate a 
-        Communication Maturity Index (CMI) score for a prospect based on their role and available information.
+        You are an expert in behavioral analysis and sales psychology. Your task is to generate a Commitment Momentum Index (CMI) score for a prospect based on their role and available information.
         
-        The CMI measures how the prospect prefers to communicate and receive information:
-        - High scores (80-100): Prefers direct, detailed, and technical communication
-        - Medium scores (50-79): Balances technical and conceptual communication
-        - Low scores (0-49): Prefers high-level, conceptual communication
+        CMI measures forward motion vs. idle curiosity—i.e., is the person merely researching or already lining up next steps?
+        Behavioral cues for high CMI:
+        - Rising share of visits to execution pages (application portals, term-sheet checklists, checkout/pricing, “how to switch…” articles)
+        - Shorter intervals between sessions on the same topic
+        - Peak in late-night or mobile hits (signals personal, off-hours prioritization)
+        High CMI means decision is moving from “thinking about it” to “doing it.” Timing outreach to this upswing dramatically lifts response rates.
         
         Provide your response as a JSON object with two fields:
         1. "score": A number between 0 and 100
-        2. "explanation": A 1-2 sentence explanation of the score and what it means for communication
+        2. "explanation": A 1-2 sentence explanation of the score and what it means for commitment momentum
         """
         
         user_prompt_for_ai = f"""
-        Generate a Communication Maturity Index (CMI) score for a {role}.
+        Generate a Commitment Momentum Index (CMI) score for a {role}.
         
         Additional information about the prospect:
         {candidate_info}
@@ -404,7 +407,7 @@ def enhance_behavioral_data_ai(
             "scores": {
                 "cmi": {
                     "score": 70,
-                    "explanation": "Moderate communication maturity index suggests balanced communication approach."
+                    "explanation": "Moderate Commitment Momentum Index (CMI) suggests the prospect is past initial research and may be ready to engage. Look for behavioral cues like late-night research or repeat visits to key pages."
                 },
                 "rbfs": {
                     "score": 65,
@@ -498,28 +501,25 @@ def generate_fallback_insight(role: str) -> str:
         return "This professional responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits."
 
 def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
-    """Generate a fallback CMI score based on role."""
+    """Generate a fallback CMI score based on role (Commitment Momentum Index)."""
     role_lower = role.lower()
-    
-    # Technical roles prefer direct, technical communication
+    # Technical roles
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
         return {
             "score": 85,
-            "explanation": "High communication maturity index indicates preference for direct, technical communication with specific examples."
+            "explanation": "High Commitment Momentum Index (CMI) indicates this technical professional is moving from research to action—look for increased visits to execution pages and shorter intervals between sessions."
         }
-    
-    # Executive roles often prefer high-level strategic communication
+    # Executive roles
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         return {
             "score": 80,
-            "explanation": "Strong communication maturity index suggests this executive values clear, concise communication focused on strategic impact and outcomes."
+            "explanation": "Strong CMI suggests this executive is lining up next steps. Outreach during this upswing can dramatically lift response rates."
         }
-    
     # Default for other roles
     else:
         return {
             "score": 70,
-            "explanation": "Moderate to high communication maturity index suggests balanced communication with both conceptual and practical elements."
+            "explanation": "Moderate to high CMI suggests the prospect is past initial research and may be ready to engage. Look for behavioral cues like late-night research or repeat visits to key pages."
         }
 
 def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
