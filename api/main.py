@@ -621,35 +621,62 @@ async def process_search(
                 logger.error(f"Search record not found for update: {request_id}")
                 return
 
-            # Update search data while preserving required fields
+            # Debug: Log the existing record
+            logger.info(f"Existing record for {request_id}: id={existing_record.get('id')}, prompt='{existing_record.get('prompt', 'NULL')[:50] if existing_record.get('prompt') else 'NULL'}...', status={existing_record.get('status')}")
+
+            # Ensure we have a valid prompt - use existing or fallback to current
+            final_prompt = existing_record.get("prompt") or prompt
+            if not final_prompt:
+                logger.error(f"CRITICAL: No valid prompt found for search {request_id}. Existing: {existing_record.get('prompt')}, Current: {prompt}")
+                final_prompt = "Search query not available"  # Emergency fallback
+
+            # Validate all required fields before update
+            if not existing_record.get("id"):
+                logger.error(f"CRITICAL: No ID found in existing record for {request_id}")
+                return
+            
+            if not existing_record.get("request_id"):
+                logger.error(f"CRITICAL: No request_id found in existing record for {request_id}")
+                return
+
+            # Update search data while preserving ALL required fields
             update_data = {
-                "id": existing_record.get("id"),
-                "request_id": existing_record.get("request_id", request_id),
-                "prompt": existing_record.get("prompt", prompt),  # Use original prompt or fallback to current prompt
+                "id": existing_record["id"],  # Required: use existing ID
+                "request_id": existing_record["request_id"],  # Required: use existing request_id
+                "prompt": final_prompt,  # Required: validated prompt
                 "status": "completed",
                 "filters": json.dumps(filters),
-                "completed_at": datetime.now(timezone.utc).isoformat()
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                # Preserve other existing fields
+                "created_at": existing_record.get("created_at"),
+                "behavioral_data": existing_record.get("behavioral_data")
             }
-            
-            # Ensure we have all required fields
-            if not update_data["prompt"]:
-                update_data["prompt"] = prompt
-                logger.warning(f"Using fallback prompt for search {request_id}: {prompt}")
+
+            # Final validation before database update
+            if not update_data["prompt"] or update_data["prompt"] == "null":
+                logger.error(f"CRITICAL: Final prompt validation failed for {request_id}. Setting emergency fallback.")
+                update_data["prompt"] = f"Search request {request_id}"
 
             # Log the search data before storing
-            logger.info(f"Updating search {request_id} to completed status with prompt: {update_data['prompt']}")
+            logger.info(f"Updating search {request_id} with validated data:")
+            logger.info(f"  - ID: {update_data['id']}")
+            logger.info(f"  - Request ID: {update_data['request_id']}")
+            logger.info(f"  - Prompt: '{update_data['prompt'][:50]}...'")
+            logger.info(f"  - Status: {update_data['status']}")
 
             try:
                 # Store the updated search in the database
                 result = store_search_to_database(update_data)
-                logger.info(f"Search update result: {result}")
+                logger.info(f"✅ Search update successful: {result}")
             except Exception as db_error:
-                logger.error(f"Error updating search in database: {str(db_error)}")
+                logger.error(f"❌ Error updating search in database: {str(db_error)}")
+                logger.error(f"Update data was: {json.dumps(update_data, indent=2, default=str)}")
+                # Don't return here - continue with candidate storage
             
             # Store candidates separately
             try:
-                # Get the database ID for the search (not the request_id)
-                search_db_id = search_data.get("id")
+                # Get the database ID for the search from the existing record
+                search_db_id = existing_record.get("id")
                 if search_db_id:
                     # Store people with the search database ID
                     store_people_to_database(search_db_id, candidates)

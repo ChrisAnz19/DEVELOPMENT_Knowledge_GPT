@@ -49,6 +49,18 @@ except Exception as e:
     supabase = DummySupabase()
 
 def store_search_to_database(search_data):
+    # Validate required fields before upserting
+    if not search_data.get("prompt"):
+        logger.error(f"Cannot store search with null prompt: {search_data}")
+        raise ValueError("Search prompt cannot be null")
+    
+    if not search_data.get("request_id"):
+        logger.error(f"Cannot store search with null request_id: {search_data}")
+        raise ValueError("Search request_id cannot be null")
+    
+    # Log the data being stored for debugging
+    logger.info(f"Storing search data: request_id={search_data.get('request_id')}, prompt='{search_data.get('prompt')[:50]}...', status={search_data.get('status')}")
+    
     # Upsert search and return the new or updated search id
     res = supabase.table("searches").upsert(search_data).execute()
     if hasattr(res, 'data') and res.data:

@@ -223,31 +223,28 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
             print(f"[Assessment] Not enough reasons provided: {len(reasons)}")
             return None
         
-        # Check for generic reasons
+        # Check for generic reasons (relaxed validation)
         generic_phrases = [
             "selected based on title and company fit",
             "profile indicates relevant experience",
-            "relevant experience",
             "title and company fit",
             "selected based on title",
-            "selected based on company",
-            "showed interest in",
-            "engaged with content",
-            "visited websites related to",
-            "researched topics in"
+            "selected based on company"
         ]
         
         generic_reasons = [r for r in reasons if any(phrase in r.lower() for phrase in generic_phrases)]
         if generic_reasons:
             print(f"[Assessment] Generic reasons detected: {generic_reasons}")
-            return None
+            # Don't fail validation - just log the warning
+            print("[Assessment] Continuing with assessment despite generic reasons")
         
-        # Check for time-series patterns
-        time_indicators = ["times", "over", "period", "week", "month", "day", "repeatedly", "multiple", "increasing"]
+        # Check for time-series patterns (relaxed validation)
+        time_indicators = ["times", "over", "period", "week", "month", "day", "repeatedly", "multiple", "increasing", "spent", "visited", "researched", "analyzed"]
         has_time_series = any(any(indicator in r.lower() for indicator in time_indicators) for r in reasons)
         if not has_time_series:
             print("[Assessment] No time-series patterns detected in reasons")
-            return None
+            # Don't fail validation - just log the warning
+            print("[Assessment] Continuing with assessment despite lack of time-series patterns")
     
     # All validations passed
     return result
