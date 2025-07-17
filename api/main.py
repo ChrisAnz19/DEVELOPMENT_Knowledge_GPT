@@ -326,12 +326,32 @@ async def get_search_result(request_id: str):
                 if candidates:
                     search_data["candidates"] = candidates
                     logger.info(f"Found {len(candidates)} candidates for search {request_id}")
+                    
+                    # If we have candidates, force the status to completed to stop polling
+                    if search_data.get("status") == "processing":
+                        logger.info(f"Forcing status to completed for search {request_id}")
+                        search_data["status"] = "completed"
+                        search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                        
+                        # Update the database
+                        try:
+                            db_update = {
+                                "id": search_data["id"],
+                                "request_id": search_data["request_id"],
+                                "status": "completed",
+                                "completed_at": search_data["completed_at"]
+                            }
+                            store_search_to_database(db_update)
+                            logger.info(f"Updated search status to completed in database for {request_id}")
+                        except Exception as update_error:
+                            logger.error(f"Error updating search status: {str(update_error)}")
             else:
                 logger.warning(f"Cannot get candidates: search_db_id not found for request_id {request_id}")
         except Exception as e:
             logger.error(f"Error getting candidates for search {request_id}: {str(e)}")
             # Continue even if getting candidates fails
-            
+        
+        # Always return a response with candidates if available
         return search_data
         
     except HTTPException:
@@ -466,13 +486,18 @@ async def process_search(
             # Continue even if behavioral data generation fails
         
         # Update the search data
-        search_data["status"] = "completed"
+        search_data["status"] = "completed"  # Set status to completed
         search_data["filters"] = json.dumps(filters)  # Convert to JSON string
         # Don't include candidates in search_data as it's not in the database schema
         search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
         
+        # Log the search data before storing
+        logger.info(f"Updating search {request_id} to completed status")
+        logger.info(f"Search data before update: {search_data}")
+        
         # Store the updated search in the database
-        store_search_to_database(search_data)
+        result = store_search_to_database(search_data)
+        logger.info(f"Search update result: {result}")
         
         # Store candidates separately
         try:
