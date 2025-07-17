@@ -352,24 +352,8 @@ async def get_search_result(request_id: str):
                                 logger.error(f"Error updating search: {str(update_error)}")
                         except Exception as be:
                             logger.error(f"Error generating behavioral data: {str(be)}")
-                            # Provide fallback behavioral data
-                            search_data["behavioral_data"] = {
-                                "behavioral_insight": "This professional responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits.",
-                                "scores": {
-                                    "cmi": {
-                                        "score": 70,
-                                        "explanation": "Moderate communication maturity index suggests balanced communication approach."
-                                    },
-                                    "rbfs": {
-                                        "score": 65,
-                                        "explanation": "Moderate risk-barrier focus score indicates balanced approach to risk and opportunity."
-                                    },
-                                    "ias": {
-                                        "score": 75,
-                                        "explanation": "Moderate to high identity alignment signal suggests professional identifies with their role."
-                                    }
-                                }
-                            }
+                            # Set behavioral_data to None if generation fails
+                            search_data["behavioral_data"] = None
             else:
                 logger.warning(f"Cannot get candidates: search_db_id not found for request_id {request_id}")
         except Exception as e:
