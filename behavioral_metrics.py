@@ -13,6 +13,22 @@ communication preferences, risk sensitivity, and professional identity alignment
 import logging
 import random
 from typing import Dict, List, Optional, Any, Union
+import os
+
+# Import AI-based behavioral metrics functions
+try:
+    from behavioral_metrics_ai import (
+        generate_focused_insight_ai,
+        generate_cmi_score_ai,
+        generate_rbfs_score_ai,
+        generate_ias_score_ai,
+        enhance_behavioral_data_ai
+    )
+    AI_METRICS_AVAILABLE = True
+    logger.info("AI-based behavioral metrics available")
+except ImportError as e:
+    logger.warning(f"AI-based behavioral metrics not available: {str(e)}")
+    AI_METRICS_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -186,6 +202,7 @@ def enhance_behavioral_data(
 ) -> Dict[str, Any]:
     """
     Enhances existing behavioral data with a focused behavioral insight and three behavioral scores.
+    Uses AI-based generation when available, falls back to rule-based generation otherwise.
     
     Args:
         behavioral_data: Existing behavioral data
@@ -197,6 +214,16 @@ def enhance_behavioral_data(
         Enhanced behavioral data with focused insight and scores
     """
     try:
+        # Check if we should use AI-based behavioral metrics
+        use_ai = AI_METRICS_AVAILABLE and os.getenv('USE_AI_BEHAVIORAL_METRICS', 'true').lower() == 'true'
+        
+        if use_ai:
+            logger.info("Using AI-based behavioral metrics")
+            return enhance_behavioral_data_ai(behavioral_data, candidates, user_prompt, industry_context)
+        
+        # Fall back to rule-based behavioral metrics
+        logger.info("Using rule-based behavioral metrics")
+        
         # If behavioral_data is None, initialize with empty dict
         if behavioral_data is None:
             logger.warning("No behavioral data provided to enhance_behavioral_data")
