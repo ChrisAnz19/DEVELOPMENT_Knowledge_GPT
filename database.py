@@ -50,23 +50,32 @@ except Exception as e:
 
 def store_search_to_database(search_data):
     # Validate required fields before upserting
-    if not search_data.get("prompt"):
-        logger.error(f"Cannot store search with null prompt: {search_data}")
-        raise ValueError("Search prompt cannot be null")
-    
     if not search_data.get("request_id"):
         logger.error(f"Cannot store search with null request_id: {search_data}")
         raise ValueError("Search request_id cannot be null")
     
-    # Log the data being stored for debugging
-    logger.info(f"Storing search data: request_id={search_data.get('request_id')}, prompt='{search_data.get('prompt')[:50]}...', status={search_data.get('status')}")
+    # Handle null prompt case gracefully
+    if not search_data.get("prompt"):
+        logger.warning(f"Search {search_data.get('request_id')} has null prompt, using default")
+        search_data = search_data.copy()  # Don't modify the original
+        search_data["prompt"] = "No prompt provided"
     
-    # Upsert search and return the new or updated search id
-    res = supabase.table("searches").upsert(search_data).execute()
-    if hasattr(res, 'data') and res.data:
-        # Return the inserted or updated search's id
-        return res.data[0].get('id')
-    return None
+    # Log the data being stored for debugging
+    prompt_preview = search_data.get('prompt', '')[:50] if search_data.get('prompt') else 'None'
+    logger.info(f"Storing search data: request_id={search_data.get('request_id')}, prompt='{prompt_preview}...', status={search_data.get('status')}")
+    
+    try:
+        # Upsert search and return the new or updated search id
+        res = supabase.table("searches").upsert(search_data).execute()
+        if hasattr(res, 'data') and res.data:
+            # Return the inserted or updated search's id
+            return res.data[0].get('id')
+        return None
+    except Exception as e:
+        logger.error(f"Error storing search to database: {str(e)}")
+        logger.error(f"Search data: {search_data}")
+        # Re-raise the exception so calling code can handle it
+        raise
 
 def get_search_from_database(request_id):
     try:

@@ -84,9 +84,27 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
                     enriched_person["profile_photo_url"] = profile_photo_url
                     print(f"[Internal Database] Found profile photo: {profile_photo_url}")
                 
+                # Extract company name from organization data
+                if "organization" in enriched_person and enriched_person["organization"]:
+                    org = enriched_person["organization"]
+                    if isinstance(org, dict) and org.get("name"):
+                        enriched_person["company"] = org["name"]
+                        print(f"[Internal Database] Found company: {org['name']}")
+                    elif isinstance(org, str):
+                        # Sometimes organization is just a string
+                        enriched_person["company"] = org
+                        print(f"[Internal Database] Found company (string): {org}")
+                
+                # Ensure linkedin_url is properly formatted
+                linkedin_url = enriched_person.get("linkedin_url")
+                if linkedin_url and not linkedin_url.startswith("http"):
+                    # Add https:// if missing
+                    enriched_person["linkedin_url"] = f"https://{linkedin_url}"
+                
                 if enriched_person.get("linkedin_url"):
                     enriched.append(enriched_person)
-                    print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} ({enriched_person.get('linkedin_url')}) - Photo: {'Yes' if profile_photo_url else 'No'}")
+                    company_name = enriched_person.get("company", "Unknown Company")
+                    print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} at {company_name} ({enriched_person.get('linkedin_url')}) - Photo: {'Yes' if profile_photo_url else 'No'}")
                 else:
                     print(f"[Internal Database] Skipped (no LinkedIn): {enriched_person.get('name', 'Unknown')}")
             except Exception as e:

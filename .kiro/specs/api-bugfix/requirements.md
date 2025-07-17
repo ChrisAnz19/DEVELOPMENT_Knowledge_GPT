@@ -38,3 +38,36 @@ This feature aims to fix critical bugs in the Knowledge_GPT API that are causing
 2. WHEN handling callbacks and recursive functions THEN it SHALL include appropriate exit conditions
 3. WHEN a search is completed THEN it SHALL properly update the status without triggering additional processing
 4. WHEN the system encounters an error THEN it SHALL gracefully exit the processing flow without entering a loop
+
+### Requirement 4
+
+**User Story:** As a developer, I want to fix the null prompt database error, so that searches are stored correctly with valid prompt data.
+
+#### Acceptance Criteria
+
+1. WHEN storing search data THEN it SHALL ensure the prompt field is not null before database insertion
+2. WHEN a search has no prompt THEN it SHALL either provide a default value or handle the null case appropriately
+3. WHEN database constraints are violated due to null prompts THEN it SHALL log the error with detailed information
+4. WHEN updating search records THEN it SHALL validate all required fields before database operations
+
+### Requirement 5
+
+**User Story:** As a client, I want to receive complete candidate information including LinkedIn URL and company name, so that I have all necessary data for engagement.
+
+#### Acceptance Criteria
+
+1. WHEN the API returns candidate data THEN it SHALL include the LinkedIn URL if available
+2. WHEN the API returns candidate data THEN it SHALL include the company name if available
+3. WHEN LinkedIn scraping is enabled THEN it SHALL populate the LinkedIn URL field in the response
+4. WHEN candidate data is incomplete THEN it SHALL still return available fields without failing
+
+### Requirement 6
+
+**User Story:** As a client, I want engagement recommendations to use the candidate's actual first name, so that the recommendations are personalized and actionable.
+
+#### Acceptance Criteria
+
+1. WHEN generating engagement recommendations THEN it SHALL use the candidate's first name instead of generic terms
+2. WHEN the candidate's name is available THEN it SHALL extract the first name for personalization
+3. WHEN the candidate's name is not available THEN it SHALL use appropriate fallback language
+4. WHEN behavioral insights are generated THEN they SHALL reference the specific candidate by name

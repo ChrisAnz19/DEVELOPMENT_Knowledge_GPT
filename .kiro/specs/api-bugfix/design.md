@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the approach to fixing critical bugs in the Knowledge_GPT API that are causing search processing errors, database constraint violations, and infinite loops. The fixes will focus on proper async/await usage, database operation integrity, and elimination of infinite loops in the search processing flow.
+This design document outlines the approach to fixing critical bugs in the Knowledge_GPT API that are causing search processing errors, database constraint violations, infinite loops, null prompt errors, missing candidate data, and non-personalized engagement recommendations. The fixes will focus on proper async/await usage, database operation integrity, elimination of infinite loops, data validation, complete API responses, and personalized recommendations.
 
 ## Architecture
 
@@ -11,6 +11,9 @@ The bugfixes will address issues in the existing architecture without changing t
 1. **Async/Await Handling**: Fix improper usage of async/await in search processing
 2. **Database Operations**: Improve database operation handling to prevent constraint violations
 3. **Search Processing Flow**: Restructure the search processing flow to eliminate infinite loops
+4. **Data Validation**: Add validation for required fields like prompt before database operations
+5. **API Response Enhancement**: Ensure complete candidate data is returned including LinkedIn URLs and company names
+6. **Personalization**: Implement proper name extraction and usage in engagement recommendations
 
 ## Components and Interfaces
 
@@ -209,6 +212,110 @@ No changes to the data models are required for these bugfixes.
 3. Ensure status updates happen only once:
    - Track whether the status has been updated
    - Prevent multiple status updates for the same search
+
+### 4. Null Prompt Validation Fix
+
+The null prompt error occurs when trying to store search data without a valid prompt field. We'll add validation:
+
+```python
+# Current problematic code
+def store_search_to_database(search_data):
+    # No validation of required fields
+    # Direct database operation that fails on null prompt
+    pass
+
+# Fixed code
+def store_search_to_database(search_data):
+    """Store search data with proper validation."""
+    # Validate required fields
+    if not search_data.get("prompt"):
+        # Provide default or handle appropriately
+        if "request_id" in search_data:
+            logger.warning(f"Search {search_data['request_id']} has null prompt, using default")
+            search_data["prompt"] = "No prompt provided"
+        else:
+            logger.error("Cannot store search with null prompt and no request_id")
+            raise ValueError("Search prompt cannot be null")
+    
+    # Continue with database operation
+    # ...
+```
+
+### 5. Complete API Response Enhancement
+
+The API response is missing LinkedIn URLs and company names. We'll ensure complete data is returned:
+
+```python
+# Current problematic response
+{
+    "candidates": [
+        {
+            "name": "John Doe",
+            "title": "Senior Director of Commercial Sales"
+            # Missing linkedin_url and company_name
+        }
+    ]
+}
+
+# Fixed response
+{
+    "candidates": [
+        {
+            "name": "John Doe",
+            "title": "Senior Director of Commercial Sales",
+            "linkedin_url": "https://linkedin.com/in/johndoe",
+            "company_name": "TechCorp Inc"
+        }
+    ]
+}
+```
+
+Implementation:
+```python
+def format_candidate_response(candidate_data):
+    """Format candidate data ensuring all fields are included."""
+    response = {
+        "name": candidate_data.get("name", ""),
+        "title": candidate_data.get("title", ""),
+        "linkedin_url": candidate_data.get("linkedin_url", ""),
+        "company_name": candidate_data.get("company_name", ""),
+        # Include other fields...
+    }
+    return response
+```
+
+### 6. Personalized Engagement Recommendations
+
+The engagement recommendations use generic terms instead of the candidate's first name. We'll implement proper personalization:
+
+```python
+# Current problematic code
+behavioral_insight = "This Senior Director of Commercial Sales is actively researching..."
+
+# Fixed code
+def generate_personalized_insight(candidate_data, behavioral_data):
+    """Generate personalized behavioral insights using candidate's name."""
+    first_name = extract_first_name(candidate_data.get("name", ""))
+    title = candidate_data.get("title", "professional")
+    
+    if first_name:
+        insight = f"{first_name}, a {title}, is actively researching..."
+    else:
+        insight = f"This {title} is actively researching..."
+    
+    return insight
+
+def extract_first_name(full_name):
+    """Extract first name from full name."""
+    if not full_name:
+        return ""
+    
+    # Handle common name formats
+    name_parts = full_name.strip().split()
+    if name_parts:
+        return name_parts[0]
+    return ""
+```
 
 ## API Changes
 

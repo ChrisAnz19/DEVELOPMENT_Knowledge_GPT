@@ -48,6 +48,25 @@ except Exception as e:
     logger.error(f"Failed to initialize OpenAI client: {str(e)}")
     openai_client = None
 
+def extract_first_name(full_name: str) -> str:
+    """
+    Extract first name from full name.
+    
+    Args:
+        full_name: The candidate's full name
+        
+    Returns:
+        The first name, or empty string if not available
+    """
+    if not full_name or not isinstance(full_name, str):
+        return ""
+    
+    # Handle common name formats
+    name_parts = full_name.strip().split()
+    if name_parts:
+        return name_parts[0]
+    return ""
+
 def generate_focused_insight_ai(
     role: str,
     user_prompt: str,
@@ -55,6 +74,7 @@ def generate_focused_insight_ai(
 ) -> str:
     """
     Generates a focused behavioral insight using AI based on the prospect's role and data.
+    Uses the candidate's first name for personalization.
     
     Args:
         role: The prospect's job title
@@ -62,12 +82,16 @@ def generate_focused_insight_ai(
         candidate_data: Optional additional data about the candidate
         
     Returns:
-        A focused behavioral insight string
+        A focused behavioral insight string with personalized name usage
     """
     try:
         if not openai_client:
             logger.warning("OpenAI client not initialized, using fallback insight")
-            return generate_fallback_insight(role)
+            return generate_fallback_insight(role, candidate_data)
+        
+        # Extract candidate's first name for personalization
+        candidate_name = candidate_data.get("name", "") if candidate_data else ""
+        first_name = extract_first_name(candidate_name)
         
         # Extract relevant information from candidate data
         candidate_info = extract_candidate_info(candidate_data)
@@ -78,21 +102,28 @@ def generate_focused_insight_ai(
         actionable behavioral insight for engaging with a prospect. The insight should be specific, 
         tailored to the prospect's role and psychology, and provide clear guidance on how to engage effectively.
         
+        IMPORTANT: Always use the candidate's first name when referring to them in the insight. 
+        This makes the recommendation personal and actionable.
+        
         Focus on these three behavioral metrics:
         1. Commitment Momentum Index (CMI): Forward motion vs. idle curiosity—i.e., is the person merely researching or already lining up next steps?
         2. Risk-Barrier Focus Score (RBFS): How sensitive the person is to downside and friction.
         3. Identity Alignment Signal (IAS): Whether the choice fits their self-image / goals—key across career, investing, and purchasing.
         
         Your insight should be 2-3 sentences and should provide specific, actionable guidance on how to engage with the prospect.
+        Start the insight by referring to the candidate by their first name.
         """
         
+        name_instruction = f"The candidate's first name is '{first_name}'. " if first_name else "The candidate's name is not available, so use their role title. "
+        
         user_prompt_for_ai = f"""
-        Generate a focused behavioral insight for a {role} who was found in a search for "{user_prompt}".
+        {name_instruction}Generate a focused behavioral insight for a {role} who was found in a search for "{user_prompt}".
         
         Additional information about the prospect:
         {candidate_info}
         
         The insight should be specific to this role and search context, providing actionable guidance on how to engage with them.
+        Remember to use the candidate's first name ({first_name}) when referring to them in the insight.
         """
         
         # Call the OpenAI API
@@ -108,12 +139,12 @@ def generate_focused_insight_ai(
         
         # Extract and return the insight
         insight = response.choices[0].message.content.strip()
-        logger.info(f"Generated AI insight for {role}: {insight[:50]}...")
+        logger.info(f"Generated AI insight for {first_name or role}: {insight[:50]}...")
         return insight
         
     except Exception as e:
         logger.error(f"Error generating focused insight: {str(e)}")
-        return generate_fallback_insight(role)
+        return generate_fallback_insight(role, candidate_data)
 
 def generate_cmi_score_ai(
     role: str,
@@ -217,8 +248,15 @@ def generate_rbfs_score_ai(
         You are an expert in risk psychology and decision-making behavior. Your task is to generate a 
         Risk-Barrier Focus Score (RBFS) for a prospect based on their role and available information.
         
-        The RBFS indicates how the prospect approaches risk and decision barriers:
-        - High scores (80-100): Highly risk-averse, needs extensive validation
+        RBFS measures how sensitive the person is to downside and friction. Behavioral cues for high RBFS:
+        - Heavy consumption of "pros & cons," "hidden costs," Glassdoor or negative-review content
+        - Re-reads of FAQ, legal, security, compliance pages
+        - Searches that include "scam," "failure," "lawsuit," "layoffs," etc.
+        
+        A high RBFS flags risk-averse or politically exposed prospects. They need assurance (case studies, guarantees, references) before they will move.
+        
+        Score ranges:
+        - High scores (80-100): Highly risk-averse, needs extensive validation and assurance
         - Medium scores (50-79): Balanced approach to risk, needs moderate validation
         - Low scores (0-49): Risk-tolerant, focuses on opportunities over barriers
         
@@ -293,10 +331,17 @@ def generate_ias_score_ai(
         You are an expert in professional identity psychology and behavioral analysis. Your task is to generate an 
         Identity Alignment Signal (IAS) score for a prospect based on their role and available information.
         
-        The IAS measures how strongly the prospect identifies with their professional role:
-        - High scores (80-100): Strongly identifies with professional role and expertise
-        - Medium scores (50-79): Balanced identity between professional and other aspects
-        - Low scores (0-49): Less identification with professional role, more with other aspects
+        IAS measures whether the choice fits their self-image / goals—key across career, investing, and purchasing. Behavioral cues for high IAS:
+        - Visits to purpose-driven or values pages (DEI, sustainability, founder story)
+        - Long reads on thought-leadership or community posts
+        - Following brand or execs on social links clicked from site
+        
+        When IAS is high, the prospect feels personally aligned; emotional friction drops and word-of-mouth lift rises. Low IAS means you must reframe the narrative to their aspirations.
+        
+        Score ranges:
+        - High scores (80-100): Strong personal alignment with values and aspirations
+        - Medium scores (50-79): Moderate alignment, some resonance with brand values
+        - Low scores (0-49): Weak alignment, needs narrative reframing to match aspirations
         
         Provide your response as a JSON object with two fields:
         1. "score": A number between 0 and 100
@@ -480,25 +525,32 @@ def extract_candidate_info(candidate_data: Optional[Dict[str, Any]]) -> str:
 
 # Fallback functions for when AI generation fails
 
-def generate_fallback_insight(role: str) -> str:
-    """Generate a fallback insight based on role."""
+def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]] = None) -> str:
+    """Generate a fallback insight based on role, using candidate's name if available."""
     role_lower = role.lower()
+    
+    # Extract candidate's first name for personalization
+    candidate_name = candidate_data.get("name", "") if candidate_data else ""
+    first_name = extract_first_name(candidate_name)
+    
+    # Use first name if available, otherwise use role-based reference
+    name_ref = first_name if first_name else "This professional"
     
     # Technical roles
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return "This technical professional responds best to detailed, evidence-based communication. Start conversations by asking about their current technical challenges, then demonstrate how your solution addresses specific pain points with concrete examples and performance metrics."
+        return f"{name_ref} responds best to detailed, evidence-based communication. Start conversations by asking about their current technical challenges, then demonstrate how your solution addresses specific pain points with concrete examples and performance metrics."
     
     # Executive roles
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return "This executive values direct communication and strategic impact. Begin by acknowledging their business challenges, then present your solution with clear ROI metrics and competitive advantages. Focus on how your offering solves their specific business problems rather than technical details."
+        return f"{name_ref} values direct communication and strategic impact. Begin by acknowledging their business challenges, then present your solution with clear ROI metrics and competitive advantages. Focus on how your offering solves their specific business problems rather than technical details."
     
     # Sales roles
     elif any(sales in role_lower for sales in ["sales", "account", "business development"]):
-        return "This sales professional responds best to competitive differentiation and concrete outcomes. Start conversations by asking about their current sales targets, then demonstrate how your solution can help them exceed goals and outperform competitors."
+        return f"{name_ref} responds best to competitive differentiation and concrete outcomes. Start conversations by asking about their current sales targets, then demonstrate how your solution can help them exceed goals and outperform competitors."
     
     # Default for other roles
     else:
-        return "This professional responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits."
+        return f"{name_ref} responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits."
 
 def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     """Generate a fallback CMI score based on role (Commitment Momentum Index)."""
