@@ -545,21 +545,20 @@ async def process_search(
                     for i in range(0, len(linkedin_urls), batch_size):
                         batch_urls = linkedin_urls[i:i+batch_size]
                         try:
-                            # Add timeout for each batch
+                            # Add a fast timeout for each batch (6 seconds)
                             batch_profiles = await asyncio.wait_for(
                                 async_scrape_linkedin_profiles(batch_urls),
-                                timeout=120  # 2 minute timeout per batch
+                                timeout=6  # 6 second timeout per batch
                             )
                             if batch_profiles:
                                 linkedin_profiles.extend(batch_profiles)
                                 logger.info(f"Successfully scraped batch {i//batch_size + 1} with {len(batch_profiles)} profiles")
                         except asyncio.TimeoutError:
-                            logger.error(f"Timeout scraping LinkedIn batch {i//batch_size + 1} for search {request_id}")
-                            # Continue with next batch
+                            logger.warning(f"Timeout (6s) scraping LinkedIn batch {i//batch_size + 1} for search {request_id}. Skipping ScrapingDog and using Apollo data only for assessment.")
+                            continue
                         except Exception as batch_error:
-                            logger.error(f"Error scraping LinkedIn batch {i//batch_size + 1} for search {request_id}: {str(batch_error)}")
-                            # Continue with next batch
-                        
+                            logger.error(f"Error scraping LinkedIn batch {i//batch_size + 1} for search {request_id}: {str(batch_error)}. Skipping ScrapingDog and using Apollo data only for assessment.")
+                            continue
                         # Add a small delay between batches
                         await asyncio.sleep(1)
                     
