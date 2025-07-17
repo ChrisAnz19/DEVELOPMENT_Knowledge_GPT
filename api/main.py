@@ -420,6 +420,16 @@ async def process_search(
         # Store people in the database
         store_people_to_database(candidates, request_id)
         
+        # Generate behavioral data
+        try:
+            from behavioral_metrics import enhance_behavioral_data
+            behavioral_data = enhance_behavioral_data({}, candidates, prompt)
+            search_data["behavioral_data"] = behavioral_data
+            logger.info(f"Generated behavioral data: {behavioral_data}")
+        except Exception as be:
+            logger.error(f"Error generating behavioral data: {str(be)}")
+            # Continue even if behavioral data generation fails
+        
         # Update the search data
         search_data["status"] = "completed"
         search_data["filters"] = filters
@@ -428,6 +438,8 @@ async def process_search(
         
         # Store the updated search in the database
         store_search_to_database(search_data)
+        
+        logger.info(f"Search completed successfully: {request_id}")
         
     except Exception as e:
         logger.error(f"Error processing search: {str(e)}")
