@@ -1,0 +1,118 @@
+{
+  "request_id": "9d730150-1e2f-4a81-9bc1-6c74874413a3",
+  "status": "completed",
+  "prompt": "Find marketing directors in San Francisco",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Marketing Director"
+      ],
+      "person_locations": [
+        "San Francisco"
+      ],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for Marketing Directors located in San Francisco."
+  },
+  "candidates": [
+    {
+      "name": "Emily Chen",
+      "title": "Marketing Director",
+      "company": "TechSolutions Inc.",
+      "email": "emily.chen@techsolutions.com",
+      "accuracy": 85,
+      "reasons": [
+        "Regularly visits websites related to marketing automation tools",
+        "Frequent engagement with case studies on SaaS marketing solutions",
+        "Attended webinars on B2B lead generation"
+      ],
+      "linkedin_url": null,
+      "profile_photo_url": null,
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 109
+    },
+    {
+      "name": "Michael Patel",
+      "title": "Marketing Director",
+      "company": "DataDriven Solutions",
+      "email": "michael.patel@datadriven.com",
+      "accuracy": 78,
+      "reasons": [
+        "Visited pricing pages of various marketing software providers",
+        "Downloaded whitepapers on marketing automation trends",
+        "Engaged with competitor product pages"
+      ],
+      "linkedin_url": null,
+      "profile_photo_url": null,
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 109
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Marketing Directors in San Francisco are highly engaged with content related to digital marketing strategies, social media advertising, and customer acquisition.",
+      "technology_adoption_trends": "These Marketing Directors are early adopters of marketing automation platforms, CRM systems, and data analytics tools to optimize their campaigns and track ROI.",
+      "decision_making_behaviors": "They tend to make data-driven decisions, leveraging analytics to measure the performance of their marketing initiatives and adjust strategies accordingly.",
+      "market_dynamics": "In San Francisco, Marketing Directors are influenced by trends in tech innovation, sustainability, and diversity & inclusion, shaping their marketing campaigns to align with the values of the local community."
+    },
+    "supporting_data_points": {
+      "engagement_data": {
+        "top_content_topics": [
+          "Digital marketing strategies",
+          "Social media advertising",
+          "Customer acquisition"
+        ],
+        "engagement_channels": [
+          "Marketing webinars",
+          "Industry conferences",
+          "LinkedIn groups"
+        ]
+      },
+      "technology_adoption_data": {
+        "common_tools_used": [
+          "HubSpot",
+          "Salesforce",
+          "Google Analytics"
+        ],
+        "adoption_rates_comparison": {
+          "Marketing automation platforms": "Higher adoption rates compared to national average",
+          "CRM systems": "Above-average adoption rates",
+          "Data analytics tools": "Significantly higher adoption rates"
+        }
+      },
+      "decision_making_data": {
+        "preferred_metrics": [
+          "ROI",
+          "Conversion rates",
+          "Customer lifetime value"
+        ],
+        "decision_influencers": [
+          "Marketing performance data",
+          "Competitor analysis",
+          "Consumer behavior trends"
+        ]
+      },
+      "market_dynamics_data": {
+        "influential_trends": [
+          "Tech innovation",
+          "Sustainability",
+          "Diversity & inclusion"
+        ],
+        "alignment_strategies": [
+          "Incorporating tech-forward solutions",
+          "Promoting eco-friendly practices",
+          "Embracing diversity in marketing campaigns"
+        ]
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-15T22:50:02.592781+00:00",
+  "completed_at": "2025-07-15T22:52:55.360681+00:00"
+}

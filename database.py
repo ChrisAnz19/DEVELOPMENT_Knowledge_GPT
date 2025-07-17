@@ -5,11 +5,45 @@ Handles Supabase connection and operations for storing search results and candid
 """
 
 import logging
-from supabase_client import supabase
+import sys
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+try:
+    from supabase_client import supabase
+except Exception as e:
+    logger.error(f"Failed to import supabase client: {e}")
+    # Create a dummy supabase object to prevent import errors
+    class DummySupabase:
+        def table(self, name):
+            return DummyTable()
+    
+    class DummyTable:
+        def select(self, *args, **kwargs):
+            return self
+        def insert(self, data):
+            return self
+        def delete(self):
+            return self
+        def eq(self, field, value):
+            return self
+        def order(self, field, desc=False):
+            return self
+        def limit(self, limit):
+            return self
+        def single(self):
+            return self
+        def execute(self):
+            return DummyResult()
+    
+    class DummyResult:
+        def __init__(self):
+            self.data = []
+            self.count = 0
+    
+    supabase = DummySupabase()
 
 def store_search_to_database(search_data):
     # Insert search and return the new search id
@@ -20,22 +54,42 @@ def store_search_to_database(search_data):
     return None
 
 def get_search_from_database(request_id):
-    res = supabase.table("searches").select("*").eq("request_id", request_id).single().execute()
-    return res.data
+    try:
+        # Use a more explicit query structure to avoid 406 errors
+        res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").eq("request_id", request_id).execute()
+        if hasattr(res, 'data') and res.data:
+            return res.data[0]  # Return the first (and should be only) result
+        return None
+    except Exception as e:
+        # If no rows found or other error, return None
+        logger.debug(f"No search found for request_id {request_id}: {e}")
+        return None
 
 def get_recent_searches_from_database(limit=10):
-    res = supabase.table("searches").select("*").order("created_at", desc=True).limit(limit).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").order("created_at", desc=True).limit(limit).execute()
     return res.data
 
 def store_people_to_database(search_id, people):
-    # Insert each person with the search_id
+    # Insert each person with the search_id, but only include fields that exist in the schema
+    schema_fields = {
+        'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
+        'profile_photo_url', 'location', 'accuracy', 'reasons', 
+        'linkedin_profile', 'linkedin_posts'
+    }
+    
+    filtered_people = []
     for person in people:
-        person["search_id"] = search_id
-    if people:
-        supabase.table("people").insert(people).execute()
+        filtered_person = {'search_id': search_id}
+        for field in schema_fields:
+            if field in person and person[field] is not None:
+                filtered_person[field] = person[field]
+        filtered_people.append(filtered_person)
+    
+    if filtered_people:
+        supabase.table("people").insert(filtered_people).execute()
 
 def get_people_for_search(search_id):
-    res = supabase.table("people").select("*").eq("search_id", search_id).execute()
+    res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, created_at").eq("search_id", search_id).execute()
     return res.data
 
 def is_person_excluded_in_database(email, days=30):
@@ -62,6 +116,31 @@ def delete_search_from_database(request_id):
     supabase.table("searches").delete().eq("request_id", request_id).execute()
     return True
 
+def get_current_exclusions(days=30):
+    """Return a list of people (email, name, company, created_at) in the people table within the last N days."""
+    from datetime import datetime, timedelta
+    import pytz
+    now = datetime.now(pytz.UTC)
+    cutoff = now - timedelta(days=days)
+    res = supabase.table("people").select("email, name, company, created_at").execute()
+    exclusions = []
+    if hasattr(res, 'data') and res.data:
+        for row in res.data:
+            created_at = row.get("created_at")
+            if created_at:
+                try:
+                    created_at_dt = datetime.fromisoformat(created_at)
+                    if created_at_dt > cutoff:
+                        exclusions.append({
+                            "email": row.get("email"),
+                            "name": row.get("name"),
+                            "company": row.get("company"),
+                            "created_at": created_at
+                        })
+                except Exception:
+                    continue
+    return exclusions
+
 if __name__ == "__main__":
     # Test database connection
     print("🧪 Testing Database Connection...")
@@ -70,14 +149,14 @@ if __name__ == "__main__":
     # The direct calls to the new functions are added.
     
     # Test a simple query
-    res = supabase.table("searches").select("*").limit(1).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, created_at").limit(1).execute()
     if res.data:
         print(f"⏰ Current database time: {res.data[0]['created_at']}")
     else:
         print("No data found in searches table.")
         
     # Show table structure
-    res = supabase.table("searches").select("*").limit(1).execute()
+    res = supabase.table("searches").select("id, request_id, status, prompt, created_at").limit(1).execute()
     if res.data:
         print("\n📋 Database Tables:")
         print(f"  - Table: searches")

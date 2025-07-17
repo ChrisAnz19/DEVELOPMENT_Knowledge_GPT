@@ -1,0 +1,115 @@
+{
+  "request_id": "dae73ecf-0b85-40bd-a6fc-f6a1a61dbcc0",
+  "status": "completed",
+  "prompt": "Find marketing directors in San Francisco",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Marketing Director"
+      ],
+      "person_locations": [
+        "San Francisco"
+      ],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for Marketing Directors located in San Francisco."
+  },
+  "candidates": [
+    {
+      "name": "Emily Chen",
+      "title": "Marketing Director",
+      "company": "TechSolutions Inc.",
+      "email": "emily.chen@techsolutions.com",
+      "accuracy": 85,
+      "reasons": [
+        "Visited the pricing page of Marketo three times in the last month",
+        "Downloaded a whitepaper on marketing automation trends from HubSpot",
+        "Engaged with case studies about SaaS marketing solutions"
+      ],
+      "linkedin_url": null,
+      "profile_photo_url": null,
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 108
+    },
+    {
+      "name": "David Kim",
+      "title": "Marketing Director",
+      "company": "CloudWorks Corp.",
+      "email": "david.kim@cloudworks.com",
+      "accuracy": 78,
+      "reasons": [
+        "Spent 20 minutes on the Salesforce integration documentation",
+        "Attended a webinar on B2B lead generation hosted by Demandbase",
+        "Compared features of Pardot and Eloqua on a review site"
+      ],
+      "linkedin_url": null,
+      "profile_photo_url": null,
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 108
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Marketing Directors in San Francisco tend to engage with content related to digital marketing strategies, social media marketing, and marketing automation tools.",
+      "technology_adoption_trends": "These Marketing Directors are likely early adopters of marketing technology platforms such as CRM systems, marketing automation tools, and data analytics software.",
+      "decision-making_behaviors": "Marketing Directors in San Francisco exhibit a preference for data-driven decision-making, often relying on analytics and performance metrics to evaluate marketing campaigns and strategies.",
+      "market_dynamics": "In the competitive San Francisco market, Marketing Directors are constantly seeking innovative ways to differentiate their brands, leading to a high demand for personalized marketing solutions and cutting-edge technologies."
+    },
+    "supporting_data_points": {
+      "engagement_data": {
+        "top_content_topics": [
+          "Digital Marketing Strategies",
+          "Social Media Marketing",
+          "Marketing Automation"
+        ],
+        "popular_content_formats": [
+          "Whitepapers",
+          "Webinars",
+          "Case Studies"
+        ]
+      },
+      "technology_adoption_data": {
+        "commonly_adopted_technologies": [
+          "CRM Systems",
+          "Marketing Automation Tools",
+          "Data Analytics Software"
+        ],
+        "preferred_integration_methods": [
+          "API Integrations",
+          "Customized Solutions"
+        ]
+      },
+      "decision_making_data": {
+        "key_metrics_utilized": [
+          "ROI",
+          "Conversion Rates",
+          "Customer Acquisition Cost"
+        ],
+        "decision_criteria": [
+          "Performance Analytics",
+          "Market Research Insights",
+          "Competitor Analysis"
+        ]
+      },
+      "market_data": {
+        "demand_trends": [
+          "Personalized Marketing Solutions",
+          "Cutting-edge Technologies"
+        ],
+        "competitive_analysis": [
+          "Brand Differentiation Strategies",
+          "Innovative Marketing Campaigns"
+        ]
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-15T22:50:12.648109+00:00",
+  "completed_at": "2025-07-15T22:51:39.576418+00:00"
+}

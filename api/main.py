@@ -7,6 +7,7 @@ import json
 import asyncio
 from datetime import datetime, timezone
 import uuid
+import time
 
 # Import the existing Knowledge_GPT modules
 import sys
@@ -23,17 +24,20 @@ if not os.getenv('OPENAI_API_KEY'):
             os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
             os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '')
             os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '')
+            os.environ['SUPABASE_URL'] = secrets.get('supabase_url', '')
+            os.environ['SUPABASE_KEY'] = secrets.get('supabase_key', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
 from prompt_formatting import parse_prompt_to_internal_database_filters, simulate_behavioral_data
 from apollo_api_call import search_people_via_internal_database
-# from linkedin_scraping import async_scrape_linkedin_profiles
+from linkedin_scraping import async_scrape_linkedin_profiles
 from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
-    store_people_to_database, get_people_for_search, is_person_excluded_in_database
+    store_people_to_database, get_people_for_search, is_person_excluded_in_database,
+    get_current_exclusions
 )
 import logging
 
@@ -60,7 +64,7 @@ app.add_middleware(
 # Pydantic models for request/response
 class SearchRequest(BaseModel):
     prompt: str
-    max_candidates: Optional[int] = 2
+    max_candidates: Optional[int] = 3
     include_linkedin: Optional[bool] = True
 
 class SearchResponse(BaseModel):
@@ -84,6 +88,10 @@ logger.info("🚀 Knowledge_GPT API starting up...")
 
 # In-memory storage for fallback only
 search_results = {}
+
+# Cache for database queries to reduce load
+search_cache = {}
+CACHE_TTL = 30  # Cache for 30 seconds
 
 # JSON file storage for persistent data
 def save_search_to_json(request_id: str, data: dict):
@@ -118,6 +126,36 @@ async def health_check():
         version="1.0.0"
     )
 
+@app.get("/api/test")
+async def test_endpoint():
+    """Test endpoint for debugging frontend issues"""
+    return {
+        "message": "API is working",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "cors_test": "This should work from frontend"
+    }
+
+@app.get("/api/cache/clear")
+async def clear_cache():
+    """Clear the search cache to force fresh database queries"""
+    global search_cache
+    cache_size = len(search_cache)
+    search_cache.clear()
+    return {
+        "message": f"Cache cleared. Removed {cache_size} entries.",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/cache/stats")
+async def cache_stats():
+    """Get cache statistics"""
+    return {
+        "cache_size": len(search_cache),
+        "cache_ttl_seconds": CACHE_TTL,
+        "cached_requests": list(search_cache.keys()),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 @app.post("/api/search", response_model=SearchResponse)
 async def create_search(request: SearchRequest, background_tasks: BackgroundTasks):
     """Create a new search request"""
@@ -141,28 +179,105 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
 async def get_search_result(request_id: str):
     """Get search result by request ID"""
     try:
+        logger.info(f"Frontend request for search: {request_id}")
+        
+        # Check cache first to reduce database load
+        current_time = time.time()
+        if request_id in search_cache:
+            cache_entry = search_cache[request_id]
+            if current_time - cache_entry['timestamp'] < CACHE_TTL:
+                logger.info(f"Returning cached result for {request_id}")
+                return cache_entry['data']
+            else:
+                # Cache expired, remove it
+                del search_cache[request_id]
+        
+        # Add CORS headers explicitly for debugging
+        from fastapi.responses import Response
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        
         db_result = get_search_from_database(request_id)
-        if db_result:
+        logger.info(f"Database result for {request_id}: {db_result is not None}")
+        
+        if db_result and isinstance(db_result, dict):
             # Fetch candidates from people table using search id
             search_id = db_result.get("id")
+            logger.info(f"Search ID from database: {search_id}")
+            
             candidates = get_people_for_search(search_id) if search_id else []
+            logger.info(f"Found {len(candidates)} candidates for search {search_id}")
+            
             # Build response dict
             response_data = dict(db_result)
             response_data["candidates"] = candidates
-            return SearchResponse(**response_data)
+            
+            # Validate the response data
+            try:
+                validated_response = SearchResponse(**response_data)
+                logger.info(f"Successfully validated response for {request_id}")
+                
+                # Cache the successful result
+                search_cache[request_id] = {
+                    'data': validated_response,
+                    'timestamp': current_time
+                }
+                
+                return validated_response
+            except Exception as validation_error:
+                logger.error(f"Validation error for {request_id}: {validation_error}")
+                # Return a simplified response if validation fails
+                simplified_response = SearchResponse(
+                    request_id=request_id,
+                    status=db_result.get("status", "unknown"),
+                    prompt=db_result.get("prompt", ""),
+                    created_at=db_result.get("created_at", ""),
+                    candidates=candidates
+                )
+                
+                # Cache the simplified result too
+                search_cache[request_id] = {
+                    'data': simplified_response,
+                    'timestamp': current_time
+                }
+                
+                return simplified_response
+        
         # Fallback to in-memory storage
         if request_id in search_results:
-            return search_results[request_id]
-        logger.warning(f"No search found in database for request_id: {request_id}")
-        # Return 202 if still processing
-        return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
+            logger.info(f"Using in-memory result for {request_id}")
+            in_memory_result = search_results[request_id]
+            
+            # Cache the in-memory result
+            search_cache[request_id] = {
+                'data': in_memory_result,
+                'timestamp': current_time
+            }
+            
+            return in_memory_result
+        
+        # Check if search exists in JSON files
+        json_result = load_search_from_json(request_id)
+        if json_result:
+            logger.info(f"Using JSON result for {request_id}")
+            return SearchResponse(**json_result)
+        
+        # If no search found anywhere, return 404
+        logger.warning(f"No search found for request_id: {request_id}")
+        raise HTTPException(status_code=404, detail=f"Search with ID {request_id} not found")
+        
+    except HTTPException as e:
+        # Re-raise HTTP exceptions (like 404)
+        logger.info(f"HTTPException for {request_id}: {e}")
+        raise
     except Exception as e:
-        # Handle Supabase 406 error (no rows)
-        if isinstance(e, dict) and e.get('code') == 'PGRST116':
-            logger.warning(f"Supabase: No search found for request_id: {request_id}")
-            return {"status": "processing", "message": "Search is still processing. Please try again in a few seconds."}, 202
         logger.error(f"Error retrieving search result for {request_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error details: {str(e)}")
+        # Return a more specific error message
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/api/search")
 async def list_searches():
@@ -240,6 +355,16 @@ async def get_search_json(request_id: str):
     
     return json_data
 
+@app.get("/api/exclusions")
+async def get_exclusions():
+    """Get list of currently excluded people (within last 30 days)"""
+    try:
+        exclusions = get_current_exclusions(days=30)
+        return {"exclusions": exclusions}
+    except Exception as e:
+        logger.error(f"Error retrieving exclusions: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
 async def process_search(request_id: str, request: SearchRequest):
     """Background task to process the search"""
     try:
@@ -261,20 +386,25 @@ async def process_search(request_id: str, request: SearchRequest):
         # Step 2: Search our internal database for people
         logger.info(f"[{request_id}] Searching our internal database...")
         try:
-            people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 2)
-            logger.info(f"[{request_id}] Found {len(people)} people")
+            logger.info(f"[{request_id}] Calling Apollo API with filters: {filters}")
+            people = search_people_via_internal_database(filters, page=1, per_page=request.max_candidates or 3)
+            logger.info(f"[{request_id}] Found {len(people)} people from Apollo API")
             
             # Filter out excluded people (already in people table within 30 days)
             if people:
                 filtered_people = []
                 for person in people:
                     email = person.get("email", "")
+                    logger.info(f"[{request_id}] Checking exclusion for {email}")
                     if email and is_person_excluded_in_database(email):
                         logger.info(f"[{request_id}] Excluded {email} (already processed within 30 days)")
                     else:
                         filtered_people.append(person)
+                        logger.info(f"[{request_id}] Kept {email}")
                 people = filtered_people
                 logger.info(f"[{request_id}] Filtered, {len(people)} remaining")
+            else:
+                logger.warning(f"[{request_id}] No people returned from Apollo API")
             
             if not people:
                 # Fall back to behavioral simulation
@@ -294,24 +424,39 @@ async def process_search(request_id: str, request: SearchRequest):
             result.completed_at = datetime.now(timezone.utc).isoformat()
             return
         
-        # Step 3: Scrape LinkedIn profiles (if enabled)
-        # if request.include_linkedin:
-        #     logger.info(f"[{request_id}] Scraping LinkedIn profiles...")
-        #     linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
-        #     if linkedin_urls:
-        #         profile_data = await async_scrape_linkedin_profiles(linkedin_urls)
-        #         # Merge profile data with our internal database data
-        #         enriched_people = []
-        #         for i, person in enumerate(people):
-        #             if person.get("linkedin_url") and profile_data:
-        #                 if isinstance(profile_data, list) and i < len(profile_data):
-        #                     person["linkedin_profile"] = profile_data[i]
-        #                 elif isinstance(profile_data, dict) and str(i) in profile_data:
-        #                     person["linkedin_profile"] = profile_data[str(i)]
-        #             enriched_people.append(person)
-        #         people = enriched_people
-        #         logger.info(f"[{request_id}] LinkedIn profiles scraped")
+        # Step 3: Scrape LinkedIn profiles (if enabled) - with 15 second timeout
+        if request.include_linkedin:
+            logger.info(f"[{request_id}] Scraping LinkedIn profiles...")
+            linkedin_urls = [person.get("linkedin_url") for person in people if person.get("linkedin_url")]
+            if linkedin_urls:
+                try:
+                    # Add timeout to LinkedIn scraping to prevent blocking
+                    profile_data = await asyncio.wait_for(
+                        async_scrape_linkedin_profiles(linkedin_urls), 
+                        timeout=15.0  # 15 second timeout - skip if too slow
+                    )
+                    # Merge profile data with our internal database data
+                    enriched_people = []
+                    for i, person in enumerate(people):
+                        if person.get("linkedin_url") and profile_data:
+                            if isinstance(profile_data, list) and i < len(profile_data):
+                                person["linkedin_profile"] = profile_data[i]
+                            elif isinstance(profile_data, dict) and str(i) in profile_data:
+                                person["linkedin_profile"] = profile_data[str(i)]
+                        enriched_people.append(person)
+                    people = enriched_people
+                    logger.info(f"[{request_id}] LinkedIn profiles scraped successfully")
+                except asyncio.TimeoutError:
+                    logger.warning(f"[{request_id}] LinkedIn scraping timed out after 15s, skipping LinkedIn data")
+                except Exception as e:
+                    logger.error(f"[{request_id}] LinkedIn scraping failed: {e}, continuing without LinkedIn data")
+            else:
+                logger.info(f"[{request_id}] No LinkedIn URLs found, skipping LinkedIn scraping")
         
+        # Filter out candidates without a company before assessment
+        people = [p for p in people if p.get("company") or (p.get("organization") and p["organization"].get("name"))]
+        logger.info(f"[{request_id}] Excluded candidates without company. {len(people)} remaining.")
+
         # Step 5: Assess and select top candidates
         logger.info(f"[{request_id}] Assessing candidates...")
         try:
@@ -340,6 +485,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 # --- PATCH: Always set company from Apollo organization.name if present ---
                 if person_data.get("organization") and person_data["organization"].get("name"):
                     company = person_data["organization"]["name"]
+                # Initialize photo URL from Apollo data first
                 photo_url = (
                     person_data.get("profile_photo_url")
                     or person_data.get("photo_url")
@@ -348,8 +494,8 @@ async def process_search(request_id: str, request: SearchRequest):
                 location = person_data.get("location")
                 linkedin_profile = person_data.get("linkedin_profile", {})
                 
-                # Extract data from ScrapingDog LinkedIn profile
-                if linkedin_profile:
+                # Extract data from ScrapingDog LinkedIn profile (if available)
+                if linkedin_profile and isinstance(linkedin_profile, dict):
                     # Extract company from description
                     description = linkedin_profile.get("description", {})
                     if description and isinstance(description, dict):
@@ -362,21 +508,30 @@ async def process_search(request_id: str, request: SearchRequest):
                     if linkedin_location and linkedin_location != "Unknown":
                         location = linkedin_location
                     
-                    # Extract profile photo
+                    # Extract profile photo - prioritize LinkedIn photo if available
                     photo_fields = ["profile_photo", "profile_photo_url", "avatar", "image", "picture", "photo"]
                     for field in photo_fields:
                         if linkedin_profile.get(field):
                             photo_url = linkedin_profile[field]
                             break
                 
+                # Final fallback for photo URL
                 if not photo_url:
-                    photo_url = person_data.get("profile_photo_url")
+                    photo_url = (
+                        person_data.get("profile_photo_url")
+                        or person_data.get("photo_url")
+                        or None
+                    )
                 # Log what will be stored
                 logger.info(f"[Candidate Storage] Name: {candidate.get('name')}, Email: {candidate.get('email')}, Company: {company}, Photo: {photo_url}, Reasons: {candidate.get('reasons')}")
+                logger.info(f"[Photo URL Debug] Final photo_url: {photo_url}")
+                logger.info(f"[Photo URL Debug] person_data photo fields: profile_photo_url={person_data.get('profile_photo_url')}, photo_url={person_data.get('photo_url')}")
+                logger.info(f"[Photo URL Debug] linkedin_profile available: {bool(linkedin_profile)}")
                 if not company or company == "Unknown":
                     logger.warning(f"[Candidate Storage] Missing company for {candidate.get('name')} ({candidate.get('email')})")
                 if not photo_url:
                     logger.warning(f"[Candidate Storage] Missing photo URL for {candidate.get('name')} ({candidate.get('email')})")
+                # Always include the full LinkedIn profile data in the candidate
                 enhanced_candidate = {
                     "name": candidate.get("name", "Unknown"),
                     "title": candidate.get("title", person_data.get("title", "Unknown")),
@@ -387,8 +542,13 @@ async def process_search(request_id: str, request: SearchRequest):
                     "linkedin_url": person_data.get("linkedin_url"),
                     "profile_photo_url": photo_url,
                     "location": location,
-                    "linkedin_profile": linkedin_profile
+                    "linkedin_profile": linkedin_profile  # <-- always include full profile
                 }
+                # If there are any extra fields in linkedin_profile, add them at the top level for convenience
+                if linkedin_profile:
+                    for k, v in linkedin_profile.items():
+                        if k not in enhanced_candidate:
+                            enhanced_candidate[k] = v
                 enhanced_candidates.append(enhanced_candidate)
             result.candidates = enhanced_candidates
         except Exception as e:
@@ -423,14 +583,28 @@ async def process_search(request_id: str, request: SearchRequest):
                 if isinstance(org, dict) and org.get("name"):
                     candidate["company"] = org["name"]
         # --- PATCH: Only write to Supabase after all processing is complete ---
-        # Store in database (primary storage)
+        # Store in database (primary storage) with retry mechanism
         search_data = result.dict()
         # Remove candidates before storing in searches
         if "candidates" in search_data:
             del search_data["candidates"]
-        db_search_id = store_search_to_database(search_data)
+        max_retries = 3
+        db_search_id = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                db_search_id = store_search_to_database(search_data)
+                if db_search_id:
+                    logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id} (attempt {attempt})")
+                    break
+                else:
+                    logger.error(f"[{request_id}] Attempt {attempt}: Failed to store in database (no ID returned)")
+            except Exception as e:
+                logger.error(f"[{request_id}] Attempt {attempt}: Exception during store_search_to_database: {e}")
+            if attempt < max_retries:
+                wait = 2 ** (attempt - 1)
+                logger.info(f"[{request_id}] Retrying database storage in {wait}s...")
+                time.sleep(wait)
         if db_search_id:
-            logger.info(f"[{request_id}] Search stored in database with ID: {db_search_id}")
             if result.candidates:
                 try:
                     store_people_to_database(db_search_id, result.candidates)
@@ -438,7 +612,7 @@ async def process_search(request_id: str, request: SearchRequest):
                 except Exception as e:
                     logger.error(f"[{request_id}] Failed to store candidates: {e}")
         else:
-            logger.error(f"[{request_id}] Failed to store in database, using in-memory storage")
+            logger.critical(f"[{request_id}] All attempts to store search in database failed. Using in-memory storage.")
             search_results[request_id] = result
         # Save to JSON file for persistence (optional backup)
         save_search_to_json(request_id, result.dict())
