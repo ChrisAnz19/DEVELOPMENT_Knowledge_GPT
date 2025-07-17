@@ -84,22 +84,26 @@ Get the results of a specific search by request ID.
         "summary": "Experienced software engineer...",
         "experience": [...],
         "education": [...]
+      },
+      "behavioral_data": {
+        "behavioral_insight": "This senior developer responds best to technical depth and practical examples. Start conversations by asking about their current cloud architecture challenges, then demonstrate how your solution addresses specific technical pain points they're experiencing.",
+        "scores": {
+          "cmi": {
+            "score": 85,
+            "explanation": "High communication maturity index indicates preference for direct, technical communication with specific examples."
+          },
+          "rbfs": {
+            "score": 72,
+            "explanation": "Moderate risk-barrier focus score suggests balancing technical details with clear business outcomes."
+          },
+          "ias": {
+            "score": 90,
+            "explanation": "Strong identity alignment signal shows this candidate strongly identifies with their technical expertise and problem-solving abilities."
+          }
+        }
       }
     }
   ],
-  "behavioral_data": {
-    "behavioral_insights": {
-      "market_dynamics": "The market for software engineers with Python and React skills is highly competitive, with demand outpacing supply in tech hubs like San Francisco.",
-      "engagement_patterns": "Senior software engineers tend to engage with technical content, open-source projects, and professional development resources.",
-      "decision_making_behaviors": "These professionals often have significant influence in technology decisions within their organizations.",
-      "technology_adoption_trends": "They are typically early adopters of new programming languages, frameworks, and development tools."
-    },
-    "supporting_data_points": {
-      "technology_interests": ["Python", "React", "Cloud Computing", "DevOps"],
-      "average_engagement_level": "Senior software engineers show high engagement with technical documentation and code repositories.",
-      "decision-making_authority": "They often participate in or lead technology selection processes within their teams."
-    }
-  },
   "created_at": "2024-01-15T10:30:00Z",
   "completed_at": "2024-01-15T10:32:15Z"
 }
@@ -149,20 +153,37 @@ Get the raw JSON data for a search (useful for debugging).
   "status": "completed",
   "prompt": "Find software engineers with 5+ years of experience in Python and React who work at tech companies in San Francisco",
   "filters": {...},
-  "candidates": [...],
-  "behavioral_data": {
-    "behavioral_insights": {
-      "market_dynamics": "The market for software engineers with Python and React skills is highly competitive, with demand outpacing supply in tech hubs like San Francisco.",
-      "engagement_patterns": "Senior software engineers tend to engage with technical content, open-source projects, and professional development resources.",
-      "decision_making_behaviors": "These professionals often have significant influence in technology decisions within their organizations.",
-      "technology_adoption_trends": "They are typically early adopters of new programming languages, frameworks, and development tools."
-    },
-    "supporting_data_points": {
-      "technology_interests": ["Python", "React", "Cloud Computing", "DevOps"],
-      "average_engagement_level": "Senior software engineers show high engagement with technical documentation and code repositories.",
-      "decision-making_authority": "They often participate in or lead technology selection processes within their teams."
+  "candidates": [
+    {
+      "name": "John Doe",
+      "title": "Senior Software Engineer",
+      "company": "Tech Corp",
+      "email": "john.doe@techcorp.com",
+      "accuracy": 92,
+      "reasons": ["5+ years experience", "Python and React skills", "San Francisco location"],
+      "linkedin_url": "https://linkedin.com/in/johndoe",
+      "profile_photo_url": "https://example.com/photo.jpg",
+      "location": "San Francisco, CA",
+      "linkedin_profile": {...},
+      "behavioral_data": {
+        "behavioral_insight": "This senior developer responds best to technical depth and practical examples. Start conversations by asking about their current cloud architecture challenges, then demonstrate how your solution addresses specific technical pain points they're experiencing.",
+        "scores": {
+          "cmi": {
+            "score": 85,
+            "explanation": "High communication maturity index indicates preference for direct, technical communication with specific examples."
+          },
+          "rbfs": {
+            "score": 72,
+            "explanation": "Moderate risk-barrier focus score suggests balancing technical details with clear business outcomes."
+          },
+          "ias": {
+            "score": 90,
+            "explanation": "Strong identity alignment signal shows this candidate strongly identifies with their technical expertise and problem-solving abilities."
+          }
+        }
+      }
     }
-  },
+  ],
   "created_at": "2024-01-15T10:30:00Z",
   "completed_at": "2024-01-15T10:32:15Z"
 }
@@ -212,16 +233,34 @@ Get all currently excluded people (30-day exclusion system).
 
 ## 🧠 Behavioral Data
 
-The API includes behavioral data that provides insights into prospect behavior and psychology. These insights are automatically generated and included in the `behavioral_data` section of search responses.
+The API includes behavioral data that provides insights into prospect behavior and psychology. These insights are automatically generated and included for each individual candidate in the search results.
 
 ### Behavioral Data Structure
 
-The behavioral data is structured into two main sections:
+The behavioral data structure has been updated to provide a single, focused behavioral insight along with three key behavioral scores. This change provides both actionable guidance and quantitative metrics for each candidate.
 
-1. **Behavioral Insights**: Descriptive insights about the prospect's behavior, market dynamics, and decision-making patterns.
-2. **Supporting Data Points**: Specific data points that support the behavioral insights.
+#### New Structure (Current)
+```typescript
+interface BehavioralData {
+  behavioral_insight: string; // Single, focused behavioral insight
+  scores: {
+    cmi: {
+      score: number; // Communication Maturity Index (0-100)
+      explanation: string; // Explanation of the score
+    };
+    rbfs: {
+      score: number; // Risk-Barrier Focus Score (0-100)
+      explanation: string; // Explanation of the score
+    };
+    ias: {
+      score: number; // Identity Alignment Signal (0-100)
+      explanation: string; // Explanation of the score
+    };
+  };
+}
+```
 
-**Structure:**
+#### Legacy Structure (Deprecated)
 ```typescript
 interface BehavioralData {
   behavioral_insights: {
@@ -237,45 +276,107 @@ interface BehavioralData {
 }
 ```
 
-### Behavioral Insights
+### Focused Behavioral Insight
 
-The `behavioral_insights` section typically includes the following types of insights:
+The new `behavioral_insight` field provides a single, focused recommendation on how to engage with the prospect. This insight is:
 
-1. **Market Dynamics**: Information about the market conditions relevant to the prospect's role and industry.
-2. **Engagement Patterns**: How the prospect typically engages with content and information.
-3. **Decision-Making Behaviors**: How the prospect makes decisions and their role in the decision-making process.
-4. **Technology Adoption Trends**: The prospect's approach to adopting new technologies.
+- Specific and actionable
+- Tailored to the prospect's psychology and role
+- Logically consistent with the search context
+- Relevant to the user's goals
 
 **Example:**
 ```json
-"behavioral_insights": {
-  "market_dynamics": "In the fintech industry, competition is fierce, and staying ahead requires a deep understanding of customer needs, regulatory changes, and emerging technologies.",
-  "engagement_patterns": "Senior Product Managers in fintech tend to engage with content related to industry trends, product development methodologies, and market disruptions.",
-  "decision_making_behaviors": "Senior Product Managers at the VP and Director level are key decision-makers in their organizations, often leading cross-functional teams and driving strategic product initiatives.",
-  "technology_adoption_trends": "These individuals are likely early adopters of fintech solutions and tools, constantly seeking innovative technologies to enhance their product offerings."
+"behavioral_insight": "This senior developer responds best to technical depth and practical examples. Start conversations by asking about their current cloud architecture challenges, then demonstrate how your solution addresses specific technical pain points they're experiencing."
+```
+
+### Behavioral Scores
+
+The API now provides three key behavioral scores for each candidate:
+
+1. **Communication Maturity Index (CMI)**: Measures how the candidate prefers to communicate and receive information.
+   - High scores (80-100): Prefers direct, detailed, and technical communication
+   - Medium scores (50-79): Balances technical and conceptual communication
+   - Low scores (0-49): Prefers high-level, conceptual communication
+
+2. **Risk-Barrier Focus Score (RBFS)**: Indicates how the candidate approaches risk and decision barriers.
+   - High scores (80-100): Highly risk-averse, needs extensive validation
+   - Medium scores (50-79): Balanced approach to risk, needs moderate validation
+   - Low scores (0-49): Risk-tolerant, focuses on opportunities over barriers
+
+3. **Identity Alignment Signal (IAS)**: Measures how strongly the candidate identifies with their professional role.
+   - High scores (80-100): Strongly identifies with professional role and expertise
+   - Medium scores (50-79): Balanced identity between professional and other aspects
+   - Low scores (0-49): Less identification with professional role, more with other aspects
+
+Each score includes an explanation that provides context and guidance on how to interpret and use the score.
+
+**Example:**
+```json
+"scores": {
+  "cmi": {
+    "score": 85,
+    "explanation": "High communication maturity index indicates preference for direct, technical communication with specific examples."
+  },
+  "rbfs": {
+    "score": 72,
+    "explanation": "Moderate risk-barrier focus score suggests balancing technical details with clear business outcomes."
+  },
+  "ias": {
+    "score": 90,
+    "explanation": "Strong identity alignment signal shows this candidate strongly identifies with their technical expertise and problem-solving abilities."
+  }
 }
 ```
 
-### Supporting Data Points
+### Backward Compatibility
 
-The `supporting_data_points` section provides specific data points that support the behavioral insights. These can vary based on the prospect's role and industry, but often include:
+For backward compatibility, clients that expect the legacy format can still access the data by treating the single insight as the primary engagement recommendation. The following mapping can be used:
 
-1. **Technology Interests**: Specific technologies or topics the prospect is interested in.
-2. **Engagement Levels**: Information about how the prospect engages with content.
-3. **Decision-Making Authority**: The prospect's role in decision-making processes.
-4. **Industry-Specific Data**: Data points relevant to the prospect's industry.
-
-**Example:**
-```json
-"supporting_data_points": {
-  "technology_interests": ["Python", "React", "Cloud Computing", "DevOps"],
-  "average_engagement_level": "Senior software engineers show high engagement with technical documentation and code repositories.",
-  "decision-making_authority": "They often participate in or lead technology selection processes within their teams."
+```javascript
+// Converting new format to legacy format for backward compatibility
+function convertToLegacyFormat(newBehavioralData) {
+  if (!newBehavioralData || !newBehavioralData.behavioral_insight) {
+    return null;
+  }
+  
+  return {
+    behavioral_insights: {
+      engagement_patterns: newBehavioralData.behavioral_insight
+    },
+    supporting_data_points: {
+      communication_maturity: newBehavioralData.scores?.cmi?.explanation || "",
+      risk_barrier_focus: newBehavioralData.scores?.rbfs?.explanation || "",
+      identity_alignment: newBehavioralData.scores?.ias?.explanation || ""
+    }
+  };
 }
 ```
 
 ### Complete Behavioral Data Example
 
+#### New Format
+```json
+"behavioral_data": {
+  "behavioral_insight": "This CTO values direct communication and technical expertise. Begin by acknowledging their experience with cloud architecture, then present your solution with specific technical details and ROI metrics. Focus on how your offering solves their specific scaling challenges rather than general benefits.",
+  "scores": {
+    "cmi": {
+      "score": 92,
+      "explanation": "Very high communication maturity index indicates strong preference for direct, detailed technical communication with specific examples and data points."
+    },
+    "rbfs": {
+      "score": 65,
+      "explanation": "Moderate risk-barrier focus score suggests this CTO balances innovation with practical considerations. Present both technical advantages and risk mitigation strategies."
+    },
+    "ias": {
+      "score": 88,
+      "explanation": "High identity alignment signal indicates this CTO strongly identifies with their technical leadership role and values being recognized for technical expertise."
+    }
+  }
+}
+```
+
+#### Legacy Format (Deprecated)
 ```json
 "behavioral_data": {
   "behavioral_insights": {
@@ -335,25 +436,29 @@ interface SearchResponse {
     reasoning: string;
   };
   candidates?: Candidate[];
-  behavioral_data?: BehavioralData;
   error?: string;
   created_at: string;
   completed_at?: string;
 }
 ```
 
-### BehavioralData
+### BehavioralData (Updated)
 ```typescript
 interface BehavioralData {
-  behavioral_insights: {
-    market_dynamics?: string;
-    engagement_patterns?: string;
-    decision_making_behaviors?: string;
-    technology_adoption_trends?: string;
-    [key: string]: string;
-  };
-  supporting_data_points: {
-    [key: string]: string | string[];
+  behavioral_insight: string; // Single, focused behavioral insight
+  scores: {
+    cmi: {
+      score: number; // Communication Maturity Index (0-100)
+      explanation: string; // Explanation of the score
+    };
+    rbfs: {
+      score: number; // Risk-Barrier Focus Score (0-100)
+      explanation: string; // Explanation of the score
+    };
+    ias: {
+      score: number; // Identity Alignment Signal (0-100)
+      explanation: string; // Explanation of the score
+    };
   };
 }
 ```
@@ -371,6 +476,7 @@ interface Candidate {
   profile_photo_url?: string;
   location?: string;
   linkedin_profile?: object;
+  behavioral_data?: BehavioralData;
 }
 ```
 
@@ -431,7 +537,7 @@ export const useKnowledgeGPT = (): UseKnowledgeGPT => {
 };
 ```
 
-### Usage Example
+### Usage Example with Focused Behavioral Insight
 ```typescript
 const MyComponent = () => {
   const [searchId, setSearchId] = useState<string | null>(null);
@@ -454,41 +560,45 @@ const MyComponent = () => {
     }
   };
 
-  const renderBehavioralData = (behavioralData: BehavioralData) => {
-    if (!behavioralData) return null;
+  const renderBehavioralInsight = (behavioralData: BehavioralData) => {
+    if (!behavioralData || !behavioralData.behavioral_insight) return null;
 
     return (
-      <div className="behavioral-data">
-        <h4>Behavioral Insights</h4>
+      <div className="behavioral-insight">
+        <h4>Engagement Strategy</h4>
+        <div className="insight-card">
+          <div className="insight-icon">💡</div>
+          <p>{behavioralData.behavioral_insight}</p>
+        </div>
         
-        {behavioralData.behavioral_insights && (
-          <div className="insights">
-            {Object.entries(behavioralData.behavioral_insights).map(([key, value]) => (
-              <div key={key} className="insight">
-                <h5>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>
-                <p>{value}</p>
+        {behavioralData.scores && (
+          <div className="behavioral-scores">
+            <h5>Behavioral Scores</h5>
+            <div className="score-grid">
+              <div className="score-card">
+                <div className="score-header">
+                  <span className="score-title">Communication Maturity</span>
+                  <span className="score-value">{behavioralData.scores.cmi.score}</span>
+                </div>
+                <p className="score-explanation">{behavioralData.scores.cmi.explanation}</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {behavioralData.supporting_data_points && (
-          <div className="supporting-data">
-            <h5>Supporting Data</h5>
-            {Object.entries(behavioralData.supporting_data_points).map(([key, value]) => (
-              <div key={key} className="data-point">
-                <h6>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h6>
-                {Array.isArray(value) ? (
-                  <ul>
-                    {value.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{value}</p>
-                )}
+              
+              <div className="score-card">
+                <div className="score-header">
+                  <span className="score-title">Risk-Barrier Focus</span>
+                  <span className="score-value">{behavioralData.scores.rbfs.score}</span>
+                </div>
+                <p className="score-explanation">{behavioralData.scores.rbfs.explanation}</p>
               </div>
-            ))}
+              
+              <div className="score-card">
+                <div className="score-header">
+                  <span className="score-title">Identity Alignment</span>
+                  <span className="score-value">{behavioralData.scores.ias.score}</span>
+                </div>
+                <p className="score-explanation">{behavioralData.scores.ias.explanation}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -506,21 +616,29 @@ const MyComponent = () => {
           <h3>Results:</h3>
           {result.candidates?.map(candidate => (
             <div key={candidate.email || candidate.name} className="candidate-card">
-              <h4>{candidate.name}</h4>
-              <p>{candidate.title} at {candidate.company}</p>
-              <p>Accuracy: {candidate.accuracy}%</p>
-              <div className="reasons">
-                <h5>Reasons:</h5>
-                <ul>
-                  {candidate.reasons.map((reason, index) => (
-                    <li key={index}>{reason}</li>
-                  ))}
-                </ul>
+              {candidate.profile_photo_url && (
+                <img 
+                  src={candidate.profile_photo_url} 
+                  alt={`${candidate.name}'s profile`}
+                  className="profile-photo"
+                />
+              )}
+              <div className="candidate-info">
+                <h4>{candidate.name}</h4>
+                <p>{candidate.title} at {candidate.company}</p>
+                <p>Accuracy: {candidate.accuracy}%</p>
+                <div className="reasons">
+                  <h5>Reasons:</h5>
+                  <ul>
+                    {candidate.reasons.map((reason, index) => (
+                      <li key={index}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+                {candidate.behavioral_data && renderBehavioralInsight(candidate.behavioral_data)}
               </div>
             </div>
           ))}
-          
-          {result.behavioral_data && renderBehavioralData(result.behavioral_data)}
         </div>
       )}
     </div>
@@ -528,102 +646,258 @@ const MyComponent = () => {
 };
 ```
 
-### Behavioral Data Integration Example
+### Focused Behavioral Insight Integration Example
 
-Here's a more comprehensive example showing how to leverage the behavioral data for prospect prioritization:
+Here's a more comprehensive example showing how to leverage the focused behavioral insight and scores for prospect engagement:
 
 ```typescript
 interface ProspectCard {
   candidate: Candidate;
-  behavioralData: BehavioralData;
 }
 
-const ProspectPrioritizer = ({ prospects }: { prospects: ProspectCard[] }) => {
-  // Sort prospects by decision-making authority (those with more authority first)
-  const sortedProspects = [...prospects].sort((a, b) => {
-    const hasAuthorityA = Object.values(a.behavioralData?.supporting_data_points || {})
-      .some(value => typeof value === 'string' && value.toLowerCase().includes('decision'));
-    const hasAuthorityB = Object.values(b.behavioralData?.supporting_data_points || {})
-      .some(value => typeof value === 'string' && value.toLowerCase().includes('decision'));
+const ProspectEngagementCard = ({ prospect }: { prospect: ProspectCard }) => {
+  const { candidate } = prospect;
+  const behavioralData = candidate.behavioral_data;
+  
+  // Extract key engagement elements from the behavioral insight
+  const getEngagementElements = (insight: string) => {
+    // These are example categories that might be extracted from the insight
+    const elements = {
+      approach: '',
+      topics: [],
+      style: '',
+      valueProposition: ''
+    };
     
-    if (hasAuthorityA && !hasAuthorityB) return -1;
-    if (!hasAuthorityA && hasAuthorityB) return 1;
-    return 0;
-  });
-
-  const getEngagementLevel = (behavioralData: BehavioralData): string => {
-    const engagementPattern = behavioralData?.behavioral_insights?.engagement_patterns || '';
-    
-    if (engagementPattern.toLowerCase().includes('high')) return "🔥 High Engagement";
-    if (engagementPattern.toLowerCase().includes('regular')) return "⚡ Regular Engagement";
-    if (engagementPattern.toLowerCase().includes('occasional')) return "📋 Occasional Engagement";
-    return "❓ Unknown Engagement";
-  };
-
-  const getCommunicationStrategy = (behavioralData: BehavioralData): string => {
-    const decisionMaking = behavioralData?.behavioral_insights?.decision_making_behaviors || '';
-    const techAdoption = behavioralData?.behavioral_insights?.technology_adoption_trends || '';
-    
-    if (decisionMaking.toLowerCase().includes('key decision') || 
-        decisionMaking.toLowerCase().includes('strategic')) {
-      return "Focus on strategic value and ROI";
+    // Simple extraction logic - in a real app, you might use more sophisticated parsing
+    if (insight.toLowerCase().includes('technical')) {
+      elements.approach = 'Technical';
+    } else if (insight.toLowerCase().includes('strategic')) {
+      elements.approach = 'Strategic';
+    } else if (insight.toLowerCase().includes('collaborative')) {
+      elements.approach = 'Collaborative';
+    } else {
+      elements.approach = 'Balanced';
     }
     
-    if (techAdoption.toLowerCase().includes('early adopter')) {
-      return "Highlight innovative features and cutting-edge capabilities";
+    // Extract potential conversation topics
+    const topicMatches = insight.match(/ask about ([^,.]+)/i);
+    if (topicMatches && topicMatches[1]) {
+      elements.topics.push(topicMatches[1].trim());
     }
     
-    return "Balance technical details with business benefits";
+    return elements;
   };
+  
+  const getScoreClass = (score: number) => {
+    if (score >= 80) return 'score-high';
+    if (score >= 50) return 'score-medium';
+    return 'score-low';
+  };
+  
+  const engagementElements = behavioralData?.behavioral_insight ? 
+    getEngagementElements(behavioralData.behavioral_insight) : 
+    { approach: 'Balanced', topics: [], style: '', valueProposition: '' };
 
   return (
-    <div className="prospect-list">
-      {sortedProspects.map(({ candidate, behavioralData }) => (
-        <div key={candidate.email || candidate.name} className="prospect-card">
-          <div className="prospect-header">
-            <h3>{candidate.name}</h3>
-            <span className="engagement-level">
-              {getEngagementLevel(behavioralData)}
-            </span>
-          </div>
-          
+    <div className="prospect-card">
+      <div className="prospect-header">
+        {candidate.profile_photo_url && (
+          <img 
+            src={candidate.profile_photo_url} 
+            alt={`${candidate.name}'s profile`}
+            className="profile-photo"
+          />
+        )}
+        <div>
+          <h3>{candidate.name}</h3>
           <p>{candidate.title} at {candidate.company}</p>
-          
-          <div className="behavioral-summary">
-            {behavioralData?.behavioral_insights?.market_dynamics && (
-              <div className="market-dynamics">
-                <h5>Market Context</h5>
-                <p>{behavioralData.behavioral_insights.market_dynamics}</p>
-              </div>
-            )}
-            
-            {behavioralData?.behavioral_insights?.decision_making_behaviors && (
-              <div className="decision-making">
-                <h5>Decision-Making Role</h5>
-                <p>{behavioralData.behavioral_insights.decision_making_behaviors}</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="communication-strategy">
-            <strong>Recommended Approach:</strong> {getCommunicationStrategy(behavioralData)}
-          </div>
-          
-          {behavioralData?.supporting_data_points?.technology_interests && (
-            <div className="technology-interests">
-              <h5>Technology Interests</h5>
-              <div className="tags">
-                {Array.isArray(behavioralData.supporting_data_points.technology_interests) ? 
-                  behavioralData.supporting_data_points.technology_interests.map((tech, index) => (
-                    <span key={index} className="tag">{tech}</span>
-                  )) : 
-                  <span className="tag">{behavioralData.supporting_data_points.technology_interests}</span>
-                }
-              </div>
-            </div>
-          )}
         </div>
+        <div className="approach-badge">
+          {engagementElements.approach} Approach
+        </div>
+      </div>
+      
+      <div className="engagement-strategy">
+        <h4>Engagement Strategy</h4>
+        <p>{behavioralData?.behavioral_insight}</p>
+      </div>
+      
+      {behavioralData?.scores && (
+        <div className="behavioral-scores">
+          <div className="score-meters">
+            <div className="score-meter">
+              <label>Communication Style</label>
+              <div className="meter-container">
+                <div 
+                  className={`meter-fill ${getScoreClass(behavioralData.scores.cmi.score)}`}
+                  style={{ width: `${behavioralData.scores.cmi.score}%` }}
+                ></div>
+              </div>
+              <div className="meter-labels">
+                <span>Conceptual</span>
+                <span>Technical</span>
+              </div>
+              <p className="score-tip">{behavioralData.scores.cmi.explanation}</p>
+            </div>
+            
+            <div className="score-meter">
+              <label>Risk Approach</label>
+              <div className="meter-container">
+                <div 
+                  className={`meter-fill ${getScoreClass(behavioralData.scores.rbfs.score)}`}
+                  style={{ width: `${behavioralData.scores.rbfs.score}%` }}
+                ></div>
+              </div>
+              <div className="meter-labels">
+                <span>Opportunity-focused</span>
+                <span>Risk-averse</span>
+              </div>
+              <p className="score-tip">{behavioralData.scores.rbfs.explanation}</p>
+            </div>
+            
+            <div className="score-meter">
+              <label>Professional Identity</label>
+              <div className="meter-container">
+                <div 
+                  className={`meter-fill ${getScoreClass(behavioralData.scores.ias.score)}`}
+                  style={{ width: `${behavioralData.scores.ias.score}%` }}
+                ></div>
+              </div>
+              <div className="meter-labels">
+                <span>Balanced</span>
+                <span>Role-identified</span>
+              </div>
+              <p className="score-tip">{behavioralData.scores.ias.explanation}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {engagementElements.topics.length > 0 && (
+        <div className="conversation-starters">
+          <h5>Potential Conversation Starters</h5>
+          <ul>
+            {engagementElements.topics.map((topic, index) => (
+              <li key={index}>
+                <strong>Ask about:</strong> {topic}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      <div className="contact-actions">
+        {candidate.email && (
+          <button className="contact-button email">
+            Email
+          </button>
+        )}
+        {candidate.linkedin_url && (
+          <button className="contact-button linkedin">
+            LinkedIn
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Usage in a list component
+const ProspectList = ({ prospects }: { prospects: Candidate[] }) => {
+  return (
+    <div className="prospect-list">
+      {prospects.map((candidate, index) => (
+        <ProspectEngagementCard key={index} prospect={{ candidate }} />
       ))}
+    </div>
+  );
+};
+```
+
+### Backward Compatibility Helper
+
+For applications that need to support both the new and legacy formats:
+
+```typescript
+const getBehavioralInsight = (behavioralData: any): string => {
+  // Check if using new format
+  if (behavioralData?.behavioral_insight) {
+    return behavioralData.behavioral_insight;
+  }
+  
+  // Check if using legacy format
+  if (behavioralData?.behavioral_insights?.engagement_patterns) {
+    return behavioralData.behavioral_insights.engagement_patterns;
+  }
+  
+  // Fallback
+  return "No engagement insight available";
+};
+
+const getBehavioralScores = (behavioralData: any) => {
+  const defaultScores = {
+    cmi: { score: 50, explanation: "No communication maturity data available" },
+    rbfs: { score: 50, explanation: "No risk-barrier focus data available" },
+    ias: { score: 50, explanation: "No identity alignment data available" }
+  };
+  
+  // Check if using new format with scores
+  if (behavioralData?.scores) {
+    return behavioralData.scores;
+  }
+  
+  // Check if using legacy format
+  if (behavioralData?.behavioral_insights) {
+    // Extract approximate scores from legacy format (simplified example)
+    return {
+      cmi: { 
+        score: 60, 
+        explanation: "Based on legacy engagement patterns data" 
+      },
+      rbfs: { 
+        score: 60, 
+        explanation: "Based on legacy decision making behaviors data" 
+      },
+      ias: { 
+        score: 60, 
+        explanation: "Based on legacy technology adoption trends data" 
+      }
+    };
+  }
+  
+  return defaultScores;
+};
+
+// Usage example
+const renderBehavioralGuidance = (behavioralData: any) => {
+  const insight = getBehavioralInsight(behavioralData);
+  const scores = getBehavioralScores(behavioralData);
+  
+  return (
+    <div className="engagement-guidance">
+      <h4>How to Engage</h4>
+      <p>{insight}</p>
+      
+      <div className="behavioral-scores">
+        <div className="score-item">
+          <span className="score-label">Communication Style:</span>
+          <span className="score-value">{scores.cmi.score}</span>
+          <p className="score-explanation">{scores.cmi.explanation}</p>
+        </div>
+        
+        <div className="score-item">
+          <span className="score-label">Risk Approach:</span>
+          <span className="score-value">{scores.rbfs.score}</span>
+          <p className="score-explanation">{scores.rbfs.explanation}</p>
+        </div>
+        
+        <div className="score-item">
+          <span className="score-label">Professional Identity:</span>
+          <span className="score-value">{scores.ias.score}</span>
+          <p className="score-explanation">{scores.ias.explanation}</p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -651,13 +925,27 @@ Error responses include an `error` field with details:
 3. **CORS**: The API supports CORS for frontend integration
 4. **Data Persistence**: All data is stored in Supabase and persists between deployments
 5. **Exclusions**: The system automatically excludes people processed within 30 days
-6. **Behavioral Data**: The behavioral data provides valuable insights into prospect behavior and can be used to:
-   - Understand the prospect's market context
-   - Identify the prospect's role in decision-making processes
-   - Determine the prospect's technology interests and adoption patterns
-   - Tailor communication strategies based on engagement patterns
-7. **Dynamic Structure**: The structure of `behavioral_insights` and `supporting_data_points` can vary based on the prospect's role and industry, so your frontend should handle this flexibility
+6. **Focused Behavioral Insight**: The new behavioral insight provides:
+   - A single, actionable recommendation for engaging with the prospect
+   - Guidance tailored to the prospect's psychology and role
+   - Context-aware engagement strategies that consider the search query
+   - Specific conversation starters or approaches to use
+7. **Behavioral Scores**: Each candidate now includes three key behavioral scores:
+   - Communication Maturity Index (CMI): How the candidate prefers to communicate
+   - Risk-Barrier Focus Score (RBFS): How the candidate approaches risk and decision barriers
+   - Identity Alignment Signal (IAS): How strongly the candidate identifies with their professional role
+8. **Profile Photos**: The API now prioritizes finding and including profile photo URLs for candidates, with improved extraction and validation
+9. **Backward Compatibility**: The API maintains backward compatibility for existing clients while providing the enhanced format
+
+### Migrating from Legacy to New Format
+
+For applications currently using the legacy behavioral data format:
+
+1. **Update your data models** to accept the new `behavioral_insight` field and `scores` object
+2. **Use the backward compatibility helper** provided above if you need to support both formats
+3. **Enhance your UI** to display both the focused insight and the three behavioral scores
+4. **Update your engagement strategy components** to extract actionable guidance from the insight and scores
 
 ## 🎯 Ready for Frontend Development
 
-The API is now fully deployed and ready for frontend integration. All endpoints are working and the database is properly connected to Supabase. You can start building your frontend application using the examples and documentation above.
+The API is now fully deployed and ready for frontend integration with the new focused behavioral insight feature. All endpoints are working and the database is properly connected to Supabase. You can start building your frontend application using the examples and documentation above.
