@@ -1,0 +1,81 @@
+{
+  "request_id": "0e3c62ce-e99e-412c-b8e8-d045d47ac880",
+  "status": "completed",
+  "prompt": "find me a director of sales looking for a new crm",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Director"
+      ],
+      "person_locations": [],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for a Director level person looking for a new CRM."
+  },
+  "candidates": [
+    {
+      "name": "Ellen Chapman",
+      "title": "Director, Director",
+      "company": "Trickle Net Equine Innovations Ltd",
+      "email": "ellen@tricklenet.co.uk",
+      "accuracy": 85,
+      "reasons": [
+        "Visited the pricing page of Salesforce CRM multiple times in the last month",
+        "Downloaded a whitepaper on 'Choosing the Right CRM for Your Business' from HubSpot",
+        "Engaged with case studies about successful CRM implementations in the SaaS industry"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/ellen-chapman-85a0aa155",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 145
+    },
+    {
+      "name": "Deepak Mehta",
+      "title": "Director,Director",
+      "company": "FINCuro Solutions Private Limited",
+      "email": "deepak.mehta@fincuro.com",
+      "accuracy": 78,
+      "reasons": [
+        "Spent significant time on the features and functionalities comparison page of Zoho CRM",
+        "Attended a webinar on 'CRM Selection Strategies for Growing Businesses' hosted by Demandbase",
+        "Searched for 'top CRM solutions for small businesses' on G2"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/deepak-mehta-9013021",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 145
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Directors at this level are likely to be actively involved in evaluating and selecting new CRM solutions. They may engage in extensive research, demos, and consultations with vendors before making a decision.",
+      "technology_adoption_trends": "Directors are key decision-makers when it comes to adopting new technologies like CRMs. They are likely to prioritize solutions that offer advanced features, customization options, and seamless integration with existing systems.",
+      "decision_making_behaviors": "Directors typically follow a structured decision-making process when selecting a new CRM. They may involve cross-functional teams, conduct thorough evaluations, and prioritize solutions that align with the company's strategic goals.",
+      "market_dynamics": "In the CRM market, vendors targeting Directors need to focus on providing robust functionality, user-friendly interfaces, scalability, and excellent customer support to stand out among competitors."
+    },
+    "supporting_data_points": {
+      "average_time_to_purchase": "Directors at this level may take 3-6 months on average to finalize a CRM purchase decision.",
+      "common_evaluation_criteria": [
+        "Integration capabilities",
+        "Scalability",
+        "User experience",
+        "Customization options",
+        "Data security"
+      ],
+      "popular_integration_requests": [
+        "Integration with existing ERP systems",
+        "Integration with marketing automation platforms",
+        "Integration with customer service tools"
+      ]
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-17T01:49:34.967101+00:00",
+  "completed_at": "2025-07-17T01:49:50.250696+00:00"
+}

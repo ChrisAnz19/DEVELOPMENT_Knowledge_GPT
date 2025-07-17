@@ -34,7 +34,8 @@ from prompt_formatting import parse_prompt_to_internal_database_filters, simulat
 from apollo_api_call import search_people_via_internal_database
 from linkedin_scraping import async_scrape_linkedin_profiles
 from assess_and_return import select_top_candidates
-from database import (
+# Import the fixed database functions
+from database_fixed import (
     store_search_to_database, get_search_from_database, 
     get_recent_searches_from_database, delete_search_from_database,
     store_people_to_database, get_people_for_search, is_person_excluded_in_database,
@@ -268,8 +269,12 @@ async def create_search(
             "completed_at": None
         }
         
-        # Store the search in the database
-        store_search_to_database(search_data)
+        # Store the search in the database using the fixed function
+        search_id = store_search_to_database(search_data)
+        
+        if not search_id:
+            logger.error(f"Failed to store initial search data for request_id: {request_id}")
+            raise HTTPException(status_code=500, detail="Failed to store search data")
         
         # Start background task to process real data
         background_tasks.add_task(
@@ -341,7 +346,7 @@ async def get_search_result(request_id: str):
                             behavioral_data = enhance_behavioral_data_ai({}, candidates, search_data.get("prompt", ""))
                             search_data["behavioral_data"] = behavioral_data
                             
-                            # Update the database
+                            # Update the database using the fixed function
                             try:
                                 db_update = {
                                     "id": search_data["id"],
@@ -411,11 +416,16 @@ async def list_searches():
 async def delete_search(request_id: str):
     """Delete a specific search and its results."""
     try:
-        # Delete the search from the database
-        delete_search_from_database(request_id)
+        # Delete the search from the database using the fixed function
+        success = delete_search_from_database(request_id)
         
-        return {"message": "Search request deleted from database"}
+        if success:
+            return {"message": "Search request deleted from database"}
+        else:
+            raise HTTPException(status_code=404, detail="Search not found or could not be deleted")
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting search: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting search: {str(e)}")
@@ -507,17 +517,12 @@ async def process_search(
             
         # Parse the prompt to filters
         filters = parse_prompt_to_internal_database_filters(prompt)
-        if not isinstance(filters, dict):
-            logger.error(f"parse_prompt_to_internal_database_filters did not return a dict (got {type(filters)}). Aborting search processing.")
-            return
+        
         # Search for people via the internal database
         try:
             people = await search_people_via_internal_database(filters, max_candidates)
             if not people:
                 logger.warning(f"No people found for search {request_id}")
-        except TypeError as te:
-            logger.error(f"TypeError in search_people_via_internal_database: {str(te)}. Filters: {filters}")
-            people = []
         except asyncio.TimeoutError:
             logger.error(f"Timeout error searching for people for {request_id}")
             people = []
@@ -595,10 +600,10 @@ async def process_search(
         
         # Select top candidates
         try:
-            candidates = select_top_candidates(prompt, people, max_candidates)
+            candidates = select_top_candidates(people, prompt, max_candidates)
         except Exception as e:
             logger.error(f"Error selecting top candidates: {str(e)}")
-            candidates = people[:max_candidates] if isinstance(people, list) and people else []
+            candidates = people[:max_candidates] if people else []
         
         # Add profile photo URLs
         for candidate in candidates:
@@ -637,6 +642,21 @@ async def process_search(
                 }
             })
         
+        # Store the candidates in the database
+        if candidates:
+            try:
+                # Get the database ID for the search
+                search_db_id = search_data.get("id")
+                if search_db_id:
+                    # Store the candidates
+                    store_people_to_database(search_db_id, candidates)
+                    logger.info(f"Stored {len(candidates)} candidates for search {request_id}")
+                else:
+                    logger.error(f"Cannot store candidates: search_db_id not found for request_id {request_id}")
+            except Exception as e:
+                logger.error(f"Error storing candidates for search {request_id}: {str(e)}")
+                # Continue even if storing candidates fails
+        
         # Update the search data only if we're still processing
         if processing_state["is_processing"]:
             # Mark as no longer processing to prevent duplicate updates
@@ -650,72 +670,29 @@ async def process_search(
             # Log the search data before storing
             logger.info(f"Updating search {request_id} to completed status")
             
-            try:
-                # Check if record exists by request_id
-                existing_record = get_search_from_database(request_id)
-                
-                if existing_record:
-                    # Update existing record
-                    # Ensure we're using the correct primary key
-                    search_data["id"] = existing_record["id"]
-                    # Store the updated search in the database
-                    result = store_search_to_database(search_data)
-                    logger.info(f"Search update result: {result}")
-                else:
-                    logger.error(f"Search record not found for update: {request_id}")
-            except Exception as db_error:
-                logger.error(f"Error updating search in database: {str(db_error)}")
+            # Store the updated search in the database using the fixed function
+            result = store_search_to_database(search_data)
+            if result:
+                logger.info(f"Successfully updated search {request_id} to completed status")
+            else:
+                logger.error(f"Failed to update search {request_id} to completed status")
             
-            # Store candidates separately
-            try:
-                # Get the database ID for the search (not the request_id)
-                search_db_id = search_data.get("id")
-                if search_db_id:
-                    # Store people with the search database ID
-                    store_people_to_database(search_db_id, candidates)
-                    logger.info(f"Stored {len(candidates)} candidates for search {request_id} (DB ID: {search_db_id})")
-                else:
-                    logger.error(f"Cannot store candidates: search_db_id not found for request_id {request_id}")
-            except Exception as pe:
-                logger.error(f"Error storing candidates: {str(pe)}")
-            
-            logger.info(f"Search completed successfully: {request_id}")
-        
     except Exception as e:
         logger.error(f"Error processing search: {str(e)}")
         
-        # Update the search status to failed, but only if we haven't already updated
+        # Update status to failed, but only if we haven't already updated
         if processing_state["is_processing"]:
             processing_state["is_processing"] = False
             try:
                 search_data = get_search_from_database(request_id)
                 if search_data:
-                    # Check if record exists by request_id
-                    existing_record = get_search_from_database(request_id)
-                    
-                    if existing_record:
-                        # Update existing record
-                        # Ensure we're using the correct primary key
-                        search_data["id"] = existing_record["id"]
-                        search_data["status"] = "failed"
-                        search_data["error"] = str(e)
-                        search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-                        store_search_to_database(search_data)
-                    else:
-                        logger.error(f"Search record not found for error update: {request_id}")
+                    search_data["status"] = "failed"
+                    search_data["error"] = str(e)
+                    search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                    store_search_to_database(search_data)
+                    logger.info(f"Updated search {request_id} to failed status")
             except Exception as update_error:
                 logger.error(f"Error updating search status: {str(update_error)}")
 
-# Server startup code
 if __name__ == "__main__":
-    # Get port from environment variable for Render deployment
-    port = int(os.environ.get("PORT", 8000))
-    
-    # Start the server
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False,
-        log_level="info"
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -3,6 +3,7 @@ import os
 import json
 import random
 from openai_utils import call_openai_for_json, call_openai
+import logging
 
 # Load API keys from environment variables or secrets.json with graceful error handling
 _secrets = {}
@@ -169,9 +170,12 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         }
     
     # Ensure filters are dictionaries, create empty ones if not
+    logger = logging.getLogger(__name__)
     if not isinstance(filters["organization_filters"], dict):
+        logger.warning(f"organization_filters is not a dict (got {type(filters['organization_filters'])}), coercing to empty dict.")
         filters["organization_filters"] = {}
     if not isinstance(filters["person_filters"], dict):
+        logger.warning(f"person_filters is not a dict (got {type(filters['person_filters'])}), coercing to empty dict.")
         filters["person_filters"] = {}
     if not isinstance(filters["reasoning"], str):
         filters["reasoning"] = "Generated filters based on prompt analysis"

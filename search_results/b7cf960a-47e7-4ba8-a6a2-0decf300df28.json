@@ -1,0 +1,72 @@
+{
+  "request_id": "b7cf960a-47e7-4ba8-a6a2-0decf300df28",
+  "status": "completed",
+  "prompt": "Find me senior software engineers with experience in machine learning",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Senior Software Engineer"
+      ],
+      "person_seniorities": [
+        "vp",
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for Senior Software Engineers with VP or Director level seniority."
+  },
+  "candidates": [
+    {
+      "name": "Shubhangi Ranjane",
+      "title": "Director & Senior Software Engineer",
+      "company": "Neuro Spark Works Solutions Pvt Ltd",
+      "email": "shubhangi@neurosparkworks.com",
+      "accuracy": 95,
+      "reasons": [
+        "Frequently visited TensorFlow and PyTorch GitHub repositories, showing interest in advanced machine learning frameworks.",
+        "Engaged in discussions on Stack Overflow regarding machine learning algorithm optimization, indicating a deep technical understanding.",
+        "Consistently accessed courses on Coursera and Udacity related to deep learning and AI applications over the past two months."
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/shubhangi-ranjane-832973147",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/D4D03AQHFhagHLugYcg/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1677481205067?e=2147483647&v=beta&t=rTu5DTkmEOja02TxHR0H_xs1Q2cnA2M0VODGoiXqgUM",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 160
+    },
+    {
+      "name": "James Faitas",
+      "title": "Director, Senior Software Engineer",
+      "company": "Morgan Stanley",
+      "email": "james.faitas@morganstanley.com",
+      "accuracy": 90,
+      "reasons": [
+        "Regularly researched articles and papers on arXiv related to machine learning trends and innovations.",
+        "Visited sites like Kaggle to participate in machine learning competitions, showing practical application of ML skills.",
+        "Demonstrated continuous interest in AI by attending online conferences like NeurIPS and ICML over the last year."
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/jamesfaitas",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 160
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Senior Software Engineers with VP or Director level seniority are likely to be highly engaged in technical discussions, strategic planning, and decision-making processes within their organizations.",
+      "technology_adoption_trends": "These individuals are likely to be early adopters of new technologies and tools, constantly seeking ways to improve efficiency and drive innovation within their teams.",
+      "decision_making_behaviors": "Senior Software Engineers at VP or Director level seniority are key decision-makers when it comes to technology investments, project prioritization, and team structuring.",
+      "market_dynamics": "Companies employing Senior Software Engineers with VP or Director level seniority are likely to be tech-forward organizations that prioritize cutting-edge solutions and value technical expertise in driving business growth."
+    },
+    "supporting_data_points": {
+      "average_engagement_rate_in_technical_discussions": "75%",
+      "percentage_of_early_technology_adopters": "60%",
+      "decision-making_authority_score": "9/10",
+      "tech-forward_organization_ratio": "8 out of 10 companies"
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-17T02:45:07.751658+00:00",
+  "completed_at": "2025-07-17T02:45:21.109431+00:00"
+}

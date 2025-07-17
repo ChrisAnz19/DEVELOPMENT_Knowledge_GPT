@@ -15,6 +15,10 @@ import random
 from typing import Dict, List, Optional, Any, Union
 import os
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Import AI-based behavioral metrics functions
 try:
     from behavioral_metrics_ai import (
@@ -29,10 +33,6 @@ try:
 except ImportError as e:
     logger.warning(f"AI-based behavioral metrics not available: {str(e)}")
     AI_METRICS_AVAILABLE = False
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def generate_concise_insight(role: str, user_prompt: str) -> str:
     """

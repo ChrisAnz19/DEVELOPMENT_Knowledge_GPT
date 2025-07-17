@@ -25,6 +25,8 @@ except Exception as e:
             return self
         def insert(self, data):
             return self
+        def upsert(self, data):
+            return self
         def delete(self):
             return self
         def eq(self, field, value):
@@ -46,10 +48,10 @@ except Exception as e:
     supabase = DummySupabase()
 
 def store_search_to_database(search_data):
-    # Insert search and return the new search id
-    res = supabase.table("searches").insert(search_data).execute()
+    # Upsert search and return the new or updated search id
+    res = supabase.table("searches").upsert(search_data).execute()
     if hasattr(res, 'data') and res.data:
-        # Return the inserted search's id
+        # Return the inserted or updated search's id
         return res.data[0].get('id')
     return None
 

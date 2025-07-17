@@ -1,0 +1,80 @@
+{
+  "request_id": "214d1201-32ac-4abd-9aea-0aedb7cf8b16",
+  "status": "completed",
+  "prompt": "find me a director of sales looking for a new crm",
+  "filters": {
+    "organization_filters": {},
+    "person_filters": {
+      "person_titles": [
+        "Director"
+      ],
+      "person_locations": [],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for a Director level person in sales."
+  },
+  "candidates": [
+    {
+      "name": "Tim Warren",
+      "title": "Director",
+      "company": "Protek CNC Components Ltd",
+      "email": "tim@protek-cnc.co.uk",
+      "accuracy": 85,
+      "reasons": [
+        "Visited the pricing page of Salesforce CRM multiple times in the last month",
+        "Downloaded whitepapers on CRM integration strategies",
+        "Engaged with case studies about successful CRM implementations"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/tim-warren-a3b025113",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/C4E03AQGKlgji5xUUdA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1637830517064?e=2147483647&v=beta&t=50lY1jqRh9EEX10QaUOaCvZgaArLHsw7RnmMH-dNrH0",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 149
+    },
+    {
+      "name": "Simon Dodd",
+      "title": "Director - Director",
+      "company": "JPE Design Studio",
+      "email": "sdodd@jpe.com.au",
+      "accuracy": 78,
+      "reasons": [
+        "Spent significant time on comparison websites for CRM solutions",
+        "Attended webinars on optimizing sales processes with CRM",
+        "Searched for 'best CRM for sales teams 2024' on industry forums"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/simon-dodd-director-68214424",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 149
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Directors in sales tend to engage with content related to sales strategies, customer relationship management, and leadership development.",
+      "technology_adoption_trends": "Directors in sales are early adopters of sales automation tools, CRM systems, and data analytics platforms to improve sales performance.",
+      "decision_making_behaviors": "Directors in sales often make decisions based on ROI, sales pipeline performance, and customer feedback to drive revenue growth.",
+      "market_dynamics": "Directors in sales are influenced by market trends, competitor analysis, and industry benchmarks to stay competitive in the market."
+    },
+    "supporting_data_points": {
+      "average_engagement_rate_sales_strategy_content": "Director-level sales professionals have a 30% higher engagement rate with sales strategy content compared to other titles.",
+      "top_technology_adoption_sales_automation_tools": "80% of Directors in sales have adopted sales automation tools in the past year.",
+      "common_decision_making_metrics": [
+        "ROI",
+        "Sales pipeline performance",
+        "Customer feedback"
+      ],
+      "market_influence_sources": [
+        "Market trends reports",
+        "Competitor analysis",
+        "Industry benchmarks"
+      ]
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-17T02:05:34.247561+00:00",
+  "completed_at": "2025-07-17T02:05:47.736896+00:00"
+}

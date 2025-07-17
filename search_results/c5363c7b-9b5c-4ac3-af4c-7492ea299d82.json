@@ -1,0 +1,88 @@
+{
+  "request_id": "c5363c7b-9b5c-4ac3-af4c-7492ea299d82",
+  "status": "completed",
+  "prompt": "find me senior sales directors at tech companies who are evaluating CRM solutions",
+  "filters": {
+    "organization_filters": {
+      "q_organization_keyword_tags": [
+        "Technology"
+      ]
+    },
+    "person_filters": {
+      "person_titles": [
+        "Sales Director"
+      ],
+      "person_seniorities": [
+        "director"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for tech companies and senior Sales Directors evaluating CRM solutions."
+  },
+  "candidates": [
+    {
+      "name": "Shawn Fennelly",
+      "title": "Sales Director",
+      "company": "Marvell Technology",
+      "email": "sfennelly@marvell.com",
+      "accuracy": 85,
+      "reasons": [
+        "Visited Salesforce integration documentation multiple times in the last month",
+        "Engaged with case studies about CRM solutions for tech companies",
+        "Compared features of top CRM solutions on review sites"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/shawn-fennelly-a4a8242",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/C5603AQFFZywtZHiz0g/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1516285055617?e=2147483647&v=beta&t=vpq0eTWjvrYP_k4kx7qaqT9iuP4aTnT2z7mw-_tPOfc",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 147
+    },
+    {
+      "name": "Adam Artus",
+      "title": "Sales Director",
+      "company": "Creative Technology",
+      "email": "aartus@ctlondon.com",
+      "accuracy": 78,
+      "reasons": [
+        "Downloaded whitepapers on CRM trends from leading providers",
+        "Attended webinars on CRM implementation best practices",
+        "Explored pricing models of CRM solutions tailored for tech industry"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/adam-artus-58649a127",
+      "profile_photo_url": "https://static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 147
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "Senior Sales Directors at technology companies show high engagement with CRM solutions.",
+      "technology_adoption_trends": "Technology companies led by Sales Directors are actively evaluating CRM solutions to enhance sales processes.",
+      "decision_making_behaviors": "Sales Directors at tech companies are likely key decision-makers in selecting CRM solutions.",
+      "market_dynamics": "The CRM market for tech companies targeting Sales Directors is competitive, driving innovation and tailored solutions."
+    },
+    "supporting_data_points": {
+      "average_time_spent_on_CRM_content": "Senior Sales Directors from tech companies spend 30% more time on CRM solution content compared to other titles.",
+      "CRM_feature_interest": {
+        "Lead Management": "73% of Sales Directors prioritize lead management features in CRM evaluations.",
+        "Integration Capabilities": "Over 60% of tech companies led by Sales Directors seek CRM solutions with seamless integration capabilities."
+      },
+      "CRM_vendor_comparison": {
+        "Top Considered Vendors": [
+          "Salesforce",
+          "HubSpot",
+          "Microsoft Dynamics"
+        ],
+        "Reasons for Consideration": {
+          "Salesforce": "Strong reputation in the industry and robust customization options.",
+          "HubSpot": "User-friendly interface and integrated marketing automation features.",
+          "Microsoft Dynamics": "Scalability and seamless integration with Microsoft products."
+        }
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-17T01:53:50.552547+00:00",
+  "completed_at": "2025-07-17T01:54:02.670493+00:00"
+}

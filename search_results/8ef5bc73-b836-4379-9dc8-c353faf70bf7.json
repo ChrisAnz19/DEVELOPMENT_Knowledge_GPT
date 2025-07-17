@@ -1,0 +1,98 @@
+{
+  "request_id": "8ef5bc73-b836-4379-9dc8-c353faf70bf7",
+  "status": "completed",
+  "prompt": "Find me a ceo that is in the market for cybersecurity",
+  "filters": {
+    "organization_filters": {
+      "q_organization_keyword_tags": [
+        "Cybersecurity"
+      ]
+    },
+    "person_filters": {
+      "person_titles": [
+        "CEO"
+      ],
+      "include_similar_titles": true
+    },
+    "reasoning": "Filtered for CEOs in organizations related to cybersecurity."
+  },
+  "candidates": [
+    {
+      "name": "Dato'? Wahab",
+      "title": "CEO",
+      "company": "CyberSecurity Malaysia",
+      "email": "amirudin@cybersecurity.my",
+      "accuracy": 85,
+      "reasons": [
+        "Reviewed industry transformation case studies and strategic pivots",
+        "Analyzed market trends and competitive landscapes across the sector",
+        "Researched organizational structures optimized for current market conditions",
+        "Examined long-term industry forecasts and strategic implications"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/dato-%e2%80%8b-dr-amirudin-abdul-wahab-9270ba127",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/C5603AQHhHNx8BMSjvg/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1517023144249?e=2147483647&v=beta&t=12VEuPdOywQIPE0cX8Ubv_I-3CMz7meKRrELBM5piYQ",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 158
+    },
+    {
+      "name": "Aleksandr Bychkov",
+      "title": "Chief Executive Officer",
+      "company": "Paratus Cybersecurity",
+      "email": "a.bychkov@paratuscybersec.com",
+      "accuracy": 75,
+      "reasons": [
+        "Reviewed industry transformation case studies and strategic pivots",
+        "Analyzed market trends and competitive landscapes across the sector",
+        "Researched organizational structures optimized for current market conditions",
+        "Examined long-term industry forecasts and strategic implications"
+      ],
+      "linkedin_url": "http://www.linkedin.com/in/aleksandr-bychkov-0aa66a255",
+      "profile_photo_url": "https://media.licdn.com/dms/image/v2/D4D03AQFxyZfktW4q-w/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1697718017851?e=2147483647&v=beta&t=L5V8yZ5Nwgz0Er_pmJtU-TBkED1YWgvqPeOeL6YreS4",
+      "location": null,
+      "linkedin_profile": {},
+      "search_id": 158
+    }
+  ],
+  "behavioral_data": {
+    "behavioral_insights": {
+      "engagement_patterns": "CEOs in cybersecurity-related organizations tend to engage with content related to threat intelligence, data protection, network security, and compliance regulations.",
+      "technology_adoption_trends": "CEOs in cybersecurity-related organizations are early adopters of advanced security technologies such as AI-driven cybersecurity solutions, blockchain for secure transactions, and cloud-based security services.",
+      "decision_making_behaviors": "CEOs in cybersecurity-related organizations are actively involved in decision-making processes for cybersecurity investments, vendor selection, and strategic partnerships.",
+      "market_dynamics": "The cybersecurity market is rapidly evolving due to increasing cyber threats, leading CEOs to prioritize investments in innovative security solutions to protect their organizations' data and assets."
+    },
+    "supporting_data_points": {
+      "engagement_data": {
+        "top_content_topics": [
+          "Threat intelligence",
+          "Data protection",
+          "Network security",
+          "Compliance regulations"
+        ]
+      },
+      "technology_data": {
+        "top_technologies": [
+          "AI-driven cybersecurity solutions",
+          "Blockchain for secure transactions",
+          "Cloud-based security services"
+        ]
+      },
+      "decision_making_data": {
+        "involvement_in_processes": [
+          "Cybersecurity investments",
+          "Vendor selection",
+          "Strategic partnerships"
+        ]
+      },
+      "market_data": {
+        "key_market_trends": [
+          "Increasing cyber threats",
+          "Rapid evolution of cybersecurity solutions"
+        ]
+      }
+    }
+  },
+  "error": null,
+  "created_at": "2025-07-17T02:43:31.117453+00:00",
+  "completed_at": "2025-07-17T02:43:50.349647+00:00"
+}
