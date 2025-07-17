@@ -213,12 +213,47 @@ interface SearchResponse {
   prompt: string;
   filters?: object;
   candidates?: Candidate[];
-  behavioral_data?: object;
+  behavioral_data?: BehavioralData; // <-- updated type
   error?: string;
   created_at: string;
   completed_at?: string;
 }
 ```
+
+### BehavioralData (AI-Generated)
+```typescript
+interface BehavioralData {
+  behavioral_insight: string; // AI-generated summary/insight for the search
+  scores: {
+    cmi: { score: number; explanation: string }; // Communication Maturity Index
+    rbfs: { score: number; explanation: string }; // Risk-Barrier Focus Score
+    ias: { score: number; explanation: string }; // Identity Alignment Signal
+  };
+}
+```
+
+**Example behavioral_data:**
+```json
+{
+  "behavioral_insight": "Given the CMO's high engagement with comprehensive market research reports, performance benchmarks, and emerging technologies, their CMI is high, indicating a readiness to take action rather than mere curiosity. However, the examination of case studies suggests a high RBFS, revealing a sensitivity to risk and a desire for proven success. Their search for marketing transformations in similar organizations indicates a strong IAS, demonstrating alignment with their role and goals.\n\nEngagement strategy: Position your solution as cutting-edge yet well-vetted, demonstrating its proven success within similar organizations. Stress how it can enhance their marketing performance and put them at the forefront of the SaaS industry. Ensure all communication aligns with their role and goals as a CMO, reinforcing their identity and ambition to drive transformative change.",
+  "scores": {
+    "cmi": {
+      "score": 85,
+      "explanation": "The CMO's high score indicates a preference for direct, detailed, and technical communication. They are likely to appreciate in-depth discussions and data-driven insights in their communication."
+    },
+    "rbfs": {
+      "score": 75,
+      "explanation": "The Chief Marketing Officer (CMO) shows a balanced approach to risk, needing moderate validation. They are likely open to exploring opportunities but also consider potential barriers before making decisions."
+    },
+    "ias": {
+      "score": 85,
+      "explanation": "The CMO shows a high alignment with their professional role through in-depth market research and strategic analysis, indicating strong identification with their expertise. This high score suggests a high level of engagement in marketing strategies and industry trends."
+    }
+  }
+}
+```
+
+**Note:** The `behavioral_data` field is always present on completed searches and contains both a summary insight and detailed scores for CMI, RBFS, and IAS.
 
 ### Candidate
 ```typescript
@@ -355,15 +390,3 @@ Error responses include an `error` field with details:
   "error": "Search not found"
 }
 ```
-
-## 📝 Notes for Frontend Development
-
-1. **Polling**: Use the polling pattern for search results as they are processed asynchronously
-2. **Rate Limiting**: Be mindful of API rate limits
-3. **CORS**: The API supports CORS for frontend integration
-4. **Data Persistence**: All data is stored in Supabase and persists between deployments
-5. **Exclusions**: The system automatically excludes people processed within 30 days
-
-## 🎯 Ready for Frontend Development
-
-The API is now fully deployed and ready for frontend integration. All endpoints are working and the database is properly connected to Supabase. You can start building your frontend application using the examples and documentation above. 

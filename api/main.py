@@ -600,42 +600,28 @@ async def process_search(
             logger.error(f"Error selecting top candidates: {str(e)}")
             candidates = people[:max_candidates] if isinstance(people, list) and people else []
         
-        # Add profile photo URLs
+        # Add profile photo URLs and personalized behavioral data
         for candidate in candidates:
             try:
                 linkedin_profile = candidate.get("linkedin_profile", {})
                 profile_photo_url = extract_profile_photo_url(candidate, linkedin_profile)
                 if profile_photo_url:
                     candidate["profile_photo_url"] = profile_photo_url
+                # Generate and attach personalized behavioral data
+                candidate["behavioral_data"] = enhance_behavioral_data_ai({}, [candidate], prompt)
             except Exception as e:
-                logger.error(f"Error extracting profile photo URL: {str(e)}")
+                logger.error(f"Error processing candidate {candidate.get('name', 'Unknown')}: {str(e)}")
                 # Continue with next candidate
-        
-        # Generate behavioral data using the AI-enhanced function
+
+        # Optionally, generate a summary behavioral_data for the search (using the first candidate or all candidates)
         try:
-            behavioral_data = enhance_behavioral_data_ai({}, candidates, prompt)
-            search_data["behavioral_data"] = json.dumps(behavioral_data)  # Convert to JSON string
-            logger.info(f"Generated behavioral data: {behavioral_data}")
+            if candidates:
+                search_data["behavioral_data"] = json.dumps(candidates[0]["behavioral_data"])  # Or use a summary if desired
+            else:
+                search_data["behavioral_data"] = json.dumps({})
         except Exception as be:
-            logger.error(f"Error generating behavioral data: {str(be)}")
-            # Provide fallback behavioral data
-            search_data["behavioral_data"] = json.dumps({
-                "behavioral_insight": "This professional responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits.",
-                "scores": {
-                    "cmi": {
-                        "score": 70,
-                        "explanation": "Moderate communication maturity index suggests balanced communication approach."
-                    },
-                    "rbfs": {
-                        "score": 65,
-                        "explanation": "Moderate risk-barrier focus score indicates balanced approach to risk and opportunity."
-                    },
-                    "ias": {
-                        "score": 75,
-                        "explanation": "Moderate to high identity alignment signal suggests professional identifies with their role."
-                    }
-                }
-            })
+            logger.error(f"Error generating search-level behavioral data: {str(be)}")
+            search_data["behavioral_data"] = json.dumps({})
         
         # Update the search data only if we're still processing
         if processing_state["is_processing"]:
