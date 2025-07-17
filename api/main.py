@@ -318,9 +318,16 @@ async def get_search_result(request_id: str):
         
         # Get candidates for this search
         try:
-            candidates = get_people_for_search(request_id)
-            if candidates:
-                search_data["candidates"] = candidates
+            # Get the database ID for the search (not the request_id)
+            search_db_id = search_data.get("id")
+            if search_db_id:
+                # Get people using the search database ID
+                candidates = get_people_for_search(search_db_id)
+                if candidates:
+                    search_data["candidates"] = candidates
+                    logger.info(f"Found {len(candidates)} candidates for search {request_id}")
+            else:
+                logger.warning(f"Cannot get candidates: search_db_id not found for request_id {request_id}")
         except Exception as e:
             logger.error(f"Error getting candidates for search {request_id}: {str(e)}")
             # Continue even if getting candidates fails
@@ -448,9 +455,6 @@ async def process_search(
             if profile_photo_url:
                 candidate["profile_photo_url"] = profile_photo_url
         
-        # Store people in the database
-        store_people_to_database(candidates, request_id)
-        
         # Generate behavioral data
         try:
             from behavioral_metrics import enhance_behavioral_data
@@ -470,10 +474,16 @@ async def process_search(
         # Store the updated search in the database
         store_search_to_database(search_data)
         
-        # Store candidates separately if needed
+        # Store candidates separately
         try:
-            store_people_to_database(candidates, request_id)
-            logger.info(f"Stored {len(candidates)} candidates for search {request_id}")
+            # Get the database ID for the search (not the request_id)
+            search_db_id = search_data.get("id")
+            if search_db_id:
+                # Store people with the search database ID
+                store_people_to_database(search_db_id, candidates)
+                logger.info(f"Stored {len(candidates)} candidates for search {request_id} (DB ID: {search_db_id})")
+            else:
+                logger.error(f"Cannot store candidates: search_db_id not found for request_id {request_id}")
         except Exception as pe:
             logger.error(f"Error storing candidates: {str(pe)}")
         
