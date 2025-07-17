@@ -1,94 +1,158 @@
-# Database Constraint Violations Fix
+# Database Fixes for Knowledge_GPT
 
-This document outlines the changes made to fix database constraint violations in the Knowledge_GPT API.
+## Issues Identified
 
-## Problem
+1. **Null Constraint Violation**: The `prompt` field was being set to `null` when updating search records
+2. **Missing Behavioral Data**: Individual candidates weren't receiving their personalized behavioral insights
+3. **Missing Database Column**: The `people` table was missing the `behavioral_data` column
 
-The original implementation of `store_search_to_database` had several issues:
+## Fixes Applied
 
-1. It did not check for existing records before inserting, leading to duplicate key errors
-2. It did not handle primary keys properly, causing constraint violations
-3. It lacked proper error handling for database operations
-4. It did not support transactions for database operations
+### 1. Fixed Null Constraint Violation (`api/main.py`)
 
-## Solution
+**Problem**: When updating search records, the `prompt` field was being set to `null`, violating the NOT NULL constraint.
 
-A new implementation of the database functions has been created in `database_fixed.py` with the following improvements:
-
-### 1. Check for Existing Records
-
-The new `store_search_to_database` function now checks if a record with the same `request_id` already exists before attempting to insert a new one. If an existing record is found, it updates that record instead of trying to insert a new one.
+**Solution**: Modified the search update logic to:
+- Retrieve the existing record first
+- Preserve all required fields (especially `prompt`)
+- Use fallback values if needed
+- Ensure proper error handling
 
 ```python
-# Check if a record with this request_id already exists
-if "request_id" in search_data:
-    request_id = search_data["request_id"]
-    existing_record = get_search_from_database(request_id)
-    
-    if existing_record:
-        # Update the existing record
-        search_id = existing_record["id"]
-        search_data["id"] = search_id
-        # Use the update method for the existing record
-        res = supabase.table("searches").update(search_data).eq("id", search_id).execute()
+# Get the existing record first to preserve required fields
+existing_record = get_search_from_database(request_id)
+if not existing_record:
+    logger.error(f"Search record not found for update: {request_id}")
+    return
+
+# Update search data while preserving required fields
+update_data = {
+    "id": existing_record.get("id"),
+    "request_id": existing_record.get("request_id", request_id),
+    "prompt": existing_record.get("prompt", prompt),  # Use original prompt or fallback
+    "status": "completed",
+    "filters": json.dumps(filters),
+    "completed_at": datetime.now(timezone.utc).isoformat()
+}
 ```
 
-### 2. Proper Primary Key Handling
+### 2. Added Behavioral Data to People Table
 
-The function now handles primary keys properly by:
-- Using the existing record's ID when updating
-- Removing the ID field when inserting a new record to let the database assign one
+**Problem**: The `people` table schema didn't include a `behavioral_data` column, so individual candidate behavioral insights weren't being stored.
 
-```python
-# This is a new record, proceed with insert
-# Remove id if it exists to let the database assign one
-if "id" in search_data:
-    del search_data["id"]
-```
+**Solution**: 
+- Updated `schema.sql` to include `behavioral_data JSONB` column
+- Modified `database.py` to handle behavioral data storage and retrieval
+- Added JSON serialization/deserialization for behavioral data
 
-### 3. Enhanced Error Handling
+### 3. Enhanced Behavioral Data Generation (`api/main.py`)
 
-Comprehensive error handling has been added to catch and log all database errors:
+**Problem**: Behavioral data generation was failing silently for individual candidates.
+
+**Solution**: Added robust error handling and fallback behavioral data:
 
 ```python
+# Generate and attach personalized behavioral data
 try:
-    # Database operations
-except Exception as e:
-    logger.error(f"Database operation error in store_search_to_database: {str(e)}")
-    # Log the search_data for debugging (excluding sensitive fields)
-    safe_data = {k: v for k, v in search_data.items() if k not in ["behavioral_data", "filters"]}
-    logger.error(f"Failed search data: {safe_data}")
-    return None
+    behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
+    candidate["behavioral_data"] = behavioral_data
+    logger.info(f"Generated behavioral data for {candidate.get('name', 'Unknown')}")
+except Exception as bd_error:
+    logger.error(f"Error generating behavioral data for {candidate.get('name', 'Unknown')}: {str(bd_error)}")
+    # Provide fallback behavioral data
+    candidate["behavioral_data"] = {
+        "behavioral_insight": "This professional responds best to personalized engagement...",
+        "scores": {
+            "cmi": {"score": 70, "explanation": "Moderate commitment momentum"},
+            "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
+            "ias": {"score": 75, "explanation": "Strong role alignment"}
+        }
+    }
 ```
 
-### 4. Return Values
+### 4. Updated Database Functions (`database.py`)
 
-The function now returns meaningful values:
-- Returns the ID of the inserted or updated record on success
-- Returns `None` on failure
+**Changes Made**:
+- Added `behavioral_data` to schema fields in `store_people_to_database()`
+- Added JSON serialization for behavioral data storage
+- Updated `get_people_for_search()` to include and parse behavioral data
+- Added proper JSON deserialization when retrieving data
 
-This allows the calling code to check if the operation was successful and take appropriate action.
+## Database Migration Required
 
-## Testing
+You need to add the `behavioral_data` column to your existing `people` table. Run this SQL in your Supabase SQL Editor:
 
-A test file `test_database_fixed.py` has been created to verify the fixes. It includes tests for:
+```sql
+ALTER TABLE people ADD COLUMN IF NOT EXISTS behavioral_data JSONB;
+```
 
-1. Storing a new search
-2. Updating an existing search
-3. Updating a search using its ID
-4. Error handling for invalid data
+## Files Modified
 
-## Integration
+1. `api/main.py` - Fixed search update logic and enhanced behavioral data generation
+2. `database.py` - Added behavioral data handling to database functions
+3. `schema.sql` - Updated schema to include behavioral_data column
+4. `database_migration.sql` - Created migration script for existing databases
+5. `run_migration.py` - Python script to run the migration
+6. `fix_database_issues.py` - Comprehensive fix and test script
 
-The API has been updated in `api/main_fixed_new.py` to use the fixed database functions. The changes include:
+## How to Apply the Fixes
 
-1. Importing the fixed database functions
-2. Checking the return value of `store_search_to_database` to handle failures
-3. Using the fixed `delete_search_from_database` function with proper error handling
+### Step 1: Update Database Schema
+Run this SQL in your Supabase SQL Editor:
+```sql
+ALTER TABLE people ADD COLUMN IF NOT EXISTS behavioral_data JSONB;
+```
 
-## Next Steps
+### Step 2: Test the Fixes
+Run the fix script to verify everything is working:
+```bash
+python fix_database_issues.py
+```
 
-1. Run the tests to verify the fixes
-2. Deploy the fixed code to the development environment
-3. Monitor for any remaining database issues
-4. Deploy to production once verified
+### Step 3: Restart Your API Server
+After applying the fixes, restart your API server to ensure all changes take effect.
+
+### Step 4: Test with a New Search
+Create a new search request and verify that:
+- The search completes without database errors
+- Each candidate has a `behavioral_data` field with:
+  - `behavioral_insight` (string)
+  - `scores` object with `cmi`, `rbfs`, and `ias` scores
+  - Each score has both `score` (number) and `explanation` (string)
+
+## Expected Result
+
+After applying these fixes, each candidate in your search results should have a `behavioral_data` field like this:
+
+```json
+{
+  "behavioral_data": {
+    "behavioral_insight": "This Director of Marketing exhibits high commitment momentum with focused research on marketing automation platforms and ROI measurement tools. Their recent deep-dive sessions on competitive analysis suggest they're moving beyond initial research toward implementation planning.",
+    "scores": {
+      "cmi": {
+        "score": 85,
+        "explanation": "Ready to act"
+      },
+      "rbfs": {
+        "score": 65,
+        "explanation": "Balanced risk approach"
+      },
+      "ias": {
+        "score": 80,
+        "explanation": "Strong role alignment"
+      }
+    }
+  }
+}
+```
+
+## Troubleshooting
+
+If you still encounter issues:
+
+1. **Check Supabase Logs**: Look for any database constraint violations
+2. **Verify Column Exists**: Ensure the `behavioral_data` column was added successfully
+3. **Check API Logs**: Look for behavioral data generation errors
+4. **Test Individual Components**: Use the `fix_database_issues.py` script to test each component
+
+The fixes ensure robust error handling, so even if behavioral data generation fails, candidates will receive fallback behavioral insights rather than empty data.

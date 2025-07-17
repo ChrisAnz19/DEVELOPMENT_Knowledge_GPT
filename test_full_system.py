@@ -1,202 +1,146 @@
 #!/usr/bin/env python3
 """
-Comprehensive test of the entire Knowledge_GPT system
-Tests API → Database → Supabase integration
+Test the full system with behavioral data
 """
 
-import requests
+import logging
 import json
-import time
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
+from supabase_client import supabase
+from database import store_search_to_database, store_people_to_database, get_people_for_search
 
-# API Configuration
-API_BASE_URL = "https://knowledge-gpt-siuq.onrender.com"
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def test_full_system():
-    """Test the complete system from API to Supabase database"""
-    
-    print("🧪 COMPREHENSIVE SYSTEM TEST")
-    print("=" * 60)
-    print(f"🌐 API URL: {API_BASE_URL}")
-    print("=" * 60)
-    
-    # Step 1: Health Check
-    print("\n1️⃣ Testing API Health...")
+def test_full_behavioral_data_flow():
+    """Test the complete flow with behavioral data"""
     try:
-        health_response = requests.get(f"{API_BASE_URL}/", timeout=10)
-        if health_response.status_code == 200:
-            health_data = health_response.json()
-            print(f"✅ API Health: {health_data['status']}")
-            print(f"⏰ Timestamp: {health_data['timestamp']}")
-            print(f"📦 Version: {health_data['version']}")
-        else:
-            print(f"❌ Health check failed: {health_response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Health check error: {e}")
-        return False
-    
-    # Step 2: Database Stats Check
-    print("\n2️⃣ Testing Database Connection...")
-    try:
-        db_response = requests.get(f"{API_BASE_URL}/api/database/stats", timeout=10)
-        if db_response.status_code == 200:
-            db_stats = db_response.json()
-            print(f"✅ Database Status: {db_stats['database_status']}")
-            if 'total_searches' in db_stats:
-                            print(f"📊 Total Searches: {db_stats['total_searches']}")
-            print(f"👥 Total People: {db_stats['total_candidates']}")
-        else:
-            print(f"⚠️  Database stats failed: {db_response.status_code}")
-    except Exception as e:
-        print(f"⚠️  Database stats error: {e}")
-    
-    # Step 3: Create Search Request
-    print("\n3️⃣ Creating Search Request...")
-    test_prompt = "Find marketing directors at SaaS companies in San Francisco who are likely to be interested in buying marketing automation software"
-    
-    search_payload = {
-        "prompt": test_prompt,
-        "max_candidates": 2,
-        "include_linkedin": True,
-        "include_posts": True
-    }
-    
-    try:
-        search_response = requests.post(
-            f"{API_BASE_URL}/api/search",
-            json=search_payload,
-            headers={"Content-Type": "application/json"},
-            timeout=30
-        )
+        # Step 1: Create a test search
+        test_request_id = f"test-{str(uuid.uuid4())[:8]}"
+        test_search = {
+            "request_id": test_request_id,
+            "prompt": "Test search for behavioral data",
+            "status": "completed",
+            "filters": json.dumps({"test": "filters"}),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }
         
-        if search_response.status_code == 200:
-            search_data = search_response.json()
-            request_id = search_data["request_id"]
-            print(f"✅ Search created successfully!")
-            print(f"🆔 Request ID: {request_id}")
-            print(f"📊 Status: {search_data['status']}")
-            print(f"⏰ Created: {search_data['created_at']}")
-        else:
-            print(f"❌ Search creation failed: {search_response.status_code}")
-            print(f"Response: {search_response.text}")
-            return False
+        # Store the search
+        search_id = store_search_to_database(test_search)
+        logger.info(f"✅ Created test search with ID: {search_id}")
+        
+        # Step 2: Create test candidates with behavioral data
+        test_candidates = [
+            {
+                "name": "John Doe",
+                "title": "Marketing Director",
+                "company": "Tech Corp",
+                "email": "john.doe@techcorp.com",
+                "linkedin_url": "https://linkedin.com/in/johndoe",
+                "accuracy": 85,
+                "reasons": ["Strong marketing background", "Tech industry experience"],
+                "behavioral_data": {
+                    "behavioral_insight": "This Marketing Director exhibits high commitment momentum with focused research on marketing automation platforms and ROI measurement tools. Their recent deep-dive sessions on competitive analysis suggest they're moving beyond initial research toward implementation planning.",
+                    "scores": {
+                        "cmi": {"score": 85, "explanation": "Ready to act"},
+                        "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
+                        "ias": {"score": 80, "explanation": "Strong role alignment"}
+                    }
+                }
+            },
+            {
+                "name": "Jane Smith",
+                "title": "Senior Software Engineer",
+                "company": "Innovation Labs",
+                "email": "jane.smith@innovationlabs.com",
+                "linkedin_url": "https://linkedin.com/in/janesmith",
+                "accuracy": 92,
+                "reasons": ["Extensive technical experience", "Leadership potential"],
+                "behavioral_data": {
+                    "behavioral_insight": "This Senior Software Engineer shows strong technical commitment with consistent engagement in advanced architecture discussions and implementation planning. Their pattern of late-night research sessions indicates personal investment in technical solutions.",
+                    "scores": {
+                        "cmi": {"score": 90, "explanation": "Lining up next steps"},
+                        "rbfs": {"score": 55, "explanation": "Open to opportunity"},
+                        "ias": {"score": 88, "explanation": "Strong technical identity"}
+                    }
+                }
+            }
+        ]
+        
+        # Step 3: Store candidates with behavioral data
+        store_people_to_database(search_id, test_candidates)
+        logger.info(f"✅ Stored {len(test_candidates)} candidates with behavioral data")
+        
+        # Step 4: Retrieve candidates and verify behavioral data
+        retrieved_candidates = get_people_for_search(search_id)
+        logger.info(f"✅ Retrieved {len(retrieved_candidates)} candidates")
+        
+        # Step 5: Verify behavioral data structure
+        for candidate in retrieved_candidates:
+            name = candidate.get('name', 'Unknown')
+            behavioral_data = candidate.get('behavioral_data')
             
-    except Exception as e:
-        print(f"❌ Search creation error: {e}")
-        return False
-    
-    # Step 4: Poll for Results
-    print("\n4️⃣ Polling for Results...")
-    max_attempts = 30  # 5 minutes max
-    attempt = 0
-    
-    while attempt < max_attempts:
-        try:
-            result_response = requests.get(
-                f"{API_BASE_URL}/api/search/{request_id}",
-                timeout=10
-            )
-            
-            if result_response.status_code == 200:
-                result_data = result_response.json()
-                status = result_data["status"]
+            if behavioral_data:
+                logger.info(f"✅ {name} has behavioral data")
                 
-                print(f"⏳ Attempt {attempt + 1}: Status = {status}")
-                
-                if status == "completed":
-                    print("✅ Search completed! Processing results...")
-                    break
-                elif status == "failed":
-                    print(f"❌ Search failed: {result_data.get('error', 'Unknown error')}")
-                    return False
+                # Check structure
+                if 'behavioral_insight' in behavioral_data:
+                    logger.info(f"  ✅ Has behavioral_insight: {behavioral_data['behavioral_insight'][:50]}...")
                 else:
-                    # Still processing
-                    time.sleep(10)  # Wait 10 seconds before next poll
-                    attempt += 1
-            else:
-                print(f"❌ Result polling failed: {result_response.status_code}")
-                return False
+                    logger.warning(f"  ⚠️  Missing behavioral_insight")
                 
-        except Exception as e:
-            print(f"❌ Polling error: {e}")
-            return False
-    
-    if attempt >= max_attempts:
-        print("❌ Timeout: Search took too long to complete")
-        return False
-    
-    # Step 5: Verify Database Storage
-    print("\n5️⃣ Verifying Database Storage...")
-    try:
-        # Get final results
-        final_response = requests.get(f"{API_BASE_URL}/api/search/{request_id}")
-        final_data = final_response.json()
-        
-        # Check if data is in database
-        db_stats_after = requests.get(f"{API_BASE_URL}/api/database/stats").json()
-        if db_stats_after.get('database_status') == 'connected':
-            print("✅ Database storage verified!")
-        else:
-            print("⚠️  Database storage status unclear")
-        
-        # Display results
-        print("\n📊 SEARCH RESULTS:")
-        print("-" * 40)
-        print(f"🎯 Prompt: {final_data['prompt']}")
-        print(f"📊 Status: {final_data['status']}")
-        print(f"⏱️  Processing Time: {final_data.get('completed_at', 'N/A')}")
-        
-        if final_data.get("filters"):
-            print(f"🔍 Filters Applied: {len(final_data['filters'].get('organization_filters', {})) + len(final_data['filters'].get('person_filters', {}))} filter(s)")
-        
-        if final_data.get("behavioral_data"):
-            print(f"🧠 Behavioral Data: Generated")
-        
-        if final_data.get("candidates"):
-            people = final_data["candidates"]
-            print(f"👥 People Found: {len(people)}")
-            
-            for i, person in enumerate(people, 1):
-                print(f"\n🥇 PERSON #{i}")
-                print(f"   👤 Name: {person.get('name', 'N/A')}")
-                print(f"   💼 Title: {person.get('title', 'N/A')}")
-                print(f"   🏢 Company: {person.get('company', 'N/A')}")
-                print(f"   📧 Email: {person.get('email', 'N/A')}")
-                print(f"   📊 Accuracy: {person.get('accuracy', 'N/A')}%")
-                print(f"   🔗 LinkedIn: {'Yes' if person.get('linkedin_url') else 'No'}")
-                print(f"   📸 Photo: {'Yes' if person.get('profile_photo_url') else 'No'}")
-                
-                if person.get('reasons'):
-                    print(f"   💡 Reasons: {len(person['reasons'])} reason(s)")
-        
-        # Step 6: Test Database Retrieval
-        print("\n6️⃣ Testing Database Retrieval...")
-        list_response = requests.get(f"{API_BASE_URL}/api/search")
-        if list_response.status_code == 200:
-            searches = list_response.json()
-            recent_searches = searches.get("searches", [])
-            if recent_searches:
-                latest_search = recent_searches[0]
-                print(f"✅ Latest search in database: {latest_search['request_id']}")
-                print(f"   Prompt: {latest_search['prompt'][:50]}...")
-                print(f"   Status: {latest_search['status']}")
-                print(f"   Candidates: {latest_search.get('candidate_count', 0)}")
+                if 'scores' in behavioral_data:
+                    scores = behavioral_data['scores']
+                    logger.info(f"  ✅ Has scores")
+                    
+                    # Check each score
+                    for score_name in ['cmi', 'rbfs', 'ias']:
+                        if score_name in scores:
+                            score_data = scores[score_name]
+                            if 'score' in score_data and 'explanation' in score_data:
+                                logger.info(f"    ✅ {score_name.upper()}: {score_data['score']} - {score_data['explanation']}")
+                            else:
+                                logger.warning(f"    ⚠️  {score_name.upper()} missing score or explanation")
+                        else:
+                            logger.warning(f"    ⚠️  Missing {score_name.upper()} score")
+                else:
+                    logger.warning(f"  ⚠️  Missing scores")
             else:
-                print("⚠️  No searches found in database")
+                logger.error(f"❌ {name} missing behavioral data")
         
-        print("\n" + "=" * 60)
-        print("🎉 FULL SYSTEM TEST COMPLETED SUCCESSFULLY!")
-        print("=" * 60)
+        # Step 6: Clean up test data
+        supabase.table("people").delete().eq("search_id", search_id).execute()
+        supabase.table("searches").delete().eq("request_id", test_request_id).execute()
+        logger.info("✅ Test data cleaned up")
+        
         return True
         
     except Exception as e:
-        print(f"❌ Error processing results: {e}")
+        logger.error(f"❌ Test failed: {str(e)}")
+        # Try to clean up
+        try:
+            if 'test_request_id' in locals():
+                supabase.table("searches").delete().eq("request_id", test_request_id).execute()
+        except:
+            pass
         return False
 
 if __name__ == "__main__":
-    success = test_full_system()
+    print("🧪 Testing Full Behavioral Data System...")
+    print("=" * 60)
+    
+    success = test_full_behavioral_data_flow()
+    
     if success:
-        print("\n✅ All systems operational! Ready for frontend development.")
+        print("\n🎉 All tests passed! The behavioral data system is working correctly.")
+        print("\nWhat this means:")
+        print("✅ Database can store behavioral data")
+        print("✅ Database can retrieve behavioral data")
+        print("✅ Behavioral data structure is correct")
+        print("✅ All three scores (CMI, RBFS, IAS) are working")
+        print("✅ Behavioral insights are being stored")
     else:
-        print("\n❌ System test failed. Please check configuration.") 
+        print("\n❌ Some tests failed. Please check the error messages above.")

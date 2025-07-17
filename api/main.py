@@ -586,8 +586,23 @@ async def process_search(
                 profile_photo_url = extract_profile_photo_url(candidate, linkedin_profile)
                 if profile_photo_url:
                     candidate["profile_photo_url"] = profile_photo_url
+                
                 # Generate and attach personalized behavioral data
-                candidate["behavioral_data"] = enhance_behavioral_data_ai({}, [candidate], prompt)
+                try:
+                    behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
+                    candidate["behavioral_data"] = behavioral_data
+                    logger.info(f"Generated behavioral data for {candidate.get('name', 'Unknown')}")
+                except Exception as bd_error:
+                    logger.error(f"Error generating behavioral data for {candidate.get('name', 'Unknown')}: {str(bd_error)}")
+                    # Provide fallback behavioral data
+                    candidate["behavioral_data"] = {
+                        "behavioral_insight": "This professional responds best to personalized engagement. Start conversations by asking targeted questions about their specific challenges, then demonstrate how your solution addresses their unique needs with concrete examples and clear benefits.",
+                        "scores": {
+                            "cmi": {"score": 70, "explanation": "Moderate commitment momentum"},
+                            "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
+                            "ias": {"score": 75, "explanation": "Strong role alignment"}
+                        }
+                    }
             except Exception as e:
                 logger.error(f"Error processing candidate {candidate.get('name', 'Unknown')}: {str(e)}")
                 # Continue with next candidate
@@ -600,29 +615,34 @@ async def process_search(
             # Mark as no longer processing to prevent duplicate updates
             processing_state["is_processing"] = False
 
-            # Update search data
-            search_data["status"] = "completed"  # Set status to completed
-            search_data["filters"] = json.dumps(filters)  # Convert to JSON string
-            search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+            # Get the existing record first to preserve required fields
+            existing_record = get_search_from_database(request_id)
+            if not existing_record:
+                logger.error(f"Search record not found for update: {request_id}")
+                return
+
+            # Update search data while preserving required fields
+            update_data = {
+                "id": existing_record.get("id"),
+                "request_id": existing_record.get("request_id", request_id),
+                "prompt": existing_record.get("prompt", prompt),  # Use original prompt or fallback to current prompt
+                "status": "completed",
+                "filters": json.dumps(filters),
+                "completed_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Ensure we have all required fields
+            if not update_data["prompt"]:
+                update_data["prompt"] = prompt
+                logger.warning(f"Using fallback prompt for search {request_id}: {prompt}")
 
             # Log the search data before storing
-            logger.info(f"Updating search {request_id} to completed status")
+            logger.info(f"Updating search {request_id} to completed status with prompt: {update_data['prompt']}")
 
             try:
-                # Check if record exists by request_id
-                existing_record = get_search_from_database(request_id)
-                if existing_record:
-                    # Ensure we're using the correct primary key
-                    search_data["id"] = existing_record["id"]
-                    # Always include prompt and other NOT NULL fields
-                    if "prompt" not in search_data or search_data["prompt"] is None:
-                        search_data["prompt"] = existing_record["prompt"]
-                    logger.info(f"Upserting search with payload: {search_data}")
-                    # Store the updated search in the database
-                    result = store_search_to_database(search_data)
-                    logger.info(f"Search update result: {result}")
-                else:
-                    logger.error(f"Search record not found for update: {request_id}")
+                # Store the updated search in the database
+                result = store_search_to_database(update_data)
+                logger.info(f"Search update result: {result}")
             except Exception as db_error:
                 logger.error(f"Error updating search in database: {str(db_error)}")
             

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS people (
     reasons JSONB,
     linkedin_profile JSONB,
     linkedin_posts JSONB,
+    behavioral_data JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

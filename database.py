@@ -6,6 +6,7 @@ Handles Supabase connection and operations for storing search results and candid
 
 import logging
 import sys
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -76,7 +77,7 @@ def store_people_to_database(search_id, people):
     schema_fields = {
         'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
         'profile_photo_url', 'location', 'accuracy', 'reasons', 
-        'linkedin_profile', 'linkedin_posts'
+        'linkedin_profile', 'linkedin_posts', 'behavioral_data'
     }
     
     filtered_people = []
@@ -84,14 +85,29 @@ def store_people_to_database(search_id, people):
         filtered_person = {'search_id': search_id}
         for field in schema_fields:
             if field in person and person[field] is not None:
-                filtered_person[field] = person[field]
+                # Convert behavioral_data to JSON string if it's a dict
+                if field == 'behavioral_data' and isinstance(person[field], dict):
+                    filtered_person[field] = json.dumps(person[field])
+                else:
+                    filtered_person[field] = person[field]
         filtered_people.append(filtered_person)
     
     if filtered_people:
         supabase.table("people").insert(filtered_people).execute()
 
 def get_people_for_search(search_id):
-    res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, created_at").eq("search_id", search_id).execute()
+    res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, behavioral_data, created_at").eq("search_id", search_id).execute()
+    
+    # Parse behavioral_data JSON strings back to Python objects
+    if hasattr(res, 'data') and res.data:
+        for person in res.data:
+            if person.get('behavioral_data') and isinstance(person['behavioral_data'], str):
+                try:
+                    person['behavioral_data'] = json.loads(person['behavioral_data'])
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse behavioral_data JSON for person {person.get('id')}")
+                    person['behavioral_data'] = None
+    
     return res.data
 
 def is_person_excluded_in_database(email, days=30):
