@@ -255,29 +255,56 @@ async def create_search(
         
         # Create a timestamp for the request
         created_at = datetime.now(timezone.utc).isoformat()
+        completed_at = datetime.now(timezone.utc).isoformat()
         
-        # Store the initial search request in the database
+        # For testing purposes, create a completed response immediately
+        # This will help us determine if the issue is with background processing
+        mock_candidates = [
+            {
+                "name": "John Doe",
+                "title": "Senior Software Engineer",
+                "company": "Tech Corp",
+                "email": "john.doe@techcorp.com",
+                "accuracy": 92,
+                "reasons": ["5+ years experience", "Python and React skills", "San Francisco location"],
+                "linkedin_url": "https://linkedin.com/in/johndoe",
+                "profile_photo_url": "https://example.com/photo.jpg",
+                "location": "San Francisco, CA",
+                "linkedin_profile": {"summary": "Experienced software engineer..."}
+            }
+        ]
+        
+        # Generate behavioral data
+        try:
+            from behavioral_metrics import enhance_behavioral_data
+            behavioral_data = enhance_behavioral_data({}, mock_candidates, request.prompt)
+        except Exception as be:
+            logger.error(f"Error generating behavioral data: {str(be)}")
+            behavioral_data = {
+                "behavioral_insight": "This professional responds best to personalized engagement.",
+                "scores": {
+                    "cmi": {"score": 70, "explanation": "Moderate communication maturity."},
+                    "rbfs": {"score": 65, "explanation": "Moderate risk-barrier focus."},
+                    "ias": {"score": 75, "explanation": "Moderate identity alignment."}
+                }
+            }
+        
+        # Store the completed search request in the database
         search_data = {
             "request_id": request_id,
-            "status": "processing",
+            "status": "completed",  # Set to completed immediately
             "prompt": request.prompt,
+            "filters": {"mock": "filters"},
+            "candidates": mock_candidates,
+            "behavioral_data": behavioral_data,
             "created_at": created_at,
-            "completed_at": None
+            "completed_at": completed_at
         }
         
         # Store the search in the database
         store_search_to_database(search_data)
         
-        # Process the search in the background
-        background_tasks.add_task(
-            process_search,
-            request_id=request_id,
-            prompt=request.prompt,
-            max_candidates=request.max_candidates,
-            include_linkedin=request.include_linkedin
-        )
-        
-        # Return the initial response
+        # Return the completed response immediately
         return search_data
         
     except Exception as e:
