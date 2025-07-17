@@ -255,63 +255,37 @@ async def create_search(
         
         # Create a timestamp for the request
         created_at = datetime.now(timezone.utc).isoformat()
-        completed_at = datetime.now(timezone.utc).isoformat()
         
-        # For testing purposes, create a completed response immediately
-        # This will help us determine if the issue is with background processing
-        mock_candidates = [
-            {
-                "name": "John Doe",
-                "title": "Senior Software Engineer",
-                "company": "Tech Corp",
-                "email": "john.doe@techcorp.com",
-                "accuracy": 92,
-                "reasons": ["5+ years experience", "Python and React skills", "San Francisco location"],
-                "linkedin_url": "https://linkedin.com/in/johndoe",
-                "profile_photo_url": "https://example.com/photo.jpg",
-                "location": "San Francisco, CA",
-                "linkedin_profile": {"summary": "Experienced software engineer..."}
-            }
-        ]
-        
-        # Generate behavioral data
-        try:
-            from behavioral_metrics import enhance_behavioral_data
-            behavioral_data = enhance_behavioral_data({}, mock_candidates, request.prompt)
-        except Exception as be:
-            logger.error(f"Error generating behavioral data: {str(be)}")
-            behavioral_data = {
-                "behavioral_insight": "This professional responds best to personalized engagement.",
-                "scores": {
-                    "cmi": {"score": 70, "explanation": "Moderate communication maturity."},
-                    "rbfs": {"score": 65, "explanation": "Moderate risk-barrier focus."},
-                    "ias": {"score": 75, "explanation": "Moderate identity alignment."}
-                }
-            }
-        
-        # Store the completed search request in the database
-        # Note: Don't include candidates in the search_data as it's not in the database schema
+        # Store the initial search request in the database with processing status
         search_data = {
             "request_id": request_id,
-            "status": "completed",  # Set to completed immediately
+            "status": "processing",
             "prompt": request.prompt,
-            "filters": json.dumps({"mock": "filters"}),  # Convert to JSON string
-            "behavioral_data": json.dumps(behavioral_data),  # Convert to JSON string
+            "filters": json.dumps({}),  # Empty filters initially
             "created_at": created_at,
-            "completed_at": completed_at
+            "completed_at": None
         }
         
         # Store the search in the database
         store_search_to_database(search_data)
         
-        # For the API response, include the candidates
-        response_data = search_data.copy()
-        response_data["candidates"] = mock_candidates
-        response_data["filters"] = {"mock": "filters"}  # Convert back to dict
-        response_data["behavioral_data"] = behavioral_data  # Convert back to dict
+        # Start background task to process real data
+        background_tasks.add_task(
+            process_search,
+            request_id=request_id,
+            prompt=request.prompt,
+            max_candidates=request.max_candidates,
+            include_linkedin=request.include_linkedin
+        )
         
-        # Return the completed response immediately
-        return response_data
+        # Return the initial response with processing status
+        return {
+            "request_id": request_id,
+            "status": "processing",
+            "prompt": request.prompt,
+            "created_at": created_at,
+            "completed_at": None
+        }
         
     except Exception as e:
         logger.error(f"Error creating search: {str(e)}")
@@ -326,6 +300,30 @@ async def get_search_result(request_id: str):
         
         if not search_data:
             raise HTTPException(status_code=404, detail="Search not found")
+        
+        # Parse JSON strings back to Python objects
+        if "filters" in search_data and isinstance(search_data["filters"], str):
+            try:
+                search_data["filters"] = json.loads(search_data["filters"])
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse filters JSON for search {request_id}")
+                search_data["filters"] = {}
+        
+        if "behavioral_data" in search_data and isinstance(search_data["behavioral_data"], str):
+            try:
+                search_data["behavioral_data"] = json.loads(search_data["behavioral_data"])
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse behavioral_data JSON for search {request_id}")
+                search_data["behavioral_data"] = {}
+        
+        # Get candidates for this search
+        try:
+            candidates = get_people_for_search(request_id)
+            if candidates:
+                search_data["candidates"] = candidates
+        except Exception as e:
+            logger.error(f"Error getting candidates for search {request_id}: {str(e)}")
+            # Continue even if getting candidates fails
             
         return search_data
         
@@ -457,7 +455,7 @@ async def process_search(
         try:
             from behavioral_metrics import enhance_behavioral_data
             behavioral_data = enhance_behavioral_data({}, candidates, prompt)
-            search_data["behavioral_data"] = behavioral_data
+            search_data["behavioral_data"] = json.dumps(behavioral_data)  # Convert to JSON string
             logger.info(f"Generated behavioral data: {behavioral_data}")
         except Exception as be:
             logger.error(f"Error generating behavioral data: {str(be)}")
@@ -465,12 +463,19 @@ async def process_search(
         
         # Update the search data
         search_data["status"] = "completed"
-        search_data["filters"] = filters
-        search_data["candidates"] = candidates
+        search_data["filters"] = json.dumps(filters)  # Convert to JSON string
+        # Don't include candidates in search_data as it's not in the database schema
         search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
         
         # Store the updated search in the database
         store_search_to_database(search_data)
+        
+        # Store candidates separately if needed
+        try:
+            store_people_to_database(candidates, request_id)
+            logger.info(f"Stored {len(candidates)} candidates for search {request_id}")
+        except Exception as pe:
+            logger.error(f"Error storing candidates: {str(pe)}")
         
         logger.info(f"Search completed successfully: {request_id}")
         
