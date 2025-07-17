@@ -148,7 +148,7 @@ def generate_cmi_score_ai(
         
         Provide your response as a JSON object with two fields:
         1. "score": A number between 0 and 100
-        2. "explanation": A 1-2 sentence explanation of the score and what it means for commitment momentum
+        2. "explanation": A few words or a short phrase, not a full sentence. Be extremely concise, like a bullet point or tag.
         """
         
         user_prompt_for_ai = f"""
@@ -168,7 +168,7 @@ def generate_cmi_score_ai(
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.5,
-            max_tokens=150
+            max_tokens=50
         )
         
         # Extract and parse the JSON response
@@ -224,7 +224,7 @@ def generate_rbfs_score_ai(
         
         Provide your response as a JSON object with two fields:
         1. "score": A number between 0 and 100
-        2. "explanation": A 1-2 sentence explanation of the score and what it means for engagement
+        2. "explanation": A few words or a short phrase, not a full sentence. Be extremely concise, like a bullet point or tag.
         """
         
         user_prompt_for_ai = f"""
@@ -244,7 +244,7 @@ def generate_rbfs_score_ai(
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.5,
-            max_tokens=150
+            max_tokens=50
         )
         
         # Extract and parse the JSON response
@@ -300,7 +300,7 @@ def generate_ias_score_ai(
         
         Provide your response as a JSON object with two fields:
         1. "score": A number between 0 and 100
-        2. "explanation": A 1-2 sentence explanation of the score and what it means for engagement
+        2. "explanation": A few words or a short phrase, not a full sentence. Be extremely concise, like a bullet point or tag.
         """
         
         user_prompt_for_ai = f"""
@@ -320,7 +320,7 @@ def generate_ias_score_ai(
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.5,
-            max_tokens=150
+            max_tokens=50
         )
         
         # Extract and parse the JSON response
@@ -507,19 +507,19 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
         return {
             "score": 85,
-            "explanation": "High Commitment Momentum Index (CMI) indicates this technical professional is moving from research to action—look for increased visits to execution pages and shorter intervals between sessions."
+            "explanation": "Ready to act"
         }
     # Executive roles
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         return {
             "score": 80,
-            "explanation": "Strong CMI suggests this executive is lining up next steps. Outreach during this upswing can dramatically lift response rates."
+            "explanation": "Lining up next steps"
         }
     # Default for other roles
     else:
         return {
             "score": 70,
-            "explanation": "Moderate to high CMI suggests the prospect is past initial research and may be ready to engage. Look for behavioral cues like late-night research or repeat visits to key pages."
+            "explanation": "Past research phase"
         }
 
 def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
@@ -530,21 +530,21 @@ def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
         return {
             "score": 85,
-            "explanation": "High risk-barrier focus score indicates this professional is risk-averse and requires thorough validation and risk mitigation strategies."
+            "explanation": "Risk-averse"
         }
     
     # Executive roles often balance risk and opportunity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         return {
             "score": 70,
-            "explanation": "Moderate risk-barrier focus score suggests this executive balances innovation with practical considerations. Present both opportunities and risk mitigation strategies."
+            "explanation": "Balanced risk"
         }
     
     # Default for other roles
     else:
         return {
-            "score": 65,
-            "explanation": "Moderate risk-barrier focus score suggests balancing opportunity messaging with appropriate risk mitigation."
+            "score": 60,
+            "explanation": "Open to opportunity"
         }
 
 def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
@@ -555,19 +555,19 @@ def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
         return {
             "score": 85,
-            "explanation": "Strong identity alignment signal shows this candidate strongly identifies with their technical expertise and problem-solving abilities."
+            "explanation": "Strong alignment"
         }
     
     # Executive roles often have strong professional identity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         return {
-            "score": 90,
-            "explanation": "Very high identity alignment signal indicates this executive strongly identifies with their leadership role and values being recognized for their strategic vision."
+            "score": 80,
+            "explanation": "Role-driven"
         }
     
     # Default for other roles
     else:
         return {
-            "score": 75,
-            "explanation": "Moderate to high identity alignment signal suggests this professional identifies with their role but maintains a balanced professional identity."
+            "score": 70,
+            "explanation": "Moderate fit"
         }
