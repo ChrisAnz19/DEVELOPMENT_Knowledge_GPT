@@ -614,6 +614,9 @@ async def process_search(
                 if existing_record:
                     # Ensure we're using the correct primary key
                     search_data["id"] = existing_record["id"]
+                    # Always include prompt and other NOT NULL fields
+                    if "prompt" not in search_data or search_data["prompt"] is None:
+                        search_data["prompt"] = existing_record["prompt"]
                     logger.info(f"Upserting search with payload: {search_data}")
                     # Store the updated search in the database
                     result = store_search_to_database(search_data)
@@ -649,11 +652,13 @@ async def process_search(
                 if search_data:
                     # Check if record exists by request_id
                     existing_record = get_search_from_database(request_id)
-                    
                     if existing_record:
                         # Update existing record
                         # Ensure we're using the correct primary key
                         search_data["id"] = existing_record["id"]
+                        # Always include prompt and other NOT NULL fields
+                        if "prompt" not in search_data or search_data["prompt"] is None:
+                            search_data["prompt"] = existing_record["prompt"]
                         search_data["status"] = "failed"
                         search_data["error"] = str(e)
                         search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
