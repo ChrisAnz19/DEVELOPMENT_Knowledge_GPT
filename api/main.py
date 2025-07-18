@@ -82,6 +82,10 @@ class SearchResponse(BaseModel):
 def extract_profile_photo_url(candidate_data, linkedin_profile=None):
     """Extract profile photo URL from candidate data or LinkedIn profile."""
     try:
+        # Ensure candidate_data is a dictionary
+        if not isinstance(candidate_data, dict):
+            return None
+            
         # Check LinkedIn profile first
         if linkedin_profile and isinstance(linkedin_profile, dict):
             for field in ["profile_photo_url", "profile_photo", "avatar", "image"]:
@@ -154,8 +158,11 @@ async def process_search(
         # Scrape LinkedIn profiles if requested (with reduced fields)
         if include_linkedin and people:
             try:
-                # Extract LinkedIn URLs
-                linkedin_urls = [p.get("linkedin_url") for p in people if p.get("linkedin_url")]
+                # Extract LinkedIn URLs with type checking
+                linkedin_urls = []
+                for p in people:
+                    if isinstance(p, dict) and p.get("linkedin_url"):
+                        linkedin_urls.append(p.get("linkedin_url"))
                 
                 if linkedin_urls:
                     # Process LinkedIn profiles with timeout
@@ -199,8 +206,12 @@ async def process_search(
             behavioral_data = enhance_behavioral_data_ai({}, candidates, prompt)
         except Exception:
             # Simple fallback behavioral data
+            title = "professional"
+            if candidates and len(candidates) > 0 and isinstance(candidates[0], dict):
+                title = candidates[0].get('title', 'professional')
+            
             behavioral_data = {
-                "behavioral_insight": f"This {candidates[0].get('title', 'professional')} responds best to personalized engagement focusing on their specific business challenges.",
+                "behavioral_insight": f"This {title} responds best to personalized engagement focusing on their specific business challenges.",
                 "scores": {
                     "cmi": {"score": 70, "explanation": "Moderate commitment"},
                     "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
