@@ -117,9 +117,10 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 linkedin_urls = [p.get("linkedin_url") for p in people if isinstance(p, dict) and p.get("linkedin_url")]
                 
                 if linkedin_urls:
+                    # Use a shorter timeout for LinkedIn scraping to prevent hanging
                     linkedin_profiles = await asyncio.wait_for(
                         async_scrape_linkedin_profiles(linkedin_urls),
-                        timeout=60
+                        timeout=30  # Reduced from 60 to 30 seconds
                     )
                     
                     if linkedin_profiles:
@@ -130,7 +131,11 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                                 linkedin_url = person.get("linkedin_url")
                                 if linkedin_url and linkedin_url in profile_map:
                                     person["linkedin_profile"] = profile_map[linkedin_url]
+            except asyncio.TimeoutError:
+                # LinkedIn scraping timed out, continue without LinkedIn data
+                pass
             except Exception:
+                # Any other error, continue without LinkedIn data
                 pass
         
         candidates = []

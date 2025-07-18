@@ -16,13 +16,13 @@ if not SCRAPING_DOG_API_KEY:
         print(f"⚠️  Warning: Could not load ScrapingDog API key: {e}")
         print("   LinkedIn scraping will be disabled. Set SCRAPING_DOG_API_KEY environment variable or create secrets.json.")
 
-async def async_scrape_linkedin_profiles(urls, delay=1.5, max_retries=3):
+async def async_scrape_linkedin_profiles(urls, delay=1.5, max_retries=2):
     """
     Async scrape LinkedIn profile data via ScrapingDog API with throttling and exponential backoff.
     Args:
         urls (list of str): LinkedIn profile URLs to scrape.
         delay (float): Delay in seconds between requests.
-        max_retries (int): Max number of retries per request.
+        max_retries (int): Max number of retries per request (reduced from 3 to 2).
     Returns:
         list of dict: Scraped profile data for each URL.
     """
@@ -34,7 +34,7 @@ async def async_scrape_linkedin_profiles(urls, delay=1.5, max_retries=3):
         return []
     print(f"🔍 Scraping {len(urls)} LinkedIn profiles with ScrapingDog API (async)...")
     results = []
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=15) as client:  # Reduced timeout from 60 to 15 seconds
         for i, url in enumerate(urls, 1):
             # Extract username from LinkedIn URL
             if "linkedin.com/in/" in url:
