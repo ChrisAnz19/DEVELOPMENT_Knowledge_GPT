@@ -460,6 +460,7 @@ async def get_search_result(request_id: str):
                                     "id": search_data["id"],
                                     "request_id": search_data["request_id"],
                                     "status": "completed",
+                                    "prompt": search_data.get("prompt", ""),  # Include the prompt field
                                     "behavioral_data": json.dumps(behavioral_data),
                                     "completed_at": search_data["completed_at"]
                                 }
