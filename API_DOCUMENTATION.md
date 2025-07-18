@@ -84,7 +84,7 @@ Get the results of a specific search by request ID.
       "behavioral_data": {
         "behavioral_insight": "Given the CMO's high engagement with comprehensive market research reports, performance benchmarks, and emerging technologies, their CMI is high, indicating a readiness to take action rather than mere curiosity. However, the examination of case studies suggests a high RBFS, revealing a sensitivity to risk and a desire for proven success. Their search for marketing transformations in similar organizations indicates a strong IAS, demonstrating alignment with their role and goals.\n\nEngagement strategy: Position your solution as cutting-edge yet well-vetted, demonstrating its proven success within similar organizations. Stress how it can enhance their marketing performance and put them at the forefront of the SaaS industry. Ensure all communication aligns with their role and goals as a CMO, reinforcing their identity and ambition to drive transformative change.",
         "scores": {
-          "cmi": { "score": 85, "explanation": "The CMO's high score indicates a preference for direct, detailed, and technical communication. They are likely to appreciate in-depth discussions and data-driven insights in their communication." },
+          "cmi": { "score": 85, "explanation": "The CMO's high score indicates strong commitment momentum with increasing engagement on execution pages, suggesting they are moving from research to action phase." },
           "rbfs": { "score": 75, "explanation": "The Chief Marketing Officer (CMO) shows a balanced approach to risk, needing moderate validation. They are likely open to exploring opportunities but also consider potential barriers before making decisions." },
           "ias": { "score": 85, "explanation": "The CMO shows a high alignment with their professional role through in-depth market research and strategic analysis, indicating strong identification with their expertise. This high score suggests a high level of engagement in marketing strategies and industry trends." }
         }
@@ -266,7 +266,7 @@ interface BehavioralData {
   "behavioral_data": {
     "behavioral_insight": "High CMI, moderate RBFS, strong IAS. Prefers direct, data-driven communication.",
     "scores": {
-      "cmi": { "score": 85, "explanation": "Prefers direct, detailed, and technical communication." },
+      "cmi": { "score": 85, "explanation": "High commitment momentum with increasing engagement on execution pages." },
       "rbfs": { "score": 75, "explanation": "Balanced approach to risk, needs moderate validation." },
       "ias": { "score": 85, "explanation": "Strong identification with professional role." }
     }
