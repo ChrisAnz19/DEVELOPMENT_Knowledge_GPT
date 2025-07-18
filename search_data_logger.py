@@ -53,6 +53,9 @@ class SearchDataLogger:
         # Add to in-memory log for analysis
         self.data_flow_log.append(log_entry)
         
+        # Only log prompt warnings for critical stages where prompt should definitely be present
+        critical_stages = ['pre_storage', 'post_storage', 'api_response']
+        
         # Log based on prompt status
         if prompt_info['has_prompt']:
             self.logger.debug(
@@ -61,10 +64,17 @@ class SearchDataLogger:
                 f"prompt_preview='{prompt_info['preview']}', "
                 f"fields={list(data_summary['fields'])}"
             )
-        else:
+        elif stage in critical_stages:
             self.logger.warning(
                 f"DATA_FLOW [{stage}] {operation.upper()}: request_id={request_id}, "
                 f"⚠️  PROMPT_MISSING: {prompt_info['issue']}, "
+                f"fields={list(data_summary['fields'])}"
+            )
+        else:
+            # For non-critical stages, just log as debug
+            self.logger.debug(
+                f"DATA_FLOW [{stage}] {operation.upper()}: request_id={request_id}, "
+                f"prompt_status={prompt_info['issue'] or 'present'}, "
                 f"fields={list(data_summary['fields'])}"
             )
     

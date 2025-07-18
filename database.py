@@ -603,6 +603,13 @@ def get_recent_searches_from_database(limit=10):
     return res.data
 
 def store_people_to_database(search_id, people):
+    """
+    Enhanced people storage with comprehensive field mapping and data preservation.
+    
+    Args:
+        search_id: Database ID of the search
+        people: List of people data to store
+    """
     # Insert each person with the search_id, but only include fields that exist in the schema
     schema_fields = {
         'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
@@ -613,17 +620,81 @@ def store_people_to_database(search_id, people):
     filtered_people = []
     for person in people:
         filtered_person = {'search_id': search_id}
+        
+        # Enhanced field mapping with fallbacks and data preservation
         for field in schema_fields:
-            if field in person and person[field] is not None:
+            value = None
+            
+            if field == 'company':
+                # Try multiple sources for company name
+                value = (
+                    person.get('company') or
+                    (person.get('organization', {}).get('name') if isinstance(person.get('organization'), dict) else None) or
+                    (person.get('organization') if isinstance(person.get('organization'), str) else None) or
+                    person.get('current_company') or
+                    person.get('employer')
+                )
+            elif field == 'linkedin_url':
+                # Ensure LinkedIn URL is properly formatted
+                linkedin_url = person.get('linkedin_url')
+                if linkedin_url:
+                    if not linkedin_url.startswith('http'):
+                        value = f"https://{linkedin_url}"
+                    else:
+                        value = linkedin_url
+            elif field == 'profile_photo_url':
+                # Try multiple sources for profile photo
+                value = (
+                    person.get('profile_photo_url') or
+                    person.get('profile_picture_url') or
+                    person.get('photo_url') or
+                    person.get('avatar_url') or
+                    person.get('image_url')
+                )
+            elif field == 'behavioral_data':
                 # Convert behavioral_data to JSON string if it's a dict
-                if field == 'behavioral_data' and isinstance(person[field], dict):
-                    filtered_person[field] = json.dumps(person[field])
-                else:
-                    filtered_person[field] = person[field]
+                if field in person and person[field] is not None:
+                    if isinstance(person[field], dict):
+                        value = json.dumps(person[field])
+                    else:
+                        value = person[field]
+            elif field == 'linkedin_profile':
+                # Convert linkedin_profile to JSON string if it's a dict
+                if field in person and person[field] is not None:
+                    if isinstance(person[field], dict):
+                        value = json.dumps(person[field])
+                    else:
+                        value = person[field]
+            else:
+                # Standard field mapping
+                value = person.get(field)
+            
+            # Only include non-null values
+            if value is not None:
+                filtered_person[field] = value
+        
+        # Log the person being stored for debugging
+        logger.debug(f"Storing person: {filtered_person.get('name', 'Unknown')} at {filtered_person.get('company', 'Unknown Company')} - LinkedIn: {bool(filtered_person.get('linkedin_url'))}, Photo: {bool(filtered_person.get('profile_photo_url'))}")
+        
         filtered_people.append(filtered_person)
     
     if filtered_people:
-        supabase.table("people").insert(filtered_people).execute()
+        try:
+            result = supabase.table("people").insert(filtered_people).execute()
+            logger.info(f"Successfully stored {len(filtered_people)} people to database for search_id {search_id}")
+            
+            # Log stored data for verification
+            for person in filtered_people:
+                logger.debug(f"Stored: {person.get('name')} - Company: {person.get('company', 'N/A')}, LinkedIn: {person.get('linkedin_url', 'N/A')[:50]}{'...' if len(person.get('linkedin_url', '')) > 50 else ''}, Photo: {'Yes' if person.get('profile_photo_url') else 'No'}")
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error storing people to database: {str(e)}")
+            logger.error(f"People data: {json.dumps(filtered_people, indent=2, default=str)}")
+            raise
+    else:
+        logger.warning(f"No people to store for search_id {search_id}")
+        return None
 
 def get_people_for_search(search_id):
     res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, behavioral_data, created_at").eq("search_id", search_id).execute()

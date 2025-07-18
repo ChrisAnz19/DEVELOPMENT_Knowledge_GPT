@@ -583,9 +583,22 @@ async def process_search(
         for candidate in candidates:
             try:
                 linkedin_profile = candidate.get("linkedin_profile", {})
-                profile_photo_url = extract_profile_photo_url(candidate, linkedin_profile)
+                
+                # Enhanced profile photo extraction with multiple fallbacks
+                profile_photo_url = (
+                    candidate.get("profile_photo_url") or  # Already set by Apollo API
+                    extract_profile_photo_url(candidate, linkedin_profile) or
+                    candidate.get("profile_picture_url") or
+                    candidate.get("photo_url") or
+                    candidate.get("avatar_url") or
+                    candidate.get("image_url")
+                )
+                
                 if profile_photo_url:
                     candidate["profile_photo_url"] = profile_photo_url
+                    logger.info(f"Found profile photo for {candidate.get('name', 'Unknown')}: {profile_photo_url[:50]}...")
+                else:
+                    logger.info(f"No valid photo URL found for candidate {candidate.get('name', 'Unknown')}")
                 
                 # Generate and attach personalized behavioral data
                 try:
