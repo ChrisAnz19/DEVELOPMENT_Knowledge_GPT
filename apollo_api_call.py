@@ -51,7 +51,6 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
         for person in people:
             person_id = person.get("id")
             if not person_id:
-                print(f"[Internal Database] Skipping person with missing ID: {person}")
                 continue
                 
             # Enrich via our internal database People Enrichment endpoint
@@ -62,7 +61,6 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
             }
             
             try:
-                print(f"[Internal Database] Attempting enrichment for person ID {person_id}")
                 enrich_response = await client.post(
                     "https://api.apollo.io/api/v1/people/match",
                     params=enrich_params,
