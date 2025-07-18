@@ -192,14 +192,54 @@ async def process_search(
         if not candidates and people:
             candidates = people[:max_candidates]
         
-        # Add profile photo URLs
+        # Enhance candidate data with missing fields
         for candidate in candidates:
-            profile_photo_url = extract_profile_photo_url(
-                candidate, 
-                candidate.get("linkedin_profile")
-            )
-            if profile_photo_url:
-                candidate["profile_photo_url"] = profile_photo_url
+            if isinstance(candidate, dict):
+                # Extract and set profile photo URL
+                profile_photo_url = extract_profile_photo_url(
+                    candidate, 
+                    candidate.get("linkedin_profile")
+                )
+                if profile_photo_url:
+                    candidate["profile_photo_url"] = profile_photo_url
+                
+                # Ensure company name is set from various sources
+                if not candidate.get("company") or candidate.get("company") == "Unknown":
+                    # Try to get company from organization field
+                    if "organization" in candidate:
+                        org = candidate["organization"]
+                        if isinstance(org, dict) and org.get("name"):
+                            candidate["company"] = org["name"]
+                        elif isinstance(org, str) and org.strip():
+                            candidate["company"] = org
+                    
+                    # Try to get company from LinkedIn profile
+                    linkedin_profile = candidate.get("linkedin_profile")
+                    if isinstance(linkedin_profile, dict):
+                        if linkedin_profile.get("company"):
+                            candidate["company"] = linkedin_profile["company"]
+                        elif linkedin_profile.get("current_company"):
+                            candidate["company"] = linkedin_profile["current_company"]
+                        elif linkedin_profile.get("experience") and isinstance(linkedin_profile["experience"], list):
+                            # Get company from most recent experience
+                            if linkedin_profile["experience"] and isinstance(linkedin_profile["experience"][0], dict):
+                                recent_exp = linkedin_profile["experience"][0]
+                                if recent_exp.get("company"):
+                                    candidate["company"] = recent_exp["company"]
+                
+                # Ensure LinkedIn URL is properly formatted and present
+                linkedin_url = candidate.get("linkedin_url")
+                if linkedin_url:
+                    if not linkedin_url.startswith("http"):
+                        candidate["linkedin_url"] = f"https://{linkedin_url}"
+                elif candidate.get("linkedin_profile") and isinstance(candidate["linkedin_profile"], dict):
+                    # Try to get LinkedIn URL from profile data
+                    profile_url = candidate["linkedin_profile"].get("url") or candidate["linkedin_profile"].get("linkedin_url")
+                    if profile_url:
+                        if not profile_url.startswith("http"):
+                            candidate["linkedin_url"] = f"https://{profile_url}"
+                        else:
+                            candidate["linkedin_url"] = profile_url
         
         # Generate behavioral data
         try:
