@@ -12,6 +12,29 @@ import json
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import enhanced logging utilities
+try:
+    from search_data_logger import (
+        log_data_flow, 
+        log_database_operation, 
+        track_prompt_presence,
+        log_prompt_integrity_check
+    )
+    ENHANCED_LOGGING_AVAILABLE = True
+except ImportError:
+    logger.warning("Enhanced logging utilities not available, using basic logging")
+    ENHANCED_LOGGING_AVAILABLE = False
+    
+    # Fallback functions
+    def log_data_flow(*args, **kwargs):
+        pass
+    def log_database_operation(*args, **kwargs):
+        pass
+    def track_prompt_presence(*args, **kwargs):
+        pass
+    def log_prompt_integrity_check(*args, **kwargs):
+        return True
+
 try:
     from supabase_client import supabase
 except Exception as e:
@@ -49,45 +72,531 @@ except Exception as e:
     supabase = DummySupabase()
 
 def store_search_to_database(search_data):
-    # Validate required fields before upserting
-    if not search_data.get("request_id"):
-        logger.error(f"Cannot store search with null request_id: {search_data}")
-        raise ValueError("Search request_id cannot be null")
+    """
+    Enhanced search storage with comprehensive validation and prompt integrity preservation.
     
-    # Handle null prompt case gracefully
-    if not search_data.get("prompt"):
-        logger.warning(f"Search {search_data.get('request_id')} has null prompt, using default")
-        search_data = search_data.copy()  # Don't modify the original
-        search_data["prompt"] = "No prompt provided"
-    
-    # Log the data being stored for debugging
-    prompt_preview = search_data.get('prompt', '')[:50] if search_data.get('prompt') else 'None'
-    logger.info(f"Storing search data: request_id={search_data.get('request_id')}, prompt='{prompt_preview}...', status={search_data.get('status')}")
+    Args:
+        search_data (dict): Search data to store
+        
+    Returns:
+        int: Database ID of stored search
+        
+    Raises:
+        ValueError: If validation fails
+        SearchDataValidationError: If data structure validation fails
+        PromptIntegrityError: If prompt integrity cannot be maintained
+    """
+    # Import validation and transformation utilities
+    try:
+        from search_data_validator import (
+            SearchDataValidator, 
+            SearchDataValidationError, 
+            PromptIntegrityError
+        )
+        VALIDATION_AVAILABLE = True
+    except ImportError:
+        logger.warning("Search data validator not available, using basic validation")
+        VALIDATION_AVAILABLE = False
     
     try:
-        # Upsert search and return the new or updated search id
-        res = supabase.table("searches").upsert(search_data).execute()
+        from data_mapping_transformer import (
+            safe_transform_for_storage,
+            PRE_STORAGE_CHECKPOINT,
+            POST_UPDATE_CHECKPOINT,
+            validate_field_mapping
+        )
+        TRANSFORMATION_AVAILABLE = True
+    except ImportError:
+        logger.warning("Data mapping transformer not available")
+        TRANSFORMATION_AVAILABLE = False
+    
+    request_id = search_data.get("request_id")
+    
+    # Enhanced logging: Log data flow at entry point
+    log_data_flow("store", request_id or "unknown", search_data, "pre_storage")
+    
+    # Validation checkpoint: Pre-storage
+    if TRANSFORMATION_AVAILABLE:
+        is_valid, issues = PRE_STORAGE_CHECKPOINT.validate_at_checkpoint(search_data)
+        if not is_valid:
+            logger.error(f"Pre-storage checkpoint failed for {request_id}: {issues}")
+            raise SearchDataValidationError(f"Pre-storage validation failed: {issues}")
+    
+    # Pre-storage validation and transformation to ensure prompt integrity
+    try:
+        if TRANSFORMATION_AVAILABLE:
+            # Use enhanced transformation with validation
+            validated_data = safe_transform_for_storage(search_data)
+            logger.info(f"Enhanced data transformation passed for request_id: {validated_data.get('request_id')}")
+        elif VALIDATION_AVAILABLE:
+            # Use comprehensive validation
+            validated_data = SearchDataValidator.validate_search_data(search_data)
+            logger.info(f"Search data validation passed for request_id: {validated_data.get('request_id')}")
+        else:
+            # Fallback to basic validation
+            validated_data = _basic_search_validation(search_data)
+            logger.info(f"Basic search data validation passed for request_id: {validated_data.get('request_id')}")
+        
+        # Update request_id after validation
+        request_id = validated_data.get('request_id')
+        
+        # Validate field mapping if transformation was used
+        if TRANSFORMATION_AVAILABLE:
+            mapping_valid, mapping_issues = validate_field_mapping(search_data, validated_data)
+            if not mapping_valid:
+                logger.error(f"Field mapping validation failed for {request_id}: {mapping_issues}")
+                raise SearchDataValidationError(f"Field mapping failed: {mapping_issues}")
+        
+        # Log successful validation
+        log_data_flow("store_validated", request_id, validated_data, "post_validation")
+        
+    except (SearchDataValidationError, PromptIntegrityError, ValueError) as e:
+        logger.error(f"Pre-storage validation failed for request_id {request_id}: {e}")
+        log_database_operation("validation_failed", "searches", request_id, search_data, None, e)
+        raise
+    
+    # Track prompt presence after validation
+    validated_prompt = validated_data.get("prompt")
+    has_validated_prompt = bool(validated_prompt and str(validated_prompt).strip())
+    track_prompt_presence("post_validation", request_id, has_validated_prompt, 
+                         len(str(validated_prompt)) if validated_prompt else 0, 
+                         "validated_data")
+    
+    # Log the data being stored for debugging
+    prompt_preview = validated_data.get('prompt', '')[:50] if validated_data.get('prompt') else 'None'
+    logger.info(f"Storing validated search data: request_id={request_id}, prompt='{prompt_preview}...', status={validated_data.get('status')}")
+    
+    try:
+        # Log pre-database operation
+        log_data_flow("store", request_id, validated_data, "pre_database")
+        
+        # Enhanced upsert with explicit field handling
+        res = supabase.table("searches").upsert(validated_data).execute()
+        
+        # Log successful database operation
+        log_database_operation("upsert", "searches", request_id, validated_data, res, None)
+        
         if hasattr(res, 'data') and res.data:
+            stored_data = res.data[0]
+            
+            # Log post-database operation with result
+            log_data_flow("store", request_id, stored_data, "post_database")
+            
+            # Validation checkpoint: Post-update
+            if TRANSFORMATION_AVAILABLE:
+                is_valid, issues = POST_UPDATE_CHECKPOINT.validate_at_checkpoint(stored_data, validated_prompt)
+                if not is_valid:
+                    logger.error(f"Post-storage checkpoint failed for {request_id}: {issues}")
+                    # Don't raise here as data is already stored, but log the issue
+            
+            # Verify prompt integrity in stored result
+            stored_prompt = stored_data.get('prompt')
+            log_prompt_integrity_check(request_id, validated_data.get('prompt'), 
+                                     stored_prompt, "post_store")
+            
+            # Additional integrity check
+            if VALIDATION_AVAILABLE:
+                try:
+                    SearchDataValidator.ensure_prompt_integrity(stored_data)
+                    logger.debug(f"Post-storage prompt integrity verified for request_id: {request_id}")
+                except PromptIntegrityError as e:
+                    logger.error(f"Post-storage prompt integrity check failed: {e}")
+                    # Don't raise here as data is already stored, but log the issue
+            
             # Return the inserted or updated search's id
-            return res.data[0].get('id')
+            return stored_data.get('id')
         return None
+        
     except Exception as e:
         logger.error(f"Error storing search to database: {str(e)}")
-        logger.error(f"Search data: {search_data}")
+        logger.error(f"Search data: {validated_data}")
+        
+        # Log failed database operation
+        log_database_operation("upsert", "searches", request_id, validated_data, None, e)
+        
         # Re-raise the exception so calling code can handle it
         raise
 
-def get_search_from_database(request_id):
+
+def store_search_to_database_enhanced(search_data):
+    """
+    Alias for the enhanced store_search_to_database function.
+    Provided for backward compatibility and explicit enhanced functionality access.
+    """
+    return store_search_to_database(search_data)
+
+
+def update_search_in_database(request_id, updates, preserve_existing=True):
+    """
+    Partial update method that preserves existing prompt data and other fields.
+    
+    Args:
+        request_id (str): Unique identifier for the search
+        updates (dict): Fields to update
+        preserve_existing (bool): Whether to preserve existing field values
+        
+    Returns:
+        bool: True if update was successful
+        
+    Raises:
+        ValueError: If request_id is invalid or updates are invalid
+        PromptIntegrityError: If prompt integrity would be compromised
+    """
+    # Import validation and transformation utilities
     try:
-        # Use a more explicit query structure to avoid 406 errors
-        res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").eq("request_id", request_id).execute()
+        from search_data_validator import (
+            SearchDataValidator, 
+            SearchDataValidationError, 
+            PromptIntegrityError
+        )
+        VALIDATION_AVAILABLE = True
+    except ImportError:
+        logger.warning("Search data validator not available for partial update")
+        VALIDATION_AVAILABLE = False
+    
+    try:
+        from data_mapping_transformer import (
+            safe_merge_search_updates,
+            safe_transform_for_storage,
+            PRE_UPDATE_CHECKPOINT,
+            POST_UPDATE_CHECKPOINT,
+            validate_field_mapping
+        )
+        TRANSFORMATION_AVAILABLE = True
+    except ImportError:
+        logger.warning("Data mapping transformer not available for partial update")
+        TRANSFORMATION_AVAILABLE = False
+    
+    # Validate input parameters
+    if not request_id or not isinstance(request_id, str) or not request_id.strip():
+        raise ValueError("request_id must be a non-empty string")
+    
+    if not isinstance(updates, dict):
+        raise ValueError("updates must be a dictionary")
+    
+    if not updates:
+        logger.warning(f"No updates provided for request_id: {request_id}")
+        return True  # Nothing to update
+    
+    request_id = request_id.strip()
+    
+    # Log the update operation start
+    log_data_flow("partial_update", request_id, updates, "pre_update")
+    logger.info(f"Starting partial update for request_id: {request_id}, fields: {list(updates.keys())}")
+    
+    # Validation checkpoint: Pre-update
+    if TRANSFORMATION_AVAILABLE:
+        is_valid, issues = PRE_UPDATE_CHECKPOINT.validate_at_checkpoint(updates)
+        if not is_valid:
+            logger.warning(f"Pre-update checkpoint issues for {request_id}: {issues}")
+            # Don't fail here as updates might be partial and valid when merged
+    
+    try:
+        # If preserving existing data, retrieve current record first
+        current_data = None
+        if preserve_existing:
+            current_data = get_search_from_database(request_id)
+            if not current_data:
+                logger.error(f"Cannot update non-existent search: {request_id}")
+                raise ValueError(f"Search with request_id {request_id} not found")
+            
+            logger.debug(f"Retrieved current data for preservation: {list(current_data.keys())}")
+        
+        # Prepare the update data using enhanced merging if available
+        if preserve_existing and current_data:
+            if TRANSFORMATION_AVAILABLE:
+                # Use enhanced safe merging
+                update_data = safe_merge_search_updates(current_data, updates)
+                logger.debug(f"Enhanced merge completed for request_id: {request_id}")
+            else:
+                # Fallback to basic merging
+                merged_data = current_data.copy()
+                merged_data.update(updates)
+                update_data = merged_data
+                
+                # Log data preservation
+                log_data_flow("partial_update_merged", request_id, update_data, "post_merge")
+                
+                # Special handling for prompt preservation
+                if 'prompt' not in updates and current_data.get('prompt'):
+                    logger.debug(f"Preserving existing prompt for request_id: {request_id}")
+                    track_prompt_presence("prompt_preserved", request_id, True, 
+                                        len(str(current_data.get('prompt'))), "preserved_from_existing")
+        else:
+            # Direct update without preservation
+            update_data = updates.copy()
+            update_data['request_id'] = request_id  # Ensure request_id is included
+        
+        # Transform and validate the final update data
+        if TRANSFORMATION_AVAILABLE:
+            try:
+                # Use enhanced transformation for storage
+                validated_update_data = safe_transform_for_storage(update_data)
+                logger.debug(f"Enhanced transformation passed for request_id: {request_id}")
+                
+                # Validate field mapping
+                mapping_valid, mapping_issues = validate_field_mapping(update_data, validated_update_data)
+                if not mapping_valid:
+                    logger.warning(f"Field mapping issues during update for {request_id}: {mapping_issues}")
+                    # Continue with transformation result but log the issues
+                
+                update_data = validated_update_data
+            except Exception as transform_error:
+                logger.error(f"Enhanced transformation failed for {request_id}: {transform_error}")
+                # Fall back to basic validation
+                if VALIDATION_AVAILABLE:
+                    update_data = SearchDataValidator.validate_search_data(update_data)
+                else:
+                    update_data = _basic_search_validation(update_data)
+        elif VALIDATION_AVAILABLE:
+            try:
+                validated_update_data = SearchDataValidator.validate_search_data(update_data)
+                logger.debug(f"Partial update data validation passed for request_id: {request_id}")
+                update_data = validated_update_data
+            except (SearchDataValidationError, PromptIntegrityError) as e:
+                logger.error(f"Partial update validation failed for request_id {request_id}: {e}")
+                raise
+        else:
+            # Basic validation
+            update_data = _basic_search_validation(update_data)
+        
+        # Log pre-database update
+        log_data_flow("partial_update", request_id, update_data, "pre_database")
+        
+        # Perform the database update
+        res = supabase.table("searches").upsert(update_data).execute()
+        
+        # Log successful database operation
+        log_database_operation("partial_update", "searches", request_id, update_data, res, None)
+        
         if hasattr(res, 'data') and res.data:
-            return res.data[0]  # Return the first (and should be only) result
-        return None
+            updated_data = res.data[0]
+            
+            # Log post-database operation
+            log_data_flow("partial_update", request_id, updated_data, "post_database")
+            
+            # Validation checkpoint: Post-update
+            if TRANSFORMATION_AVAILABLE:
+                expected_prompt = update_data.get('prompt')
+                is_valid, issues = POST_UPDATE_CHECKPOINT.validate_at_checkpoint(updated_data, expected_prompt)
+                if not is_valid:
+                    logger.error(f"Post-update checkpoint failed for {request_id}: {issues}")
+                    # Don't raise here as update is complete, but log the issue
+            
+            # Verify prompt integrity if prompt was involved
+            if 'prompt' in updates or (preserve_existing and current_data and current_data.get('prompt')):
+                updated_prompt = updated_data.get('prompt')
+                expected_prompt = updates.get('prompt') or (current_data.get('prompt') if preserve_existing else None)
+                
+                if expected_prompt:
+                    log_prompt_integrity_check(request_id, expected_prompt, updated_prompt, "post_partial_update")
+                    
+                    # Additional integrity verification
+                    if VALIDATION_AVAILABLE:
+                        try:
+                            SearchDataValidator.ensure_prompt_integrity(updated_data)
+                            logger.debug(f"Post-update prompt integrity verified for request_id: {request_id}")
+                        except PromptIntegrityError as e:
+                            logger.error(f"Post-update prompt integrity check failed: {e}")
+                            # Log but don't raise as update is complete
+            
+            logger.info(f"Successfully updated search {request_id}")
+            return True
+        else:
+            logger.error(f"No data returned from partial update for request_id: {request_id}")
+            return False
+            
     except Exception as e:
-        # If no rows found or other error, return None
-        logger.debug(f"No search found for request_id {request_id}: {e}")
-        return None
+        logger.error(f"Error in partial update for request_id {request_id}: {str(e)}")
+        log_database_operation("partial_update", "searches", request_id, updates, None, e)
+        raise
+
+
+def _basic_search_validation(search_data):
+    """
+    Basic search data validation when SearchDataValidator is not available.
+    
+    Args:
+        search_data (dict): Search data to validate
+        
+    Returns:
+        dict: Validated search data
+        
+    Raises:
+        ValueError: If basic validation fails
+    """
+    if not isinstance(search_data, dict):
+        raise ValueError("Search data must be a dictionary")
+    
+    validated_data = search_data.copy()
+    
+    # Validate required fields
+    required_fields = ['request_id', 'prompt', 'status']
+    for field in required_fields:
+        if field not in validated_data or validated_data[field] is None:
+            raise ValueError(f"Missing required field: {field}")
+    
+    # Validate request_id
+    request_id = validated_data['request_id']
+    if not isinstance(request_id, str):
+        raise ValueError("request_id must be a string")
+    if not request_id.strip():
+        raise ValueError("request_id must be a non-empty string")
+    
+    # Validate prompt
+    prompt = validated_data['prompt']
+    if prompt is None:
+        raise ValueError("prompt cannot be None")
+    if not isinstance(prompt, str):
+        # Convert to string if possible
+        validated_data['prompt'] = str(prompt)
+        prompt = validated_data['prompt']
+    
+    if not prompt.strip():
+        raise ValueError("prompt must be a non-empty string")
+    
+    # Validate status
+    status = validated_data['status']
+    if not isinstance(status, str) or not status.strip():
+        raise ValueError("status must be a non-empty string")
+    
+    valid_statuses = {'pending', 'processing', 'completed', 'failed', 'cancelled'}
+    if status not in valid_statuses:
+        logger.warning(f"Status '{status}' is not in standard valid statuses: {valid_statuses}")
+    
+    return validated_data
+
+def get_search_from_database(request_id):
+    """
+    Enhanced database retrieval function with explicit field selection and comprehensive logging.
+    
+    Args:
+        request_id (str): The unique identifier for the search request
+        
+    Returns:
+        dict: Search data with all fields, or None if not found
+        
+    Raises:
+        ValueError: If request_id is invalid
+        Exception: For database connection or query errors
+    """
+    # Validate input
+    if not request_id or not isinstance(request_id, str) or not request_id.strip():
+        logger.error(f"Invalid request_id provided: {repr(request_id)}")
+        raise ValueError("request_id must be a non-empty string")
+    
+    request_id = request_id.strip()
+    
+    # Enhanced logging: Log retrieval attempt with detailed context
+    log_data_flow("retrieve", request_id, {}, "pre_retrieval")
+    logger.info(f"Starting database retrieval for request_id: {request_id}")
+    
+    try:
+        # Explicitly select ALL required fields to ensure prompt is included
+        # This addresses the core issue where prompt might be missing from results
+        required_fields = [
+            "id", 
+            "request_id", 
+            "status", 
+            "prompt",           # Explicitly include prompt field
+            "filters", 
+            "behavioral_data", 
+            "created_at", 
+            "completed_at",
+            "error"             # Include error field for completeness
+        ]
+        
+        # Log the exact query being executed
+        logger.debug(f"Executing database query: SELECT {', '.join(required_fields)} FROM searches WHERE request_id = '{request_id}'")
+        
+        # Execute query with explicit field selection
+        res = supabase.table("searches").select(", ".join(required_fields)).eq("request_id", request_id).execute()
+        
+        # Log database operation with detailed result analysis
+        log_database_operation("select", "searches", request_id, None, res, None)
+        
+        # Log raw database response for debugging
+        logger.debug(f"Database response: data_count={len(res.data) if hasattr(res, 'data') and res.data else 0}")
+        
+        if hasattr(res, 'data') and res.data:
+            if len(res.data) > 1:
+                logger.warning(f"Multiple records found for request_id {request_id}, using first record")
+            
+            retrieved_data = res.data[0]  # Get the first (and should be only) result
+            
+            # Validate that all expected fields are present
+            missing_fields = [field for field in required_fields if field not in retrieved_data]
+            if missing_fields:
+                logger.warning(f"Retrieved data missing expected fields: {missing_fields}")
+            
+            # Log successful retrieval with comprehensive data flow tracking
+            log_data_flow("retrieve", request_id, retrieved_data, "post_retrieval")
+            
+            # Detailed prompt analysis and tracking
+            retrieved_prompt = retrieved_data.get('prompt')
+            has_retrieved_prompt = bool(retrieved_prompt and str(retrieved_prompt).strip())
+            prompt_length = len(str(retrieved_prompt)) if retrieved_prompt else 0
+            
+            track_prompt_presence("post_retrieve", request_id, has_retrieved_prompt,
+                                prompt_length, "retrieved_from_db")
+            
+            # Enhanced logging with field-by-field analysis
+            prompt_preview = retrieved_prompt[:50] if retrieved_prompt else 'None'
+            logger.info(f"Successfully retrieved search data:")
+            logger.info(f"  - request_id: {request_id}")
+            logger.info(f"  - status: {retrieved_data.get('status')}")
+            logger.info(f"  - prompt: '{prompt_preview}{'...' if prompt_length > 50 else ''}' (length: {prompt_length})")
+            logger.info(f"  - has_filters: {bool(retrieved_data.get('filters'))}")
+            logger.info(f"  - has_behavioral_data: {bool(retrieved_data.get('behavioral_data'))}")
+            logger.info(f"  - created_at: {retrieved_data.get('created_at')}")
+            logger.info(f"  - completed_at: {retrieved_data.get('completed_at')}")
+            
+            # Critical check for null prompt in retrieved data
+            if not has_retrieved_prompt:
+                logger.error(f"CRITICAL: Retrieved search {request_id} has null/empty prompt!")
+                logger.error(f"  - Raw prompt value: {repr(retrieved_prompt)}")
+                logger.error(f"  - Prompt type: {type(retrieved_prompt)}")
+                logger.error(f"  - All retrieved fields: {list(retrieved_data.keys())}")
+                
+                # Log this as a data integrity issue
+                track_prompt_presence("integrity_violation", request_id, False, 0, 
+                                    f"null_prompt_in_db_result: {repr(retrieved_prompt)}")
+            else:
+                logger.debug(f"Prompt integrity verified for request_id {request_id}")
+            
+            return retrieved_data
+            
+        else:
+            # Enhanced logging when no data found
+            logger.info(f"No search record found for request_id: {request_id}")
+            logger.debug(f"Database response details: {res}")
+            track_prompt_presence("retrieve_not_found", request_id, False, 0, "no_data_found")
+            return None
+            
+    except ValueError as ve:
+        # Re-raise validation errors
+        logger.error(f"Validation error in get_search_from_database: {ve}")
+        raise
+        
+    except Exception as e:
+        # Enhanced error logging and handling
+        logger.error(f"Database error retrieving search {request_id}: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.debug(f"Full error details: {e}", exc_info=True)
+        
+        # Log failed database operation with detailed error context
+        log_database_operation("select", "searches", request_id, None, None, e)
+        track_prompt_presence("retrieve_error", request_id, False, 0, f"error: {str(e)}")
+        
+        # For debugging purposes, don't suppress the error completely
+        # but provide a clear indication of what went wrong
+        if "not found" in str(e).lower() or "no rows" in str(e).lower():
+            logger.info(f"Search {request_id} not found in database")
+            return None
+        else:
+            # For other database errors, re-raise to allow proper error handling upstream
+            logger.error(f"Unexpected database error for request_id {request_id}, re-raising")
+            raise
 
 def get_recent_searches_from_database(limit=10):
     res = supabase.table("searches").select("id, request_id, status, prompt, filters, behavioral_data, created_at, completed_at").order("created_at", desc=True).limit(limit).execute()

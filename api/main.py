@@ -615,47 +615,103 @@ async def process_search(
             # Mark as no longer processing to prevent duplicate updates
             processing_state["is_processing"] = False
 
+            # Import data mapping utilities for enhanced processing
+            try:
+                from data_mapping_transformer import (
+                    safe_merge_search_updates,
+                    safe_transform_for_storage,
+                    POST_RETRIEVAL_CHECKPOINT,
+                    PRE_UPDATE_CHECKPOINT,
+                    API_RESPONSE_CHECKPOINT,
+                    validate_field_mapping
+                )
+                TRANSFORMATION_AVAILABLE = True
+            except ImportError:
+                logger.warning("Data mapping transformer not available in API")
+                TRANSFORMATION_AVAILABLE = False
+
             # Get the existing record first to preserve required fields
             existing_record = get_search_from_database(request_id)
             if not existing_record:
                 logger.error(f"Search record not found for update: {request_id}")
                 return
 
+            # Validation checkpoint: Post-retrieval
+            if TRANSFORMATION_AVAILABLE:
+                is_valid, issues = POST_RETRIEVAL_CHECKPOINT.validate_at_checkpoint(existing_record)
+                if not is_valid:
+                    logger.error(f"Post-retrieval checkpoint failed for {request_id}: {issues}")
+                    # Continue but log the issues
+
             # Debug: Log the existing record
             logger.info(f"Existing record for {request_id}: id={existing_record.get('id')}, prompt='{existing_record.get('prompt', 'NULL')[:50] if existing_record.get('prompt') else 'NULL'}...', status={existing_record.get('status')}")
 
-            # Ensure we have a valid prompt - use existing or fallback to current
-            final_prompt = existing_record.get("prompt") or prompt
-            if not final_prompt:
-                logger.error(f"CRITICAL: No valid prompt found for search {request_id}. Existing: {existing_record.get('prompt')}, Current: {prompt}")
-                final_prompt = "Search query not available"  # Emergency fallback
-
-            # Validate all required fields before update
-            if not existing_record.get("id"):
-                logger.error(f"CRITICAL: No ID found in existing record for {request_id}")
-                return
-            
-            if not existing_record.get("request_id"):
-                logger.error(f"CRITICAL: No request_id found in existing record for {request_id}")
-                return
-
-            # Update search data while preserving ALL required fields
-            update_data = {
-                "id": existing_record["id"],  # Required: use existing ID
-                "request_id": existing_record["request_id"],  # Required: use existing request_id
-                "prompt": final_prompt,  # Required: validated prompt
+            # Prepare update data with enhanced merging
+            updates = {
                 "status": "completed",
                 "filters": json.dumps(filters),
-                "completed_at": datetime.now(timezone.utc).isoformat(),
-                # Preserve other existing fields
-                "created_at": existing_record.get("created_at"),
-                "behavioral_data": existing_record.get("behavioral_data")
+                "completed_at": datetime.now(timezone.utc).isoformat()
             }
 
-            # Final validation before database update
-            if not update_data["prompt"] or update_data["prompt"] == "null":
-                logger.error(f"CRITICAL: Final prompt validation failed for {request_id}. Setting emergency fallback.")
-                update_data["prompt"] = f"Search request {request_id}"
+            # Use enhanced merging if available
+            if TRANSFORMATION_AVAILABLE:
+                try:
+                    # Use safe merge to preserve prompt and other critical fields
+                    update_data = safe_merge_search_updates(existing_record, updates)
+                    logger.info(f"Enhanced merge completed for search update: {request_id}")
+                    
+                    # Validate field mapping
+                    mapping_valid, mapping_issues = validate_field_mapping(existing_record, update_data)
+                    if not mapping_valid:
+                        logger.warning(f"Field mapping issues during search update for {request_id}: {mapping_issues}")
+                        # Continue but log the issues
+                        
+                except Exception as merge_error:
+                    logger.error(f"Enhanced merge failed for {request_id}: {merge_error}")
+                    # Fall back to manual merging
+                    TRANSFORMATION_AVAILABLE = False
+            
+            if not TRANSFORMATION_AVAILABLE:
+                # Fallback to manual merging with prompt preservation
+                # Ensure we have a valid prompt - use existing or fallback to current
+                final_prompt = existing_record.get("prompt") or prompt
+                if not final_prompt:
+                    logger.error(f"CRITICAL: No valid prompt found for search {request_id}. Existing: {existing_record.get('prompt')}, Current: {prompt}")
+                    final_prompt = "Search query not available"  # Emergency fallback
+
+                # Validate all required fields before update
+                if not existing_record.get("id"):
+                    logger.error(f"CRITICAL: No ID found in existing record for {request_id}")
+                    return
+                
+                if not existing_record.get("request_id"):
+                    logger.error(f"CRITICAL: No request_id found in existing record for {request_id}")
+                    return
+
+                # Update search data while preserving ALL required fields
+                update_data = {
+                    "id": existing_record["id"],  # Required: use existing ID
+                    "request_id": existing_record["request_id"],  # Required: use existing request_id
+                    "prompt": final_prompt,  # Required: validated prompt
+                    "status": "completed",
+                    "filters": json.dumps(filters),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    # Preserve other existing fields
+                    "created_at": existing_record.get("created_at"),
+                    "behavioral_data": existing_record.get("behavioral_data")
+                }
+
+                # Final validation before database update
+                if not update_data["prompt"] or update_data["prompt"] == "null":
+                    logger.error(f"CRITICAL: Final prompt validation failed for {request_id}. Setting emergency fallback.")
+                    update_data["prompt"] = f"Search request {request_id}"
+
+            # Validation checkpoint: Pre-update
+            if TRANSFORMATION_AVAILABLE:
+                is_valid, issues = PRE_UPDATE_CHECKPOINT.validate_at_checkpoint(update_data)
+                if not is_valid:
+                    logger.error(f"Pre-update checkpoint failed for {request_id}: {issues}")
+                    # Continue but log the issues
 
             # Log the search data before storing
             logger.info(f"Updating search {request_id} with validated data:")
