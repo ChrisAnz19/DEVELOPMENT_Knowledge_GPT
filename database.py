@@ -680,6 +680,18 @@ def store_people_to_database(search_id, people):
     
     if filtered_people:
         try:
+            # Log the fields that will be stored for each person
+            for person in filtered_people:
+                present_fields = [field for field in schema_fields if field in person]
+                missing_fields = [field for field in schema_fields if field not in person]
+                logger.info(f"Fields for {person.get('name', 'Unknown')}: Present={present_fields}, Missing={missing_fields}")
+                
+                # Log LinkedIn-specific fields
+                linkedin_fields = ['linkedin_url', 'profile_photo_url', 'company']
+                for field in linkedin_fields:
+                    logger.info(f"LinkedIn field '{field}' for {person.get('name', 'Unknown')}: {repr(person.get(field))}")
+            
+            # Insert without specifying columns to ensure all fields are included
             result = supabase.table("people").insert(filtered_people).execute()
             logger.info(f"Successfully stored {len(filtered_people)} people to database for search_id {search_id}")
             
