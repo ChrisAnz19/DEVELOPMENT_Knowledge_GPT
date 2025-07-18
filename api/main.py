@@ -303,6 +303,13 @@ async def create_search(
 ):
     """Create a new search request."""
     try:
+        # Validate input
+        if not request.prompt or not request.prompt.strip():
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+        
+        if request.max_candidates and (request.max_candidates < 1 or request.max_candidates > 10):
+            raise HTTPException(status_code=400, detail="max_candidates must be between 1 and 10")
+        
         # Generate a unique request ID
         request_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
@@ -311,44 +318,66 @@ async def create_search(
         search_data = {
             "request_id": request_id,
             "status": "processing",
-            "prompt": request.prompt,
+            "prompt": request.prompt.strip(),
             "filters": json.dumps({}),
             "created_at": created_at,
             "completed_at": None
         }
         
-        store_search_to_database(search_data)
+        # Store in database
+        search_db_id = store_search_to_database(search_data)
+        if not search_db_id:
+            raise HTTPException(status_code=500, detail="Failed to store search in database")
         
         # Start background task
         background_tasks.add_task(
             process_search,
             request_id=request_id,
-            prompt=request.prompt,
-            max_candidates=request.max_candidates,
-            include_linkedin=request.include_linkedin
+            prompt=request.prompt.strip(),
+            max_candidates=request.max_candidates or 3,
+            include_linkedin=request.include_linkedin if request.include_linkedin is not None else True
         )
         
         # Return initial response
-        return {
+        response_data = {
             "request_id": request_id,
             "status": "processing",
-            "prompt": request.prompt,
+            "prompt": request.prompt.strip(),
             "created_at": created_at,
             "completed_at": None
         }
         
+        # Ensure we return a proper object
+        if not isinstance(response_data, dict):
+            logger.error(f"Response data is not a dictionary: {type(response_data)}")
+            raise HTTPException(status_code=500, detail="Invalid response format")
+        
+        return response_data
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error creating search: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating search: {str(e)}")
 
 @app.get("/api/search/{request_id}")
 async def get_search_result(request_id: str):
     """Get the results of a specific search by request ID."""
     try:
+        # Validate request_id
+        if not request_id or not isinstance(request_id, str):
+            raise HTTPException(status_code=400, detail="Invalid request_id")
+        
         # Get the search from the database
         search_data = get_search_from_database(request_id)
         
         if not search_data:
             raise HTTPException(status_code=404, detail="Search not found")
+        
+        # Ensure search_data is a dictionary
+        if not isinstance(search_data, dict):
+            logger.error(f"Search data is not a dictionary: {type(search_data)}")
+            raise HTTPException(status_code=500, detail="Invalid search data format")
         
         # Parse JSON strings to Python objects
         if "filters" in search_data and isinstance(search_data["filters"], str):
@@ -361,26 +390,27 @@ async def get_search_result(request_id: str):
         search_db_id = search_data.get("id")
         if search_db_id:
             candidates = get_people_for_search(search_db_id)
-            if candidates:
+            if candidates and isinstance(candidates, list):
                 # Process candidates to ensure all required fields
                 processed_candidates = []
                 
                 for candidate in candidates:
-                    processed_candidate = {
-                        "id": candidate.get("id"),
-                        "name": candidate.get("name"),
-                        "title": candidate.get("title"),
-                        "email": candidate.get("email"),
-                        "location": candidate.get("location"),
-                        "company": candidate.get("company"),
-                        "linkedin_url": candidate.get("linkedin_url"), 
-                        "profile_photo_url": candidate.get("profile_photo_url"),
-                        "accuracy": candidate.get("accuracy"),
-                        "reasons": candidate.get("reasons"),
-                        "linkedin_profile": candidate.get("linkedin_profile"),
-                        "behavioral_data": candidate.get("behavioral_data")
-                    }
-                    processed_candidates.append(processed_candidate)
+                    if isinstance(candidate, dict):
+                        processed_candidate = {
+                            "id": candidate.get("id"),
+                            "name": candidate.get("name"),
+                            "title": candidate.get("title"),
+                            "email": candidate.get("email"),
+                            "location": candidate.get("location"),
+                            "company": candidate.get("company"),
+                            "linkedin_url": candidate.get("linkedin_url"), 
+                            "profile_photo_url": candidate.get("profile_photo_url"),
+                            "accuracy": candidate.get("accuracy"),
+                            "reasons": candidate.get("reasons"),
+                            "linkedin_profile": candidate.get("linkedin_profile"),
+                            "behavioral_data": candidate.get("behavioral_data")
+                        }
+                        processed_candidates.append(processed_candidate)
                 
                 search_data["candidates"] = processed_candidates
                 
@@ -389,11 +419,17 @@ async def get_search_result(request_id: str):
                 if not search_data.get("completed_at"):
                     search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
         
+        # Ensure we always return a proper object
+        if not isinstance(search_data, dict):
+            logger.error(f"Final search_data is not a dictionary: {type(search_data)}")
+            raise HTTPException(status_code=500, detail="Invalid response format")
+        
         return search_data
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error getting search result: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting search result: {str(e)}")
 
 @app.get("/api/search")
