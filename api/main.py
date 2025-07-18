@@ -166,12 +166,16 @@ async def process_search(
                     
                     # Merge LinkedIn profile data
                     if linkedin_profiles:
-                        profile_map = {p.get("linkedin_url"): p for p in linkedin_profiles if p.get("linkedin_url")}
+                        profile_map = {}
+                        for p in linkedin_profiles:
+                            if isinstance(p, dict) and p.get("linkedin_url"):
+                                profile_map[p.get("linkedin_url")] = p
                         
                         for person in people:
-                            linkedin_url = person.get("linkedin_url")
-                            if linkedin_url and linkedin_url in profile_map:
-                                person["linkedin_profile"] = profile_map[linkedin_url]
+                            if isinstance(person, dict):
+                                linkedin_url = person.get("linkedin_url")
+                                if linkedin_url and linkedin_url in profile_map:
+                                    person["linkedin_profile"] = profile_map[linkedin_url]
             except Exception:
                 # Continue without LinkedIn data if there's an error
                 pass
