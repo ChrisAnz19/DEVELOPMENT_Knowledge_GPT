@@ -184,21 +184,22 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                         else:
                             candidate["linkedin_url"] = profile_url
         
-        try:
-            behavioral_data = enhance_behavioral_data_ai({}, candidates, prompt)
-        except Exception:
-            title = "professional"
-            if candidates and len(candidates) > 0 and isinstance(candidates[0], dict):
-                title = candidates[0].get('title', 'professional')
-            
-            behavioral_data = {
-                "behavioral_insight": f"This {title} responds best to personalized engagement focusing on their specific business challenges.",
-                "scores": {
-                    "cmi": {"score": 70, "explanation": "Moderate commitment"},
-                    "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
-                    "ias": {"score": 75, "explanation": "Strong role alignment"}
-                }
-            }
+        # Generate behavioral data for each candidate individually
+        for candidate in candidates:
+            if isinstance(candidate, dict):
+                try:
+                    candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
+                    candidate["behavioral_data"] = candidate_behavioral_data
+                except Exception:
+                    title = candidate.get('title', 'professional')
+                    candidate["behavioral_data"] = {
+                        "behavioral_insight": f"This {title} responds best to personalized engagement focusing on their specific business challenges.",
+                        "scores": {
+                            "cmi": {"score": 70, "explanation": "Moderate commitment"},
+                            "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
+                            "ias": {"score": 75, "explanation": "Strong role alignment"}
+                        }
+                    }
         
         search_db_id = search_data.get("id")
         if search_db_id:
@@ -209,7 +210,6 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 search_data["status"] = "completed"
                 search_data["filters"] = json.dumps(filters)
                 search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-                search_data["behavioral_data"] = json.dumps(behavioral_data)
                 store_search_to_database(search_data)
                 is_completed = True
             except Exception:
