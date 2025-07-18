@@ -188,9 +188,16 @@ async def process_search(
                 pass
         
         # Select top candidates
-        candidates = select_top_candidates(people, prompt, max_candidates) if people else []
-        if not candidates and people:
-            candidates = people[:max_candidates]
+        candidates = []
+        try:
+            if people:
+                candidates = select_top_candidates(prompt, people)  # Fixed parameter order
+                if not candidates:
+                    candidates = people[:max_candidates]
+        except Exception as e:
+            logger.error(f"Error selecting candidates: {str(e)}")
+            # Fallback to first N people
+            candidates = people[:max_candidates] if people else []
         
         # Enhance candidate data with missing fields
         for candidate in candidates:
@@ -266,12 +273,24 @@ async def process_search(
         
         # Update search status
         if not is_completed:
-            search_data["status"] = "completed"
-            search_data["filters"] = json.dumps(filters)
-            search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-            search_data["behavioral_data"] = json.dumps(behavioral_data)
-            store_search_to_database(search_data)
-            is_completed = True
+            try:
+                search_data["status"] = "completed"
+                search_data["filters"] = json.dumps(filters)
+                search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                search_data["behavioral_data"] = json.dumps(behavioral_data)
+                store_search_to_database(search_data)
+                is_completed = True
+                logger.info(f"Search {request_id} completed successfully with {len(candidates)} candidates")
+            except Exception as e:
+                logger.error(f"Error updating search status to completed: {str(e)}")
+                # Try to update with minimal data
+                try:
+                    search_data["status"] = "completed"
+                    search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                    store_search_to_database(search_data)
+                    is_completed = True
+                except Exception as update_error:
+                    logger.error(f"Failed to update search status: {str(update_error)}")
             
     except Exception as e:
         # Update search status to failed if not already completed
