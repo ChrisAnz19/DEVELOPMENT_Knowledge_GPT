@@ -70,6 +70,13 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
                 )
                 enrich_response.raise_for_status()
                 enriched_person = enrich_response.json().get("person", {})
+                # --- Merge logic: preserve best value for each field ---
+                merged_person = person.copy()
+                for k, v in enriched_person.items():
+                    # Only overwrite if enrichment provides a non-null, non-empty value
+                    if v is not None and (not isinstance(v, str) or v.strip()):
+                        merged_person[k] = v
+                enriched_person = merged_person
                 
                 # Extract profile photo URL from Apollo data
                 profile_photo_url = (
