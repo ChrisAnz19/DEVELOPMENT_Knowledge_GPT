@@ -697,19 +697,136 @@ def store_people_to_database(search_id, people):
         return None
 
 def get_people_for_search(search_id):
-    res = supabase.table("people").select("id, search_id, name, title, company, email, linkedin_url, profile_photo_url, location, accuracy, reasons, linkedin_profile, linkedin_posts, behavioral_data, created_at").eq("search_id", search_id).execute()
+    """
+    Get people associated with a search with comprehensive diagnostic logging.
     
-    # Parse behavioral_data JSON strings back to Python objects
+    Args:
+        search_id: Database ID of the search
+        
+    Returns:
+        List of candidate data with all fields
+    """
+    # Define the fields we're selecting to ensure LinkedIn data fields are included
+    selected_fields = [
+        "id", "search_id", "name", "title", "company", "email", 
+        "linkedin_url", "profile_photo_url", "location", "accuracy", 
+        "reasons", "linkedin_profile", "linkedin_posts", "behavioral_data", "created_at"
+    ]
+    
+    # Define required LinkedIn data fields for validation
+    required_linkedin_fields = ["company", "linkedin_url", "profile_photo_url"]
+    
+    # Log the exact database query being executed
+    logger.info(f"[DIAGNOSTIC] Executing database query for search_id {search_id}")
+    logger.info(f"[DIAGNOSTIC] Selected fields: {', '.join(selected_fields)}")
+    logger.info(f"[DIAGNOSTIC] Query: SELECT {', '.join(selected_fields)} FROM people WHERE search_id = {search_id}")
+    
+    try:
+        res = supabase.table("people").select(", ".join(selected_fields)).eq("search_id", search_id).execute()
+    except Exception as e:
+        logger.error(f"[ERROR] Database query failed for search_id {search_id}: {str(e)}")
+        logger.error(f"[ERROR] This may indicate missing fields in database schema")
+        return []
+    
+    # Log raw database response details
+    logger.info(f"[DIAGNOSTIC] Database response for search_id {search_id}:")
+    logger.info(f"[DIAGNOSTIC] - Response has data: {hasattr(res, 'data')}")
+    logger.info(f"[DIAGNOSTIC] - Data count: {len(res.data) if hasattr(res, 'data') and res.data else 0}")
+    
+    # Validate that database response contains expected structure
+    if not hasattr(res, 'data'):
+        logger.error(f"[ERROR] Database response missing 'data' attribute for search_id {search_id}")
+        return []
+    
     if hasattr(res, 'data') and res.data:
-        for person in res.data:
+        logger.info(f"[DIAGNOSTIC] Retrieved {len(res.data)} candidates from database")
+        
+        # Validate that all expected fields are present in database schema
+        validated_candidates = []
+        schema_validation_errors = []
+        
+        # Log field-by-field analysis for each candidate
+        for i, person in enumerate(res.data):
+            logger.info(f"[DIAGNOSTIC] Candidate {i+1} ({person.get('name', 'Unknown')}) database fields:")
+            
+            # Validate that all selected fields are present in the result
+            missing_fields = []
+            for field in selected_fields:
+                if field not in person:
+                    missing_fields.append(field)
+            
+            if missing_fields:
+                error_msg = f"Missing fields in database schema for candidate {i+1}: {missing_fields}"
+                logger.error(f"[ERROR] {error_msg}")
+                schema_validation_errors.append(error_msg)
+            
+            # Check critical LinkedIn data fields with validation
+            critical_fields = ['company', 'linkedin_url', 'profile_photo_url']
+            missing_critical_fields = []
+            
+            for field in critical_fields:
+                if field not in person:
+                    missing_critical_fields.append(field)
+                    logger.error(f"[ERROR] Critical field '{field}' missing from database schema")
+                    continue
+                    
+                value = person.get(field)
+                has_value = bool(value and str(value).strip())
+                logger.info(f"[DIAGNOSTIC] - {field}: {'✓' if has_value else '✗'} ({repr(value)})")
+                
+                # Add validation for required LinkedIn fields
+                if field in required_linkedin_fields and not has_value:
+                    logger.warning(f"[VALIDATION] Required LinkedIn field '{field}' is null/empty for candidate {person.get('name', 'Unknown')}")
+            
+            # Log schema validation errors for this candidate
+            if missing_critical_fields:
+                error_msg = f"Critical LinkedIn fields missing from database schema: {missing_critical_fields}"
+                logger.error(f"[ERROR] {error_msg}")
+                schema_validation_errors.append(error_msg)
+            
+            # Check all other fields
+            other_fields = [f for f in selected_fields if f not in critical_fields]
+            for field in other_fields:
+                if field not in person:
+                    continue  # Already logged in missing_fields check
+                    
+                value = person.get(field)
+                has_value = bool(value and str(value).strip()) if field != 'behavioral_data' else bool(value)
+                logger.info(f"[DIAGNOSTIC] - {field}: {'✓' if has_value else '✗'} ({'present' if has_value else 'missing/null'})")
+            
+            # Parse behavioral_data JSON strings back to Python objects
             if person.get('behavioral_data') and isinstance(person['behavioral_data'], str):
                 try:
                     person['behavioral_data'] = json.loads(person['behavioral_data'])
+                    logger.info(f"[DIAGNOSTIC] - behavioral_data: Successfully parsed JSON")
                 except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse behavioral_data JSON for person {person.get('id')}")
+                    logger.warning(f"[DIAGNOSTIC] - behavioral_data: Failed to parse JSON for person {person.get('id')}")
                     person['behavioral_data'] = None
-    
-    return res.data
+            
+            # Add candidate to validated list only if no critical schema errors
+            if not missing_critical_fields:
+                validated_candidates.append(person)
+            else:
+                logger.error(f"[ERROR] Excluding candidate {person.get('name', 'Unknown')} due to missing critical fields")
+        
+        # Log overall schema validation results
+        if schema_validation_errors:
+            logger.error(f"[ERROR] Schema validation errors found for search_id {search_id}:")
+            for error in schema_validation_errors:
+                logger.error(f"[ERROR] - {error}")
+            
+            # If all candidates have schema errors, this indicates a database schema issue
+            if not validated_candidates:
+                logger.error(f"[ERROR] All candidates excluded due to schema validation errors")
+                logger.error(f"[ERROR] This indicates missing fields in the database schema")
+                return []
+        
+        logger.info(f"[VALIDATION] Successfully validated {len(validated_candidates)} out of {len(res.data)} candidates")
+        return validated_candidates
+        
+    else:
+        logger.warning(f"[DIAGNOSTIC] No candidates found in database for search_id {search_id}")
+        return []
 
 def is_person_excluded_in_database(email, days=30):
     # Check if a person with this email exists in the people table within the last N days

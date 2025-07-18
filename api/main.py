@@ -322,7 +322,124 @@ async def get_search_result(request_id: str):
                 # Get people using the search database ID
                 candidates = get_people_for_search(search_db_id)
                 if candidates:
-                    search_data["candidates"] = candidates
+                    # Add comprehensive diagnostic logging for API response
+                    logger.info(f"[DIAGNOSTIC] API endpoint processing {len(candidates)} candidates for request_id {request_id}")
+                    
+                    # Log field-by-field comparison between database result and API response
+                    for i, candidate in enumerate(candidates):
+                        logger.info(f"[DIAGNOSTIC] Candidate {i+1} ({candidate.get('name', 'Unknown')}) API response analysis:")
+                        
+                        # Check critical LinkedIn data fields that should be in API response
+                        critical_fields = ['company', 'linkedin_url', 'profile_photo_url']
+                        for field in critical_fields:
+                            db_value = candidate.get(field)
+                            has_db_value = bool(db_value and str(db_value).strip())
+                            logger.info(f"[DIAGNOSTIC] - {field}: DB={'✓' if has_db_value else '✗'} ({repr(db_value)}) -> API={'✓' if has_db_value else '✗'}")
+                        
+                        # Check all other fields that will be included in API response
+                        other_fields = ['id', 'name', 'title', 'email', 'location', 'accuracy', 'reasons', 'linkedin_profile', 'behavioral_data']
+                        for field in other_fields:
+                            db_value = candidate.get(field)
+                            has_db_value = bool(db_value) if field in ['linkedin_profile', 'behavioral_data', 'reasons'] else bool(db_value and str(db_value).strip())
+                            logger.info(f"[DIAGNOSTIC] - {field}: DB={'✓' if has_db_value else '✗'} -> API={'✓' if has_db_value else '✗'}")
+                    
+                    # Process candidates to ensure all required fields are included in API response
+                    processed_candidates = []
+                    
+                    for i, candidate in enumerate(candidates):
+                        # Create processed candidate with explicit field mapping
+                        processed_candidate = {
+                            # Core identification fields
+                            "id": candidate.get("id"),
+                            "name": candidate.get("name"),
+                            "title": candidate.get("title"),
+                            "email": candidate.get("email"),
+                            "location": candidate.get("location"),
+                            
+                            # LinkedIn data fields - explicitly ensure they're included
+                            "company": candidate.get("company"),
+                            "linkedin_url": candidate.get("linkedin_url"), 
+                            "profile_photo_url": candidate.get("profile_photo_url"),
+                            
+                            # Assessment and matching fields
+                            "accuracy": candidate.get("accuracy"),
+                            "reasons": candidate.get("reasons"),
+                            
+                            # Extended profile data
+                            "linkedin_profile": candidate.get("linkedin_profile"),
+                            "behavioral_data": candidate.get("behavioral_data")
+                        }
+                        
+                        # Apply comprehensive null value handling for missing optional fields
+                        # Ensure all expected fields are present with proper null handling
+                        expected_fields = [
+                            'id', 'name', 'title', 'email', 'location', 'company', 
+                            'linkedin_url', 'profile_photo_url', 'accuracy', 'reasons',
+                            'linkedin_profile', 'behavioral_data'
+                        ]
+                        
+                        # Ensure all expected fields exist in the response
+                        for field_name in expected_fields:
+                            if field_name not in processed_candidate:
+                                processed_candidate[field_name] = None
+                                logger.warning(f"[FIELD_MAPPING] Added missing field '{field_name}' with null value for candidate {processed_candidate.get('name', 'Unknown')}")
+                        
+                        # Apply null value handling for empty/invalid values
+                        for field_name, field_value in processed_candidate.items():
+                            if field_value is None:
+                                # Already null, keep as is
+                                continue
+                            elif isinstance(field_value, str) and not field_value.strip():
+                                # Empty string, convert to null
+                                processed_candidate[field_name] = None
+                                logger.debug(f"[FIELD_MAPPING] Converted empty string to null for field '{field_name}' in candidate {processed_candidate.get('name', 'Unknown')}")
+                            elif field_name in ['linkedin_profile', 'behavioral_data', 'reasons']:
+                                # Special handling for complex fields
+                                if field_name == 'reasons' and isinstance(field_value, list) and not field_value:
+                                    # Empty list for reasons
+                                    processed_candidate[field_name] = []
+                                elif field_name in ['linkedin_profile', 'behavioral_data'] and isinstance(field_value, dict) and not field_value:
+                                    # Empty dict for complex objects
+                                    processed_candidate[field_name] = None
+                        
+                        # Log field mapping validation for each candidate
+                        logger.info(f"[FIELD_MAPPING] Candidate {i+1} ({processed_candidate.get('name', 'Unknown')}) field mapping:")
+                        
+                        # Validate critical LinkedIn fields are properly mapped
+                        critical_fields = ['company', 'linkedin_url', 'profile_photo_url']
+                        for field in critical_fields:
+                            original_value = candidate.get(field)
+                            mapped_value = processed_candidate.get(field)
+                            has_original = bool(original_value and str(original_value).strip())
+                            has_mapped = bool(mapped_value and str(mapped_value).strip())
+                            
+                            if has_original != has_mapped:
+                                logger.error(f"[FIELD_MAPPING] Field mapping error for {field}: DB={'✓' if has_original else '✗'} -> API={'✓' if has_mapped else '✗'}")
+                            else:
+                                logger.info(f"[FIELD_MAPPING] - {field}: {'✓' if has_mapped else '✗'} (preserved from DB)")
+                        
+                        processed_candidates.append(processed_candidate)
+                    
+                    # Log the complete field list that will be returned in API response
+                    if processed_candidates:
+                        sample_candidate = processed_candidates[0]
+                        api_fields = list(sample_candidate.keys())
+                        logger.info(f"[DIAGNOSTIC] API response will include fields: {', '.join(sorted(api_fields))}")
+                        
+                        # Specifically check for LinkedIn data fields in API response
+                        linkedin_fields_present = []
+                        linkedin_fields_missing = []
+                        expected_linkedin_fields = ['company', 'linkedin_url', 'profile_photo_url']
+                        
+                        for field in expected_linkedin_fields:
+                            if field in api_fields and sample_candidate.get(field):
+                                linkedin_fields_present.append(field)
+                            else:
+                                linkedin_fields_missing.append(field)
+                        
+                        logger.info(f"[DIAGNOSTIC] LinkedIn fields in API response - Present: {linkedin_fields_present}, Missing: {linkedin_fields_missing}")
+                    
+                    search_data["candidates"] = processed_candidates
                     logger.info(f"Found {len(candidates)} candidates for search {request_id}")
                     
                     # ALWAYS force the status to completed when we have candidates
@@ -417,6 +534,91 @@ async def get_search_json(request_id: str):
     except Exception as e:
         logger.error(f"Error getting search JSON: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting search JSON: {str(e)}")
+
+@app.get("/api/search/{request_id}/candidates/raw")
+async def get_raw_candidates(request_id: str):
+    """Get raw database candidate data for debugging purposes."""
+    try:
+        # Get the search from the database to get the search ID
+        search_data = get_search_from_database(request_id)
+        
+        if not search_data:
+            raise HTTPException(status_code=404, detail="Search not found")
+        
+        search_db_id = search_data.get("id")
+        if not search_db_id:
+            raise HTTPException(status_code=404, detail="Search database ID not found")
+        
+        # Log the exact SQL query being executed for debugging
+        logger.info(f"[RAW_DEBUG] Executing raw candidate query for request_id: {request_id}")
+        logger.info(f"[RAW_DEBUG] Search database ID: {search_db_id}")
+        
+        # Use the existing get_people_for_search function to get raw data
+        # This function already includes comprehensive logging and field selection
+        raw_candidates = get_people_for_search(search_db_id)
+        
+        # Define all possible fields from the people table for documentation
+        all_fields = [
+            "id", "search_id", "name", "title", "company", "email", 
+            "linkedin_url", "profile_photo_url", "location", "accuracy", 
+            "reasons", "linkedin_profile", "linkedin_posts", "behavioral_data", 
+            "created_at", "updated_at"
+        ]
+        
+        # Log the conceptual SQL query for debugging purposes
+        sql_query = f"SELECT {', '.join(all_fields)} FROM people WHERE search_id = {search_db_id}"
+        logger.info(f"[RAW_DEBUG] Conceptual SQL Query: {sql_query}")
+        
+        # Log raw database response
+        logger.info(f"[RAW_DEBUG] Raw database response:")
+        logger.info(f"[RAW_DEBUG] - Data count: {len(raw_candidates) if raw_candidates else 0}")
+        
+        if raw_candidates:
+            # Log detailed field analysis for each candidate
+            for i, candidate in enumerate(raw_candidates):
+                logger.info(f"[RAW_DEBUG] Candidate {i+1} raw database fields:")
+                for field in all_fields:
+                    if field in candidate:
+                        value = candidate.get(field)
+                        logger.info(f"[RAW_DEBUG] - {field}: {repr(value)} (type: {type(value).__name__})")
+                    else:
+                        logger.info(f"[RAW_DEBUG] - {field}: <not present in result>")
+            
+            # Return raw data without any processing or transformation
+            return {
+                "request_id": request_id,
+                "search_db_id": search_db_id,
+                "sql_query": sql_query,
+                "candidate_count": len(raw_candidates),
+                "raw_candidates": raw_candidates,
+                "debug_info": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "fields_expected": all_fields,
+                    "processing_applied": "none - direct from get_people_for_search()",
+                    "note": "This endpoint returns raw database data without any API processing"
+                }
+            }
+        else:
+            logger.info(f"[RAW_DEBUG] No candidates found in database for search_id: {search_db_id}")
+            return {
+                "request_id": request_id,
+                "search_db_id": search_db_id,
+                "sql_query": sql_query,
+                "candidate_count": 0,
+                "raw_candidates": [],
+                "debug_info": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "fields_expected": all_fields,
+                    "processing_applied": "none - direct from get_people_for_search()",
+                    "note": "No candidates found in database"
+                }
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[RAW_DEBUG] Error getting raw candidates: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting raw candidates: {str(e)}")
 
 @app.get("/api/database/stats")
 async def get_database_stats():
