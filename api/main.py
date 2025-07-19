@@ -323,7 +323,7 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         # Check for obviously inappropriate requests
         inappropriate_patterns = [
             "celebrities", "famous people", "movie stars", "actors", "singers", "athletes",
-            "president", "ceo of apple", "ceo of google", "ceo of microsoft", "ceo of amazon",
+            "president of", "ceo of apple", "ceo of google", "ceo of microsoft", "ceo of amazon",
             "elon musk", "jeff bezos", "mark zuckerberg", "bill gates", "larry fink",
             "politicians", "senators", "congress", "white house", "government officials",
             "royalty", "prince", "princess", "king", "queen", "duke", "duchess"
