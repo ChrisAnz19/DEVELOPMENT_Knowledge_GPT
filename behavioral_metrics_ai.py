@@ -59,18 +59,21 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         # Extract candidate's first name for personalization
         first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
         
-        # Create a simplified prompt
+        # Create a focused prompt based on behavioral metrics
         system_prompt = """
-        Generate a focused, actionable behavioral insight for engaging with a prospect.
-        Use the candidate's first name when referring to them.
-        Focus on Commitment Momentum Index (CMI), Risk-Barrier Focus Score (RBFS), and Identity Alignment Signal (IAS).
-        Keep it to 2-3 sentences with specific, actionable guidance.
+        Generate an engagement strategy based on behavioral metrics:
+        - Commitment Momentum Index (CMI): Forward motion vs idle curiosity
+        - Risk-Barrier Focus Score (RBFS): How sensitive to downside and friction
+        - Identity Alignment Signal (IAS): Whether choice fits their self-image/goals
+        
+        Provide 2-3 sentences of specific, actionable guidance for outreach timing and approach.
         """
         
         name_instruction = f"The candidate's first name is '{first_name}'. " if first_name else "Use their role title. "
         
         user_prompt_for_ai = f"""
-        {name_instruction}Generate a focused behavioral insight for a {role} who was found in a search for "{user_prompt}".
+        {name_instruction}Generate an engagement strategy for a {role} found in search for "{user_prompt}".
+        Focus on timing, risk sensitivity, and personal alignment factors.
         """
         
         # Call the OpenAI API with reduced tokens
@@ -167,9 +170,9 @@ def enhance_behavioral_data_ai(
         return {
             "behavioral_insight": "This professional responds best to personalized engagement focusing on their specific business challenges.",
             "scores": {
-                "cmi": {"score": 70, "explanation": "Moderate commitment"},
-                "rbfs": {"score": 60, "explanation": "Balanced risk approach"},
-                "ias": {"score": 75, "explanation": "Strong role alignment"}
+                "cmi": {"score": 70, "explanation": "Forward motion"},
+                "rbfs": {"score": 60, "explanation": "Moderately sensitive"},
+                "ias": {"score": 75, "explanation": "Fits self-image"}
             }
         }
 
@@ -206,7 +209,7 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     role_lower = role.lower()
     # Technical roles
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return {"score": 85, "explanation": "Ready to act"}
+        return {"score": 85, "explanation": "Forward motion"}
     # Executive roles
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         return {"score": 80, "explanation": "Lining up next steps"}
@@ -220,15 +223,15 @@ def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
     
     # Finance and legal roles tend to be more risk-averse
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        return {"score": 85, "explanation": "Risk-averse"}
+        return {"score": 85, "explanation": "Highly sensitive"}
     
     # Executive roles often balance risk and opportunity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 70, "explanation": "Balanced risk"}
+        return {"score": 70, "explanation": "Moderately sensitive"}
     
     # Default for other roles
     else:
-        return {"score": 60, "explanation": "Open to opportunity"}
+        return {"score": 60, "explanation": "Low sensitivity"}
 
 def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     """Generate a fallback IAS score based on role."""
@@ -236,11 +239,11 @@ def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     
     # Technical specialists often strongly identify with their expertise
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        return {"score": 85, "explanation": "Strong alignment"}
+        return {"score": 85, "explanation": "Fits self-image"}
     
     # Executive roles often have strong professional identity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 80, "explanation": "Role-driven"}
+        return {"score": 80, "explanation": "Strong alignment"}
     
     # Default for other roles
     else:

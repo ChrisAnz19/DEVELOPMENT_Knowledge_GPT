@@ -195,9 +195,9 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                     candidate["behavioral_data"] = {
                         "behavioral_insight": f"This {title} responds best to personalized engagement focusing on their specific business challenges.",
                         "scores": {
-                            "cmi": {"score": 70, "explanation": "Moderate commitment"},
-                            "rbfs": {"score": 65, "explanation": "Balanced risk approach"},
-                            "ias": {"score": 75, "explanation": "Strong role alignment"}
+                            "cmi": {"score": 70, "explanation": "Forward motion"},
+                            "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
+                            "ias": {"score": 75, "explanation": "Fits self-image"}
                         }
                     }
         
