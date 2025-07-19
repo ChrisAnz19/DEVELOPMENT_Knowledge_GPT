@@ -126,7 +126,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         Be specific and actionable. Avoid generic phrases like "high commitment" or "risk sensitive."
         Instead, focus on practical insights about their decision-making style and professional priorities.
         
-        IMPORTANT: Use "they/them" pronouns, never "The [role title]". Keep response to 15-25 words maximum.
+        IMPORTANT: Use "they/them" pronouns, never "The [role title]". Provide 2-3 detailed sentences with specific engagement guidance.
         """
         
         name_ref = first_name if first_name else "This professional"
@@ -146,7 +146,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         Focus on their professional mindset and decision-making style, not generic commitment levels.
         """
         
-        # Call the OpenAI API with reduced tokens
+        # Call the OpenAI API with sufficient tokens for detailed response
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -154,7 +154,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.7,
-            max_tokens=120
+            max_tokens=200
         )
         
         return response.choices[0].message.content.strip()
