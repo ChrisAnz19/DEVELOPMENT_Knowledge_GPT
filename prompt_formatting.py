@@ -65,7 +65,8 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "Only use these exact People Search parameters:\n\n"
         "Organization filters (arrays or integers):\n"
         "- organization_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
-        "- organization_num_employees_ranges[] (e.g. [\"1,10\", \"11,50\"])\n\n"
+        "- organization_num_employees_ranges[] (e.g. [\"1,10\", \"11,50\"])\n"
+        "- q_organization_keyword_tags[] (e.g. [\"automotive\", \"technology\", \"healthcare\"]) - USE SPARINGLY, only for clear industry terms\n\n"
         "Person filters:\n"
         "- person_titles[] (e.g. [\"CEO\", \"CTO\", \"Sales Director\"])\n"
         "- person_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
@@ -75,8 +76,9 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "1. Use ONLY the parameter names listed above\n"
         "2. Keep filters simple - avoid complex combinations\n"
         "3. Use arrays for multiple values\n"
-        "4. DO NOT use q_organization_keyword_tags[] - it causes API errors\n"
-        "5. Focus on person titles, locations, and seniority levels only\n"
+        "4. Use q_organization_keyword_tags[] ONLY for clear industry terms like 'automotive', 'healthcare', 'technology'\n"
+        "5. AVOID generic terms like 'sales', 'business', 'company' in keyword tags\n"
+        "6. Focus primarily on person titles, locations, and seniority levels\n"
         "6. Return ONLY valid JSON, inside a single markdown code block (triple backticks, json). No extra text, no explanation, no comments.\n"
         "7. The JSON must have keys: organization_filters, person_filters, reasoning."
     )
@@ -119,7 +121,8 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
 
     org_list_keys = [
         "organization_locations",
-        "organization_num_employees_ranges"
+        "organization_num_employees_ranges",
+        "q_organization_keyword_tags"
     ]
     person_list_keys = [
         "person_titles",
