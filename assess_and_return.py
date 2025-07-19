@@ -89,12 +89,12 @@ EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
-Then select the two with the highest probabilities.
+Then select the top candidates with the highest probabilities (return 2-3 candidates, prioritizing quality over quantity).
 
 For each selected candidate, provide 3-4 specific, plausible, and realistic behavioral reasons why they were selected,
 based on their simulated online activity patterns over time.
 
-Return ONLY valid JSON array with exactly two objects, each containing:
+Return ONLY valid JSON array with 2-3 objects, each containing:
 name, title, company, email, accuracy (number), reasons (array of strings).
 No extra text, no explanation, no comments.
 """
@@ -126,7 +126,7 @@ def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict 
         List of dicts with candidate info and behavioral assessments
     """
     # Optimize token usage by limiting candidates and extracting only necessary fields
-    max_candidates = min(3, len(people))  # Limit to 3 candidates maximum
+    max_candidates = min(5, len(people))  # Limit to 5 candidates maximum (increased from 3)
     limited_people = people[:max_candidates]
     
     # Simplify the people data to reduce tokens - only include essential fields
@@ -196,9 +196,9 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
     Returns:
         The validated result or None if validation fails
     """
-    # Check if we have exactly 2 results
-    if len(result) != 2:
-        print(f"[Assessment] Expected 2 results, got {len(result)}")
+    # Check if we have 2-3 results (more flexible)
+    if len(result) < 2 or len(result) > 3:
+        print(f"[Assessment] Expected 2-3 results, got {len(result)}")
         return None
     
     # Check required fields
@@ -481,7 +481,7 @@ def _apply_pattern_replacements(patterns: list, replacements: dict) -> list:
 
 def _fallback_assessment(people: list, user_prompt: str = "", industry_context: str = None) -> list:
     """
-    Enhanced fallback assessment when OpenAI fails - returns top 2 people with realistic behavioral reasoning
+    Enhanced fallback assessment when OpenAI fails - returns top 3 people with realistic behavioral reasoning
     
     Args:
         people: List of candidate data
@@ -494,11 +494,11 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
     if len(people) == 0:
         return []
     
-    # Take first 2 people and create behavioral assessment
-    top_2 = people[:2]
+    # Take first 3 people and create behavioral assessment (increased from 2)
+    top_candidates = people[:min(3, len(people))]
     result = []
     
-    for i, person in enumerate(top_2):
+    for i, person in enumerate(top_candidates):
         # Generate behavioral reasons based on their role and industry
         title = person.get("title", "Unknown")
         company = person.get("organization_name", "Unknown")
@@ -524,7 +524,7 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
             "title": person.get("title", "Unknown"),
             "company": person.get("organization_name", "Unknown"),
             "email": person.get("email", "None"),
-            "accuracy": 85 - (i * 10),  # 85% for first, 75% for second
+            "accuracy": 85 - (i * 5),  # 85% for first, 80% for second, 75% for third
             "reasons": behavioral_reasons
         })
     
