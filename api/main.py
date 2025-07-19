@@ -320,13 +320,12 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         # Validate prompt for ridiculous or inappropriate content
         prompt_lower = request.prompt.lower().strip()
         
-        # Check for obviously inappropriate requests
+        # Check for obviously inappropriate requests - only the most obvious cases
         inappropriate_patterns = [
-            "celebrities", "famous people", "movie stars", "actors", "singers", "athletes",
-            "president of", "ceo of apple", "ceo of google", "ceo of microsoft", "ceo of amazon",
             "elon musk", "jeff bezos", "mark zuckerberg", "bill gates", "larry fink",
-            "politicians", "senators", "congress", "white house", "government officials",
-            "royalty", "prince", "princess", "king", "queen", "duke", "duchess"
+            "ceo of apple", "ceo of google", "ceo of microsoft", "ceo of amazon",
+            "president of the united states", "white house", "government officials",
+            "movie stars", "actors", "singers", "athletes", "celebrities"
         ]
         
         for pattern in inappropriate_patterns:
