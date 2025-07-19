@@ -21,12 +21,91 @@ Usage:
 
 import json
 import logging
+import random
+from datetime import datetime, timedelta
 from openai_utils import call_openai_for_json, call_openai
 from typing import List, Dict, Any, Tuple, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def generate_random_time_reference() -> str:
+    """
+    Generate a random time reference that's never in the past 6 hours.
+    Returns realistic time phrases for behavioral patterns.
+    """
+    # Define time ranges (avoiding past 6 hours)
+    time_options = [
+        # Yesterday and beyond
+        "yesterday",
+        "two days ago", 
+        "three days ago",
+        "earlier this week",
+        "last week",
+        "two weeks ago",
+        "three weeks ago",
+        "last month",
+        "two months ago",
+        
+        # Duration-based (ongoing patterns)
+        "over the past week",
+        "over the past two weeks", 
+        "over the past month",
+        "over the past three weeks",
+        "over a two-week period",
+        "over a three-week period",
+        "over the past quarter",
+        
+        # Frequency-based
+        "daily over the past week",
+        "multiple times last week",
+        "repeatedly over the past month",
+        "consistently over two weeks",
+        "regularly over the past month",
+        
+        # Specific timeframes
+        "during the past weekend",
+        "throughout last week",
+        "across multiple sessions last month",
+        "in several sessions over two weeks",
+        "during evening hours last week",
+    ]
+    
+    return random.choice(time_options)
+
+def generate_activity_duration() -> str:
+    """Generate realistic activity duration references."""
+    durations = [
+        "for 15+ minutes",
+        "for 30+ minutes", 
+        "for 45+ minutes",
+        "for over an hour",
+        "spending significant time",
+        "with extended sessions",
+        "in detailed sessions",
+        "with focused attention",
+        "for extended periods",
+        "in multiple long sessions"
+    ]
+    
+    return random.choice(durations)
+
+def generate_frequency_reference() -> str:
+    """Generate realistic frequency references."""
+    frequencies = [
+        "5 times",
+        "7 times", 
+        "multiple times",
+        "repeatedly",
+        "consistently",
+        "regularly",
+        "several times",
+        "numerous times",
+        "frequently"
+    ]
+    
+    return random.choice(frequencies)
 
 def build_assessment_prompt(user_prompt: str, candidates: list, industry_context: str = None) -> Tuple[str, str]:
     """
@@ -293,58 +372,58 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
     elif any(exec_level in title for exec_level in ["ceo", "cto", "cfo", "coo", "chief", "vp", "vice president", "director", "head"]):
         role_level = "executive"
     
-    # Industry-specific behavioral patterns with time-series data
+    # Industry-specific behavioral patterns with dynamic time-series data
     patterns = {
         "tech": {
             "junior": [
-                "Spent an average of 2 hours per day on Stack Overflow over the past month, with focus on {tech_topic} questions",
-                "Cloned 5 GitHub repositories related to {tech_framework} in the past two weeks",
-                "Visited documentation pages for {tech_tool} repeatedly, with increasing time spent per visit",
-                "Searched for '{tech_topic} tutorial' and spent 45+ minutes on resulting pages last week"
+                "Visited Stack Overflow {frequency} {time_ref}, focusing on {tech_topic} questions and {duration}",
+                "Cloned GitHub repositories related to {tech_framework} {time_ref}, exploring implementation examples",
+                "Researched {tech_tool} documentation {frequency} {time_ref}, {duration} on each session",
+                "Searched for '{tech_topic} tutorials' {time_ref} and bookmarked multiple resources {duration}"
             ],
             "mid": [
-                "Contributed to {tech_framework} discussions on GitHub over a three-week period",
-                "Researched {tech_topic} optimization techniques across multiple technical blogs, spending 30+ minutes on each",
-                "Compared {tech_tool} with alternatives on review sites, then deeply explored documentation",
-                "Downloaded technical papers on {tech_topic} and spent significant time reviewing them"
+                "Contributed to {tech_framework} discussions on GitHub {time_ref}, providing detailed code examples",
+                "Analyzed {tech_topic} optimization techniques {time_ref}, comparing different approaches {duration}",
+                "Evaluated {tech_tool} alternatives on review sites {time_ref}, then explored vendor documentation",
+                "Downloaded and reviewed technical papers on {tech_topic} {time_ref}, {duration} on implementation details"
             ],
             "senior": [
-                "Researched enterprise architecture patterns, then explored {tech_framework} implementation examples",
-                "Analyzed performance benchmarks for various {tech_tool} configurations over several days",
-                "Reviewed technical documentation for multiple {tech_topic} solutions, then focused on specific implementation details",
-                "Participated in technical forums discussing advanced {tech_topic} concepts, with multiple return visits"
+                "Researched enterprise {tech_framework} architecture patterns {time_ref}, {duration} on scalability considerations",
+                "Benchmarked {tech_tool} performance configurations {time_ref}, analyzing results across multiple scenarios",
+                "Reviewed technical documentation for {tech_topic} solutions {frequency} {time_ref}, focusing on integration capabilities",
+                "Participated in technical forums discussing {tech_topic} best practices {time_ref}, contributing expert insights"
             ],
             "executive": [
-                "Compared enterprise {tech_tool} solutions on G2 and Capterra, focusing on ROI metrics",
-                "Researched industry adoption rates of {tech_framework} technologies across multiple analyst reports",
-                "Reviewed case studies of successful {tech_topic} implementations at Fortune 500 companies",
-                "Analyzed market trends in {tech_topic} technologies through industry reports and news sources"
+                "Compared enterprise {tech_tool} solutions on G2 and Capterra {time_ref}, focusing on ROI and adoption metrics",
+                "Analyzed industry reports on {tech_framework} adoption trends {time_ref}, {duration} on competitive analysis",
+                "Reviewed case studies of {tech_topic} implementations {frequency} {time_ref}, evaluating business impact",
+                "Researched market trends in {tech_topic} technologies {time_ref}, consulting multiple analyst reports"
             ]
         },
         "finance": {
             "junior": [
-                "Studied financial modeling tutorials on specialized learning platforms over several weeks",
-                "Regularly checked market data on Bloomberg and Reuters, with increasing session duration",
-                "Downloaded templates for financial analysis and spent time customizing them",
-                "Tracked specific market sectors daily over a two-week period"
+                "Studied financial modeling tutorials on specialized platforms {time_ref}, {duration} on Excel techniques",
+                "Checked market data on Bloomberg and Reuters {frequency} {time_ref}, tracking sector performance",
+                "Downloaded financial analysis templates {time_ref} and customized them {duration}",
+                "Monitored specific market sectors {frequency} {time_ref}, analyzing volatility patterns"
             ],
             "mid": [
-                "Analyzed quarterly reports from companies in the {industry_sector} sector",
-                "Compared financial data visualization tools, then focused on advanced features",
-                "Researched regulatory compliance requirements specific to {finance_topic}",
-                "Tracked market indicators related to {industry_sector} over a month-long period"
+                "Analyzed quarterly reports from {industry_sector} companies {time_ref}, {duration} on financial metrics",
+                "Compared financial data visualization tools {time_ref}, evaluating advanced analytics features",
+                "Researched {finance_topic} compliance requirements {frequency} {time_ref}, reviewing regulatory updates",
+                "Tracked market indicators related to {industry_sector} {time_ref}, building performance models"
             ],
             "senior": [
-                "Conducted in-depth analysis of merger activity in the {industry_sector} space over the past quarter",
-                "Researched advanced risk management frameworks, focusing on implementation strategies",
-                "Compared enterprise financial software solutions, examining integration capabilities",
-                "Analyzed historical performance data for various investment strategies in {finance_topic}"
+                "Conducted merger activity analysis in {industry_sector} {time_ref}, {duration} on due diligence processes",
+                "Researched advanced risk management frameworks {frequency} {time_ref}, evaluating implementation strategies",
+                "Compared enterprise financial software solutions {time_ref}, examining integration and scalability",
+                "Analyzed investment strategy performance data {time_ref}, {duration} on {finance_topic} optimization"
             ],
             "executive": [
-                "Reviewed macroeconomic indicators and their impact on {industry_sector} over multiple sessions",
-                "Analyzed competitor financial performance and strategic initiatives across the {industry_sector}",
-                "Researched emerging regulatory frameworks affecting {finance_topic} at the executive level",
-                "Examined global market trends in {industry_sector} through premium research reports"
+                "Reviewed macroeconomic indicators impacting {industry_sector} {frequency} {time_ref}, consulting multiple sources",
+                "Analyzed competitor financial performance {time_ref}, {duration} on strategic positioning",
+                "Researched regulatory frameworks affecting {finance_topic} {time_ref}, evaluating compliance implications",
+                "Examined global market trends in {industry_sector} {frequency} {time_ref}, reviewing analyst reports"
             ]
         },
         "marketing": {
@@ -375,28 +454,28 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         },
         "sales": {
             "junior": [
-                "Researched prospecting techniques specific to {industry_sector} buyers",
-                "Studied product comparison guides to understand competitive positioning",
-                "Explored CRM functionality with focus on pipeline management features",
-                "Analyzed successful sales emails and templates for {industry_sector} outreach"
+                "Researched prospecting techniques for {industry_sector} buyers {time_ref}, {duration} on outreach strategies",
+                "Studied product comparison guides {frequency} {time_ref}, analyzing competitive positioning",
+                "Explored CRM pipeline management features {time_ref}, testing different workflow configurations",
+                "Analyzed successful sales email templates {time_ref}, {duration} on {industry_sector} messaging"
             ],
             "mid": [
-                "Compared sales enablement platforms with focus on content management capabilities",
-                "Researched negotiation strategies for {industry_sector} enterprise deals",
-                "Analyzed win/loss patterns in {industry_sector} sales through multiple data sources",
-                "Studied account-based selling approaches for {industry_sector} target accounts"
+                "Compared sales enablement platforms {time_ref}, evaluating content management and analytics capabilities",
+                "Researched negotiation strategies for {industry_sector} deals {frequency} {time_ref}, studying case examples",
+                "Analyzed win/loss patterns in {industry_sector} sales {time_ref}, {duration} on performance metrics",
+                "Studied account-based selling approaches {time_ref}, focusing on {industry_sector} target accounts"
             ],
             "senior": [
-                "Evaluated enterprise sales methodologies with application to {industry_sector}",
-                "Researched strategic account planning frameworks for complex sales cycles",
-                "Analyzed sales performance data across teams and regions in similar industries",
-                "Compared sales technology stacks with focus on analytics and forecasting"
+                "Evaluated enterprise sales methodologies {time_ref}, {duration} on {industry_sector} applications",
+                "Researched strategic account planning frameworks {frequency} {time_ref}, analyzing complex sales cycles",
+                "Analyzed sales performance data across regions {time_ref}, benchmarking against industry standards",
+                "Compared sales technology stacks {time_ref}, evaluating analytics and forecasting capabilities"
             ],
             "executive": [
-                "Reviewed industry revenue forecasts and growth projections for strategic planning",
-                "Analyzed competitive positioning and go-to-market strategies in {industry_sector}",
-                "Researched organizational sales structures of market leaders in {industry_sector}",
-                "Examined case studies of successful sales transformations in similar companies"
+                "Reviewed {industry_sector} revenue forecasts {frequency} {time_ref}, analyzing growth projections",
+                "Analyzed competitive positioning strategies {time_ref}, {duration} on market differentiation",
+                "Researched sales organizational structures {time_ref}, studying market leaders in {industry_sector}",
+                "Examined sales transformation case studies {frequency} {time_ref}, evaluating implementation strategies"
             ]
         },
         "general": {
@@ -471,11 +550,18 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
     }
 
 def _apply_pattern_replacements(patterns: list, replacements: dict) -> list:
-    """Apply replacements to pattern templates"""
+    """Apply replacements to pattern templates with dynamic time references"""
     result = []
     for pattern in patterns:
+        # First apply the standard replacements
         for key, value in replacements.items():
             pattern = pattern.replace(f"{{{key}}}", value)
+        
+        # Then apply dynamic time references
+        pattern = pattern.replace("{time_ref}", generate_random_time_reference())
+        pattern = pattern.replace("{duration}", generate_activity_duration())
+        pattern = pattern.replace("{frequency}", generate_frequency_reference())
+        
         result.append(pattern)
     return result
 
