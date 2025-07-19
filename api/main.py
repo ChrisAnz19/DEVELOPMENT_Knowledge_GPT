@@ -26,7 +26,7 @@ if not os.getenv('OPENAI_API_KEY'):
 
 from prompt_formatting import parse_prompt_to_internal_database_filters
 from apollo_api_call import search_people_via_internal_database
-from linkedin_scraping import async_scrape_linkedin_profiles
+# from linkedin_scraping import async_scrape_linkedin_profiles  # Commented out - using Apollo data instead
 from assess_and_return import select_top_candidates
 from database import (
     store_search_to_database, get_search_from_database, 
@@ -112,31 +112,32 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             store_search_to_database(search_data)
             return
         
-        if include_linkedin and people:
-            try:
-                linkedin_urls = [p.get("linkedin_url") for p in people if isinstance(p, dict) and p.get("linkedin_url")]
-                
-                if linkedin_urls:
-                    # Use a shorter timeout for LinkedIn scraping to prevent hanging
-                    linkedin_profiles = await asyncio.wait_for(
-                        async_scrape_linkedin_profiles(linkedin_urls),
-                        timeout=30  # Reduced from 60 to 30 seconds
-                    )
-                    
-                    if linkedin_profiles:
-                        profile_map = {p.get("linkedin_url"): p for p in linkedin_profiles if isinstance(p, dict) and p.get("linkedin_url")}
-                        
-                        for person in people:
-                            if isinstance(person, dict):
-                                linkedin_url = person.get("linkedin_url")
-                                if linkedin_url and linkedin_url in profile_map:
-                                    person["linkedin_profile"] = profile_map[linkedin_url]
-            except asyncio.TimeoutError:
-                # LinkedIn scraping timed out, continue without LinkedIn data
-                pass
-            except Exception:
-                # Any other error, continue without LinkedIn data
-                pass
+        # LinkedIn scraping commented out - using Apollo data instead
+        # if include_linkedin and people:
+        #     try:
+        #         linkedin_urls = [p.get("linkedin_url") for p in people if isinstance(p, dict) and p.get("linkedin_url")]
+        #         
+        #         if linkedin_urls:
+        #             # Use a shorter timeout for LinkedIn scraping to prevent hanging
+        #             linkedin_profiles = await asyncio.wait_for(
+        #                 async_scrape_linkedin_profiles(linkedin_urls),
+        #                 timeout=30  # Reduced from 60 to 30 seconds
+        #             )
+        #             
+        #             if linkedin_profiles:
+        #                 profile_map = {p.get("linkedin_url"): p for p in linkedin_profiles if isinstance(p, dict) and p.get("linkedin_url")}
+        #                 
+        #                 for person in people:
+        #                         if isinstance(person, dict):
+        #                             linkedin_url = person.get("linkedin_url")
+        #                             if linkedin_url and linkedin_url in profile_map:
+        #                                 person["linkedin_profile"] = profile_map[linkedin_url]
+        #     except asyncio.TimeoutError:
+        #         # LinkedIn scraping timed out, continue without LinkedIn data
+        #         pass
+        #     except Exception:
+        #         # Any other error, continue without LinkedIn data
+        #         pass
         
         candidates = []
         try:
@@ -149,10 +150,13 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         
         for candidate in candidates:
             if isinstance(candidate, dict):
-                profile_photo_url = extract_profile_photo_url(candidate, candidate.get("linkedin_profile"))
-                if profile_photo_url:
-                    candidate["profile_photo_url"] = profile_photo_url
+                # Use Apollo data for profile photo, company, and LinkedIn URL
                 
+                # Set profile photo from Apollo data
+                if candidate.get("profile_pic_url"):
+                    candidate["profile_photo_url"] = candidate["profile_pic_url"]
+                
+                # Set company from Apollo organization data
                 if not candidate.get("company") or candidate.get("company") == "Unknown":
                     if "organization" in candidate:
                         org = candidate["organization"]
@@ -160,29 +164,11 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                             candidate["company"] = org["name"]
                         elif isinstance(org, str) and org.strip():
                             candidate["company"] = org
-                    
-                    linkedin_profile = candidate.get("linkedin_profile")
-                    if isinstance(linkedin_profile, dict):
-                        if linkedin_profile.get("company"):
-                            candidate["company"] = linkedin_profile["company"]
-                        elif linkedin_profile.get("current_company"):
-                            candidate["company"] = linkedin_profile["current_company"]
-                        elif linkedin_profile.get("experience") and isinstance(linkedin_profile["experience"], list):
-                            if linkedin_profile["experience"] and isinstance(linkedin_profile["experience"][0], dict):
-                                recent_exp = linkedin_profile["experience"][0]
-                                if recent_exp.get("company"):
-                                    candidate["company"] = recent_exp["company"]
                 
+                # Ensure LinkedIn URL is properly formatted
                 linkedin_url = candidate.get("linkedin_url")
                 if linkedin_url and not linkedin_url.startswith("http"):
                     candidate["linkedin_url"] = f"https://{linkedin_url}"
-                elif candidate.get("linkedin_profile") and isinstance(candidate["linkedin_profile"], dict):
-                    profile_url = candidate["linkedin_profile"].get("url") or candidate["linkedin_profile"].get("linkedin_url")
-                    if profile_url:
-                        if not profile_url.startswith("http"):
-                            candidate["linkedin_url"] = f"https://{profile_url}"
-                        else:
-                            candidate["linkedin_url"] = profile_url
         
         # Generate behavioral data for each candidate individually
         for candidate in candidates:
