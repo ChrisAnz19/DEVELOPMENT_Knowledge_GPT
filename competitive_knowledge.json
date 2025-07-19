@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  "companies": {
+    "orum": {
+      "category": "sales_dialer",
+      "competitors": ["five9", "outreach", "salesloft", "aircall", "dialpad"],
+      "aliases": ["orum.com", "orum technologies"],
+      "description": "AI-powered sales dialer and communication platform"
+    },
+    "five9": {
+      "category": "sales_dialer",
+      "competitors": ["orum", "outreach", "salesloft", "aircall", "dialpad"],
+      "aliases": ["five9.com"],
+      "description": "Cloud contact center software"
+    },
+    "salesforce": {
+      "category": "crm",
+      "competitors": ["hubspot", "pipedrive", "zoho", "microsoft_dynamics"],
+      "aliases": ["salesforce.com", "sfdc"],
+      "description": "Customer relationship management platform"
+    },
+    "hubspot": {
+      "category": "crm",
+      "competitors": ["salesforce", "pipedrive", "zoho", "microsoft_dynamics"],
+      "aliases": ["hubspot.com"],
+      "description": "Inbound marketing and sales platform"
+    },
+    "outreach": {
+      "category": "sales_dialer",
+      "competitors": ["orum", "five9", "salesloft", "aircall", "dialpad"],
+      "aliases": ["outreach.io"],
+      "description": "Sales engagement platform"
+    },
+    "salesloft": {
+      "category": "sales_dialer", 
+      "competitors": ["orum", "five9", "outreach", "aircall", "dialpad"],
+      "aliases": ["salesloft.com"],
+      "description": "Sales engagement platform"
+    }
+  },
+  "categories": {
+    "sales_dialer": {
+      "description": "Sales dialing and communication platforms",
+      "buying_indicators": [
+        "looking for dialer",
+        "need calling solution",
+        "want to improve call efficiency",
+        "seeking sales communication tool"
+      ],
+      "exclusion_patterns": [
+        "dialer company",
+        "calling platform provider",
+        "telephony vendor"
+      ]
+    },
+    "crm": {
+      "description": "Customer relationship management platforms",
+      "buying_indicators": [
+        "looking for crm",
+        "need customer management",
+        "want to track leads",
+        "seeking sales pipeline tool"
+      ],
+      "exclusion_patterns": [
+        "crm company",
+        "customer management provider",
+        "sales software vendor"
+      ]
+    }
+  }
+}

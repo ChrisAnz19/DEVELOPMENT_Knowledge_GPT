@@ -36,6 +36,7 @@ from database import (
     store_people_to_database, get_people_for_search
 )
 from behavioral_metrics_ai import enhance_behavioral_data_ai
+from smart_prompt_enhancement import enhance_prompt
 
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
@@ -132,7 +133,18 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         if not search_data or search_data.get("status") == "completed":
             return
         
-        filters = parse_prompt_to_internal_database_filters(prompt)
+        # Apply smart prompt enhancement with error handling fallback
+        try:
+            enhanced_prompt, analysis = enhance_prompt(prompt)
+            # Log the enhancement for transparency (could be stored in database later)
+            if analysis.reasoning:
+                print(f"Smart prompt enhancement applied: {', '.join(analysis.reasoning)}")
+        except Exception as e:
+            # Fall back to original prompt on any failure
+            enhanced_prompt = prompt
+            print(f"Smart prompt enhancement failed, using original prompt: {str(e)}")
+        
+        filters = parse_prompt_to_internal_database_filters(enhanced_prompt)
         
         try:
             people = await asyncio.wait_for(
