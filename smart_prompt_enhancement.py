@@ -67,50 +67,9 @@ def detect_buying_intent(prompt: str, knowledge_data: Optional[Dict] = None) -> 
     Returns:
         Tuple of (buying_intent, selling_intent, confidence_score)
     """
-    prompt_lower = prompt.lower()
-    
-    # Buying intent indicators
-    buying_keywords = [
-        "looking to buy", "want to buy", "need to purchase", "shopping for",
-        "looking for", "need a", "want a", "seeking", "interested in buying",
-        "considering", "evaluating", "comparing", "switch from", "replace",
-        "upgrade to", "implement", "adopt"
-    ]
-    
-    # Selling intent indicators  
-    selling_keywords = [
-        "sell", "selling", "offering", "providing", "vendor", "supplier", "provider",
-        "company that sells", "business that offers", "we sell", "we offer",
-        "our product", "our solution", "competitor", "alternative to"
-    ]
-    
-    # Buyer role indicators
-    buyer_roles = [
-        "manager", "director", "vp", "cto", "cio", "decision maker",
-        "buyer", "purchaser", "administrator", "user", "team lead"
-    ]
-    
-    # Count matches
-    buying_matches = sum(1 for keyword in buying_keywords if keyword in prompt_lower)
-    selling_matches = sum(1 for keyword in selling_keywords if keyword in prompt_lower)
-    buyer_role_matches = sum(1 for role in buyer_roles if role in prompt_lower)
-    
-    # Calculate intent
-    buying_intent = buying_matches > 0 or buyer_role_matches > 0
-    selling_intent = selling_matches > 0
-    
-    # Calculate confidence based on number of matches
-    total_matches = buying_matches + selling_matches + buyer_role_matches
-    confidence = min(0.9, 0.3 + (total_matches * 0.15))  # Cap at 0.9
-    
-    # If both intents detected, favor buying if buyer roles mentioned
-    if buying_intent and selling_intent:
-        if buyer_role_matches > 0:
-            selling_intent = False
-        else:
-            buying_intent = False
-            
-    return buying_intent, selling_intent, confidence
+    # Simplified intent detection - removed problematic keyword filtering
+    # Only return basic intent without complex analysis
+    return False, False, 0.0
 
 
 def generate_competitive_exclusions(detected_products: List[str], knowledge_data: Optional[Dict] = None) -> List[str]:
@@ -145,14 +104,14 @@ def generate_competitive_exclusions(detected_products: List[str], knowledge_data
 
 def enhance_prompt_with_exclusions(original_prompt: str, analysis: PromptAnalysis) -> str:
     """
-    Enhance the original prompt with competitive exclusions and intent clarification.
+    Enhance the original prompt with competitive exclusions only.
     
     Args:
         original_prompt: Original user prompt
         analysis: Analysis results from analyze_prompt
         
     Returns:
-        Enhanced prompt with exclusions and clarifications
+        Enhanced prompt with exclusions only
     """
     enhanced_prompt = original_prompt
     
@@ -162,18 +121,14 @@ def enhance_prompt_with_exclusions(original_prompt: str, analysis: PromptAnalysi
         exclusion_text = f" EXCLUDE employees from these competing companies: {competitor_list}."
         enhanced_prompt += exclusion_text
     
-    # Add buying intent clarification if detected
-    if analysis.buying_intent and analysis.intent_confidence > 0.5:
-        if "buy" in original_prompt.lower() or "looking for" in original_prompt.lower():
-            intent_text = " Focus on prospects at companies that would be BUYERS of this solution, not companies that SELL or provide similar solutions."
-            enhanced_prompt += intent_text
+    # Removed buyer/seller intent clarification as it was causing Apollo API issues
     
     return enhanced_prompt
 
 
 def analyze_prompt(prompt: str, knowledge_data: Optional[Dict] = None) -> PromptAnalysis:
     """
-    Analyze a prompt for product mentions, competitive intelligence, and intent.
+    Analyze a prompt for product mentions and competitive intelligence only.
     
     Args:
         prompt: User prompt to analyze
@@ -194,8 +149,8 @@ def analyze_prompt(prompt: str, knowledge_data: Optional[Dict] = None) -> Prompt
     # Get competitors for detected products
     competitors = generate_competitive_exclusions(detected_products, knowledge_data)
     
-    # Analyze buying/selling intent
-    buying_intent, selling_intent, intent_confidence = detect_buying_intent(prompt, knowledge_data)
+    # Removed buying/selling intent detection to avoid Apollo API issues
+    buying_intent, selling_intent, intent_confidence = False, False, 0.0
     
     # Generate reasoning
     reasoning = []
@@ -203,10 +158,6 @@ def analyze_prompt(prompt: str, knowledge_data: Optional[Dict] = None) -> Prompt
         reasoning.append(f"Detected products: {', '.join(detected_products)}")
     if competitors:
         reasoning.append(f"Identified {len(competitors)} competitors to exclude")
-    if buying_intent:
-        reasoning.append(f"Detected buying intent (confidence: {intent_confidence:.2f})")
-    if selling_intent:
-        reasoning.append(f"Detected selling intent (confidence: {intent_confidence:.2f})")
     
     return PromptAnalysis(
         detected_products=detected_products,
