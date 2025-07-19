@@ -155,17 +155,18 @@ def analyze_search_context(user_prompt: str) -> dict:
     """
     prompt_lower = user_prompt.lower()
     
-    # Personal purchase indicators
+    # Personal purchase indicators (truly personal items)
     personal_purchases = [
         "new car", "car", "vehicle", "auto", "house", "home", "apartment", 
-        "vacation", "travel", "insurance", "loan", "mortgage", "credit card",
-        "phone", "laptop", "computer", "furniture", "appliance"
+        "vacation", "travel", "personal insurance", "personal loan", "mortgage", "credit card",
+        "phone", "personal laptop", "furniture", "appliance"
     ]
     
-    # Business/professional service indicators  
+    # Business/professional service indicators (includes CRM, software, etc.)
     business_services = [
         "crm", "software", "tool", "platform", "system", "solution", "service",
-        "consultant", "agency", "vendor", "provider", "contractor", "freelancer"
+        "consultant", "agency", "vendor", "provider", "contractor", "freelancer",
+        "marketing automation", "analytics", "business intelligence", "enterprise"
     ]
     
     # Job/career indicators
@@ -270,34 +271,24 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         search_context_analysis = analyze_search_context(user_prompt)
         role_relevance = analyze_role_relevance(role, user_prompt)
         
-        # Create a context and relevance-aware prompt for behavioral insights
+        # Create a concise, relevance-aware prompt for behavioral insights
         system_prompt = f"""
-        You are a behavioral psychology expert analyzing how to engage with this prospect based on their professional role, what they're looking for, AND how relevant it is to their role.
+        Generate a concise behavioral insight for engaging with this prospect.
         
-        CRITICAL RELEVANCE ANALYSIS:
-        - Relevance score: {role_relevance['relevance_score']:.2f} (0.0 = completely irrelevant, 1.0 = highly relevant)
+        RELEVANCE ANALYSIS:
+        - Role-need relevance: {role_relevance['relevance_score']:.2f}
         - Engagement level: {role_relevance['engagement_level']}
-        - Behavioral modifier: {role_relevance['behavioral_modifier']}
+        - Context: {search_context_analysis['context_type']}
         
-        ENGAGEMENT RULES BASED ON RELEVANCE:
-        - HIGH relevance (0.8+): Active research, detailed evaluation, high commitment
-        - MEDIUM relevance (0.5-0.8): Interested but not urgent, moderate research
-        - LOW relevance (0.3-0.5): Casual browsing, low commitment, minimal research
-        
-        CONTEXT ANALYSIS:
-        - Search type: {search_context_analysis['context_type']}
-        - Is personal decision: {search_context_analysis['is_personal']}
-        - Role match: {role_relevance['role_match']}
-        
-        Generate insights that reflect their ACTUAL level of interest based on role-relevance fit:
-        - If low relevance: Describe casual, low-commitment behavior
-        - If high relevance: Describe active, engaged research behavior
-        - Match engagement intensity to logical role-need alignment
-        
-        IMPORTANT: 
-        - Use "they/them" pronouns, never "The [role title]"
-        - Provide 2-3 detailed sentences reflecting their TRUE engagement level
-        - Don't assume high interest if role-need alignment is poor
+        RESPONSE RULES:
+        - Keep to 1-2 sentences maximum (under 40 words)
+        - Use "they" pronouns, never mention their title
+        - Match advice to their actual engagement level:
+          * HIGH relevance: Active evaluation, detailed research
+          * MEDIUM relevance: Moderate interest, some research  
+          * LOW relevance: Casual browsing, minimal commitment
+        - Focus on decision-making style, not feature lists
+        - Be specific and actionable
         """
         
         name_ref = first_name if first_name else "This professional"
@@ -309,23 +300,15 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
             research_context = f" They've been researching solutions outside business hours, indicating personal investment in finding the right tool."
 
         user_prompt_for_ai = f"""
+        Search: "{user_prompt}"
         Role: {role}
-        Company: {company}
-        Search context: "{user_prompt}"
-        Context analysis: {search_context_analysis}
+        Relevance: {role_relevance['engagement_level']} ({role_relevance['relevance_score']:.2f})
         
-        Generate a behavioral insight about how {name_ref} likely evaluates and makes decisions in THIS SPECIFIC CONTEXT.{research_context}
-        
-        Key considerations:
-        - Context type: {search_context_analysis['context_type']}
-        - Decision factors: {', '.join(search_context_analysis['decision_factors'])}
-        - Is personal decision: {search_context_analysis['is_personal']}
-        - Is business decision: {search_context_analysis['is_business']}
-        
-        Focus on their decision-making style for THIS PARTICULAR need, not generic business advice.
+        Generate a concise insight about how they evaluate decisions in this context.{research_context}
+        Focus on their decision-making approach, not their title or context details.
         """
         
-        # Call the OpenAI API with sufficient tokens for detailed response
+        # Call the OpenAI API with limited tokens for concise response
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -333,7 +316,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.7,
-            max_tokens=200
+            max_tokens=80  # Reduced for concise responses
         )
         
         return response.choices[0].message.content.strip()
@@ -494,37 +477,21 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     # Analyze search context to provide relevant insights
     context_analysis = analyze_search_context(user_prompt)
     
-    # Generate context-aware insights
+    # Generate concise, context-aware insights based on relevance
+    role_relevance = analyze_role_relevance(role, user_prompt)
+    
     if context_analysis["context_type"] == "personal_purchase":
-        # Personal purchase decision-making
-        if any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-            base_insight = f"{name_ref} likely approaches personal purchases with the same analytical mindset they use for business decisions, researching options thoroughly and considering long-term value over immediate cost savings."
-        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-            base_insight = f"{name_ref} probably evaluates personal purchases by comparing features and benefits across multiple options, leveraging their negotiation skills to secure the best deal."
-        elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-            base_insight = f"{name_ref} likely researches personal purchases extensively, reading reviews, comparing specifications, and prioritizing quality and reliability over brand recognition."
-        else:
-            base_insight = f"{name_ref} probably takes a methodical approach to personal purchases, weighing practical benefits against cost and seeking recommendations from trusted sources."
-            
+        base_insight = f"They approach personal purchases analytically, prioritizing long-term value and thorough research."
     elif context_analysis["context_type"] == "career_opportunity":
-        # Career decision-making
-        if any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-            base_insight = f"{name_ref} likely evaluates career opportunities based on strategic growth potential, company vision alignment, and the ability to make significant organizational impact."
-        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-            base_insight = f"{name_ref} probably focuses on compensation structure, territory potential, and company growth trajectory when considering new career opportunities."
-        else:
-            base_insight = f"{name_ref} likely prioritizes role growth potential, company culture fit, and professional development opportunities when evaluating career moves."
-            
+        base_insight = f"They evaluate career moves based on growth potential, compensation, and strategic fit."
     else:
-        # Business solution decision-making (default)
-        if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-            base_insight = f"{name_ref} likely evaluates business tools based on technical specifications, integration capabilities, and developer experience rather than high-level business benefits."
-        elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-            base_insight = f"{name_ref} probably focuses on ROI, competitive advantage, and how solutions align with {company}'s strategic objectives when making vendor decisions."
-        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-            base_insight = f"{name_ref} likely prioritizes tools that directly impact pipeline generation, conversion rates, and quota attainment over features that don't drive revenue."
+        # Business solution - adjust based on role relevance
+        if role_relevance["engagement_level"] == "high":
+            base_insight = f"They actively evaluate solutions with detailed analysis and clear success criteria."
+        elif role_relevance["engagement_level"] == "medium":
+            base_insight = f"They show moderate interest, researching options without immediate urgency."
         else:
-            base_insight = f"{name_ref} probably evaluates new solutions based on how they solve specific pain points in their current workflow and deliver measurable improvements."
+            base_insight = f"They browse casually with minimal commitment to this area."
     
     # Check for personal research patterns
     research_data = simulate_personal_research_patterns()
