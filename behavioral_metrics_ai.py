@@ -137,11 +137,10 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         job_search_keywords = ["looking for a role", "job", "hire", "candidate", "position", "career move"]
         is_job_context = any(k in user_prompt.lower() for k in job_search_keywords)
 
-        job_clause = " The prospect is *not* assumed to be looking for a job." if not is_job_context else ""
-
         user_prompt_for_ai = f"""
-        {name_instruction}Generate an engagement strategy for a {role} found in search for \"{user_prompt}\".{job_clause}
-        Focus on timing, risk sensitivity, and personal alignment factors.{personal_context}
+        {name_instruction}Generate a high-level approach for engaging with this {role} found in search for "{user_prompt}".
+        Focus on their professional interests and how your offering aligns with their role and goals.{personal_context}
+        Keep it conversational and avoid specific timing or tactical advice.
         """
         
         # Call the OpenAI API with reduced tokens
