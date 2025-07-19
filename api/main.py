@@ -197,14 +197,43 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         for p in people:
             if not isinstance(p, dict):
                 continue
-            # Location must mention United States / USA
+            
+            # Location filtering: exclude non-US, allow no location
             loc = (p.get("location") or p.get("country") or "").lower()
-            if loc and not ("united states" in loc or "usa" in loc):
-                continue
+            
+            if loc:
+                # Comprehensive list of non-US countries/regions to exclude
+                non_us_locations = [
+                    # Major countries
+                    "canada", "mexico", "uk", "united kingdom", "england", "scotland", "wales", "ireland",
+                    "france", "germany", "spain", "italy", "netherlands", "belgium", "switzerland",
+                    "austria", "portugal", "sweden", "norway", "denmark", "finland", "poland",
+                    "czech republic", "hungary", "romania", "bulgaria", "greece", "turkey",
+                    "russia", "ukraine", "belarus", "lithuania", "latvia", "estonia",
+                    "australia", "new zealand", "japan", "south korea", "china", "taiwan",
+                    "singapore", "malaysia", "thailand", "vietnam", "philippines", "indonesia",
+                    "india", "pakistan", "bangladesh", "sri lanka", "nepal", "myanmar",
+                    "israel", "saudi arabia", "uae", "qatar", "kuwait", "bahrain", "oman",
+                    "egypt", "south africa", "nigeria", "kenya", "morocco", "tunisia",
+                    "brazil", "argentina", "chile", "colombia", "peru", "venezuela", "ecuador",
+                    # European cities that are clearly non-US
+                    "london", "paris", "berlin", "madrid", "rome", "amsterdam", "brussels",
+                    "zurich", "vienna", "stockholm", "oslo", "copenhagen", "helsinki",
+                    # Other major non-US cities
+                    "toronto", "vancouver", "montreal", "sydney", "melbourne", "tokyo",
+                    "seoul", "beijing", "shanghai", "hong kong", "mumbai", "delhi", "bangalore"
+                ]
+                
+                # Exclude if location contains any non-US indicator
+                is_non_us = any(non_us in loc for non_us in non_us_locations)
+                if is_non_us:
+                    continue
+            
             # Exclude well-known public figures
             name_val = (p.get("name") or "").strip()
             if name_val and await is_public_figure(name_val):
                 continue
+                
             filtered_people.append(p)
         people = filtered_people
         
