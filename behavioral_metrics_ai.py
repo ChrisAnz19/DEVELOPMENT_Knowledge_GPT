@@ -52,6 +52,100 @@ def extract_first_name(full_name: str) -> str:
         return name_parts[0]
     return ""
 
+def analyze_role_relevance(role: str, search_context: str) -> dict:
+    """
+    Analyze the logical relationship between a person's role and what they're looking for.
+    Returns relevance score and behavioral adjustments.
+    """
+    role_lower = role.lower()
+    search_lower = search_context.lower()
+    
+    # Define role-to-domain relevance mappings
+    role_domains = {
+        # Technical roles
+        "engineer": ["software", "technology", "programming", "development", "cloud", "infrastructure", "api", "database"],
+        "developer": ["software", "technology", "programming", "development", "cloud", "infrastructure", "api", "database"],
+        "architect": ["software", "technology", "programming", "development", "cloud", "infrastructure", "enterprise"],
+        "devops": ["cloud", "infrastructure", "deployment", "monitoring", "automation", "security"],
+        
+        # Sales roles
+        "sales": ["crm", "sales tools", "pipeline", "lead generation", "prospecting", "revenue", "quota"],
+        "account": ["crm", "sales tools", "client management", "relationship", "revenue"],
+        "business development": ["crm", "sales tools", "partnerships", "growth", "revenue"],
+        
+        # Marketing roles
+        "marketing": ["marketing automation", "analytics", "campaigns", "content", "social media", "advertising"],
+        "growth": ["marketing automation", "analytics", "campaigns", "growth hacking", "conversion"],
+        "content": ["content management", "cms", "social media", "publishing", "seo"],
+        
+        # Executive roles
+        "ceo": ["strategy", "analytics", "business intelligence", "enterprise", "leadership"],
+        "cto": ["technology", "software", "infrastructure", "security", "enterprise"],
+        "cfo": ["finance", "accounting", "analytics", "business intelligence", "compliance"],
+        
+        # Operations roles
+        "operations": ["project management", "workflow", "automation", "efficiency", "process"],
+        "manager": ["project management", "team collaboration", "productivity", "workflow"],
+        
+        # Finance roles
+        "finance": ["accounting", "financial planning", "analytics", "compliance", "reporting"],
+        "accounting": ["accounting", "financial planning", "compliance", "reporting", "audit"],
+        
+        # HR roles
+        "hr": ["human resources", "recruiting", "talent management", "employee", "payroll"],
+        "recruiting": ["recruiting", "talent management", "hr", "candidate", "hiring"],
+        
+        # Security roles
+        "security": ["cybersecurity", "compliance", "risk management", "audit", "privacy"],
+        "compliance": ["compliance", "risk management", "audit", "security", "regulatory"]
+    }
+    
+    # Calculate relevance score
+    relevance_score = 0.3  # baseline for any professional
+    role_match = False
+    
+    # Check for direct role matches
+    for role_key, domains in role_domains.items():
+        if role_key in role_lower:
+            for domain in domains:
+                if domain in search_lower:
+                    relevance_score = min(1.0, relevance_score + 0.2)
+                    role_match = True
+    
+    # Check for cross-functional relevance (lower scores)
+    cross_functional_terms = ["productivity", "collaboration", "communication", "project management"]
+    if any(term in search_lower for term in cross_functional_terms):
+        relevance_score = min(1.0, relevance_score + 0.1)
+    
+    # Check for personal purchases (always somewhat relevant)
+    personal_terms = ["car", "house", "phone", "laptop", "insurance", "loan"]
+    if any(term in search_lower for term in personal_terms):
+        relevance_score = min(1.0, relevance_score + 0.3)
+    
+    # Check for career-related (always highly relevant)
+    career_terms = ["job", "position", "role", "career", "opportunity"]
+    if any(term in search_lower for term in career_terms):
+        relevance_score = min(1.0, relevance_score + 0.4)
+    
+    # Determine engagement level based on relevance
+    if relevance_score >= 0.8:
+        engagement_level = "high"
+        behavioral_modifier = "active"
+    elif relevance_score >= 0.5:
+        engagement_level = "medium" 
+        behavioral_modifier = "interested"
+    else:
+        engagement_level = "low"
+        behavioral_modifier = "casual"
+    
+    return {
+        "relevance_score": relevance_score,
+        "engagement_level": engagement_level,
+        "behavioral_modifier": behavioral_modifier,
+        "role_match": role_match,
+        "adjustment_factor": relevance_score  # Used to adjust CMI, RBFS, IAS scores
+    }
+
 def analyze_search_context(user_prompt: str) -> dict:
     """
     Analyze the user's search context to understand what they're actually looking for.
@@ -172,31 +266,38 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
         company = candidate_data.get("company", "their company") if candidate_data else "their company"
         
-        # Analyze the search context to understand what the user is actually looking for
+        # Analyze the search context and role relevance
         search_context_analysis = analyze_search_context(user_prompt)
+        role_relevance = analyze_role_relevance(role, user_prompt)
         
-        # Create a context-aware prompt for behavioral insights
+        # Create a context and relevance-aware prompt for behavioral insights
         system_prompt = f"""
-        You are a behavioral psychology expert analyzing how to engage with this prospect based on BOTH their professional role AND what they're actually looking for.
+        You are a behavioral psychology expert analyzing how to engage with this prospect based on their professional role, what they're looking for, AND how relevant it is to their role.
         
-        CRITICAL: Analyze the search context to understand what the user wants:
-        - If searching for "new car" → personal purchase decision, not business tool
-        - If searching for "CRM" → business software decision
-        - If searching for "job" → career opportunity, not product sale
-        - If searching for "consultant" → service provider evaluation
+        CRITICAL RELEVANCE ANALYSIS:
+        - Relevance score: {role_relevance['relevance_score']:.2f} (0.0 = completely irrelevant, 1.0 = highly relevant)
+        - Engagement level: {role_relevance['engagement_level']}
+        - Behavioral modifier: {role_relevance['behavioral_modifier']}
         
-        Generate insights about their decision-making style for THIS SPECIFIC CONTEXT, not generic business advice.
+        ENGAGEMENT RULES BASED ON RELEVANCE:
+        - HIGH relevance (0.8+): Active research, detailed evaluation, high commitment
+        - MEDIUM relevance (0.5-0.8): Interested but not urgent, moderate research
+        - LOW relevance (0.3-0.5): Casual browsing, low commitment, minimal research
         
-        Focus on:
-        - How they likely evaluate THIS TYPE of decision (personal vs business vs career)
-        - What motivates them in THIS SPECIFIC context
-        - What concerns or priorities they have for THIS PARTICULAR need
-        - How their professional background influences THIS DECISION
+        CONTEXT ANALYSIS:
+        - Search type: {search_context_analysis['context_type']}
+        - Is personal decision: {search_context_analysis['is_personal']}
+        - Role match: {role_relevance['role_match']}
+        
+        Generate insights that reflect their ACTUAL level of interest based on role-relevance fit:
+        - If low relevance: Describe casual, low-commitment behavior
+        - If high relevance: Describe active, engaged research behavior
+        - Match engagement intensity to logical role-need alignment
         
         IMPORTANT: 
         - Use "they/them" pronouns, never "The [role title]"
-        - Provide 2-3 detailed sentences with context-specific engagement guidance
-        - Match the advice to what they're actually shopping for, not their job title
+        - Provide 2-3 detailed sentences reflecting their TRUE engagement level
+        - Don't assume high interest if role-need alignment is poor
         """
         
         name_ref = first_name if first_name else "This professional"
@@ -245,34 +346,41 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
     try:
         if not openai_client:
             if score_type == "cmi":
-                return generate_fallback_cmi_score(role)
+                return generate_fallback_cmi_score(role, user_prompt)
             elif score_type == "rbfs":
-                return generate_fallback_rbfs_score(role)
+                return generate_fallback_rbfs_score(role, user_prompt)
             else:
-                return generate_fallback_ias_score(role)
+                return generate_fallback_ias_score(role, user_prompt)
         
-        # Analyze context for more accurate scoring
+        # Analyze context and role relevance for accurate scoring
         context_analysis = analyze_search_context(user_prompt)
+        role_relevance = analyze_role_relevance(role, user_prompt)
         
-        # Create a context-aware prompt based on score type
+        # Create a relevance-aware prompt based on score type
         if score_type == "cmi":
             system_prompt = f"""
-            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role} in this context: "{user_prompt}"
+            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role} looking for: "{user_prompt}"
             
-            IMPORTANT: Consider what they're actually looking for:
-            - Personal purchases (car, house): Different urgency than business tools
-            - Career opportunities: Timeline depends on current job satisfaction
-            - Business solutions: Urgency varies by pain point severity
+            CRITICAL RELEVANCE FACTOR:
+            - Role-need relevance: {role_relevance['relevance_score']:.2f} (0.0 = irrelevant, 1.0 = highly relevant)
+            - Engagement level: {role_relevance['engagement_level']}
+            - Expected behavior: {role_relevance['behavioral_modifier']}
             
-            CMI measures how actively they're moving toward THIS SPECIFIC decision vs just browsing.
+            RELEVANCE-BASED SCORING RULES:
+            - HIGH relevance (0.8+): 70-95 CMI - Active evaluation, comparing options, ready to move
+            - MEDIUM relevance (0.5-0.8): 40-70 CMI - Interested but not urgent, moderate research
+            - LOW relevance (0.3-0.5): 15-40 CMI - Casual browsing, low commitment, minimal urgency
             
-            Context-aware scoring:
-            - Personal purchases: Consider seasonal factors, life events, current need urgency
-            - Career moves: Consider job market, career stage, current role satisfaction
-            - Business solutions: Consider budget cycles, pain point severity, competitive pressure
+            EXAMPLES:
+            - Sales Manager + CRM = HIGH relevance → 80+ CMI (actively evaluating)
+            - Sales Manager + Cybersecurity = LOW relevance → 25 CMI (casual browsing)
+            - Engineer + Development Tools = HIGH relevance → 85+ CMI (detailed evaluation)
+            - Engineer + HR Software = LOW relevance → 20 CMI (minimal interest)
+            
+            Adjust the score based on logical role-need alignment. Don't assume high commitment if the need doesn't match their role.
             
             Return JSON with "score" and "explanation". 
-            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing their likely decision stage for THIS CONTEXT.
+            For explanation: Use "they" pronouns. Keep to 8-12 words reflecting their TRUE engagement level.
             """
         elif score_type == "rbfs":
             system_prompt = f"""
@@ -428,11 +536,14 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     
     return base_insight
 
-def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
-    """Generate a fallback CMI score based on role with personal research simulation."""
+def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
+    """Generate a relevance-adjusted fallback CMI score."""
     role_lower = role.lower()
     
-    # Base scores by role with specific explanations (8-12 words, using "they")
+    # Analyze role relevance to adjust scores
+    role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
+    
+    # Base scores by role
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
         base_score = 75
         base_explanation = "They're likely evaluating technical specifications and integration options"
@@ -446,13 +557,24 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
         base_score = 70
         base_explanation = "They're exploring solutions for current workflow challenges"
     
+    # Adjust score based on role relevance
+    adjusted_score = int(base_score * role_relevance["adjustment_factor"])
+    
+    # Adjust explanation based on engagement level
+    if role_relevance["engagement_level"] == "low":
+        adjusted_explanation = "They're casually browsing, minimal commitment to this area"
+    elif role_relevance["engagement_level"] == "medium":
+        adjusted_explanation = "They're moderately interested, exploring options without urgency"
+    else:
+        adjusted_explanation = base_explanation
+    
     # Simulate personal research patterns
     research_data = simulate_personal_research_patterns()
     
-    if research_data["personal_research"]:
-        # Boost CMI score for personal research patterns
-        boosted_score = min(100, base_score + research_data["cmi_boost"])
-        enhanced_explanation = "They're researching solutions during personal time - high priority"
+    if research_data["personal_research"] and role_relevance["engagement_level"] != "low":
+        # Only boost if relevance is medium or high
+        boosted_score = min(100, adjusted_score + research_data["cmi_boost"])
+        enhanced_explanation = "They're researching options during personal time - higher priority"
         
         return {
             "score": boosted_score,
@@ -461,54 +583,81 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
         }
     else:
         return {
-            "score": base_score,
-            "explanation": base_explanation
+            "score": adjusted_score,
+            "explanation": adjusted_explanation
         }
 
-def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
-    """Generate a fallback RBFS score based on role."""
+def generate_fallback_rbfs_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
+    """Generate a relevance-adjusted fallback RBFS score."""
     role_lower = role.lower()
     
-    # Finance and legal roles tend to be more risk-averse (8-12 words, using "they")
+    # Analyze role relevance - low relevance = higher risk sensitivity
+    role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
+    
+    # Base scores by role
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        return {"score": 85, "explanation": "They need extensive proof points and security documentation"}
-    
-    # Executive roles often balance risk and opportunity
+        base_score = 85
+        base_explanation = "They need extensive proof points and security documentation"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 65, "explanation": "They want clear implementation roadmap and success metrics"}
-    
-    # Sales roles are often more risk-tolerant for performance gains
+        base_score = 65
+        base_explanation = "They want clear implementation roadmap and success metrics"
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        return {"score": 45, "explanation": "They're willing to try new approaches if they drive results"}
-    
-    # Technical roles focus on implementation risks
+        base_score = 45
+        base_explanation = "They're willing to try new approaches if they drive results"
     elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return {"score": 70, "explanation": "They're concerned about technical integration and system stability"}
-    
-    # Default for other roles
+        base_score = 70
+        base_explanation = "They're concerned about technical integration and system stability"
     else:
-        return {"score": 60, "explanation": "They take standard due diligence approach to new solutions"}
+        base_score = 60
+        base_explanation = "They take standard due diligence approach to new solutions"
+    
+    # Adjust score - LOWER relevance = HIGHER risk sensitivity (inverse relationship)
+    if role_relevance["engagement_level"] == "low":
+        # Low relevance = higher risk sensitivity (they're more cautious about unfamiliar areas)
+        adjusted_score = min(90, base_score + 20)
+        adjusted_explanation = "They're cautious about areas outside their expertise"
+    elif role_relevance["engagement_level"] == "medium":
+        adjusted_score = base_score + 5
+        adjusted_explanation = "They want moderate validation before proceeding"
+    else:
+        adjusted_score = base_score
+        adjusted_explanation = base_explanation
+    
+    return {"score": adjusted_score, "explanation": adjusted_explanation}
 
-def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
-    """Generate a fallback IAS score based on role."""
+def generate_fallback_ias_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
+    """Generate a relevance-adjusted fallback IAS score."""
     role_lower = role.lower()
     
-    # Technical specialists often strongly identify with their expertise (8-12 words, using "they")
+    # Analyze role relevance to adjust scores
+    role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
+    
+    # Base scores by role
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        return {"score": 80, "explanation": "Technical tools that enhance their capabilities align with professional identity"}
-    
-    # Executive roles often have strong professional identity
+        base_score = 80
+        base_explanation = "Technical tools that enhance their capabilities align with professional identity"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 85, "explanation": "Strategic solutions that drive business outcomes fit their leadership role"}
-    
-    # Sales roles strongly identify with performance and results
+        base_score = 85
+        base_explanation = "Strategic solutions that drive business outcomes fit their leadership role"
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        return {"score": 90, "explanation": "Performance tools directly support their success metrics and career growth"}
-    
-    # Marketing roles identify with growth and customer acquisition
+        base_score = 90
+        base_explanation = "Performance tools directly support their success metrics and career growth"
     elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
-        return {"score": 85, "explanation": "Growth-driving tools align with their marketing objectives and professional goals"}
-    
-    # Default for other roles
+        base_score = 85
+        base_explanation = "Growth-driving tools align with their marketing objectives and professional goals"
     else:
-        return {"score": 75, "explanation": "Solutions that improve job performance align with their professional objectives"}
+        base_score = 75
+        base_explanation = "Solutions that improve job performance align with their professional objectives"
+    
+    # Adjust score based on role relevance
+    adjusted_score = int(base_score * role_relevance["adjustment_factor"])
+    
+    # Adjust explanation based on relevance
+    if role_relevance["engagement_level"] == "low":
+        adjusted_explanation = "This area has minimal alignment with their core professional responsibilities"
+    elif role_relevance["engagement_level"] == "medium":
+        adjusted_explanation = "Moderate alignment with their professional objectives and daily responsibilities"
+    else:
+        adjusted_explanation = base_explanation
+    
+    return {"score": adjusted_score, "explanation": adjusted_explanation}
