@@ -111,47 +111,50 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         
         # Extract candidate's first name for personalization
         first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
+        company = candidate_data.get("company", "their company") if candidate_data else "their company"
         
-        # Create a focused prompt based on behavioral metrics
+        # Create a more specific prompt for sales engagement insights
         system_prompt = """
-        Generate a high-level approach for engaging with this prospect based on their behavioral profile.
+        You are a sales psychology expert. Generate a practical behavioral insight for engaging with this prospect.
         
-        Consider:
-        - Commitment Momentum Index (CMI): Are they in research mode or ready to act?
-        - Risk-Barrier Focus Score (RBFS): How sensitive are they to risks and friction?
-        - Identity Alignment Signal (IAS): Does this opportunity fit their self-image and goals?
+        Focus on:
+        - What motivates them professionally based on their role
+        - How they likely evaluate new solutions or vendors
+        - What communication style would resonate with them
+        - What concerns or priorities they probably have
         
-        Provide 2-3 sentences describing how to approach them if you were offering what they're looking for.
-        Keep it conversational and high-level - no specific tactics, timing, or formatting.
+        Be specific and actionable. Avoid generic phrases like "high commitment" or "risk sensitive."
+        Instead, focus on practical insights about their decision-making style and professional priorities.
+        
+        Keep it to 1-2 sentences maximum.
         """
         
-        name_instruction = f"The candidate's first name is '{first_name}'. " if first_name else "Use their role title. "
+        name_ref = first_name if first_name else "This professional"
         
         # Check for personal research patterns to enhance the prompt
         research_data = simulate_personal_research_patterns()
-        personal_context = ""
+        research_context = ""
         if research_data["personal_research"]:
-            personal_context = f" Note: This prospect {research_data['engagement_note']}, suggesting high personal commitment."
-
-        # Detect if the user prompt implies a job search
-        job_search_keywords = ["looking for a role", "job", "hire", "candidate", "position", "career move"]
-        is_job_context = any(k in user_prompt.lower() for k in job_search_keywords)
+            research_context = f" They've been researching solutions outside business hours, indicating personal investment in finding the right tool."
 
         user_prompt_for_ai = f"""
-        {name_instruction}Generate a high-level approach for engaging with this {role} found in search for "{user_prompt}".
-        Focus on their professional interests and how your offering aligns with their role and goals.{personal_context}
-        Keep it conversational and avoid specific timing or tactical advice.
+        Role: {role}
+        Company: {company}
+        Search context: "{user_prompt}"
+        
+        Generate a behavioral insight about how {name_ref} likely evaluates and makes decisions about new solutions in their role.{research_context}
+        Focus on their professional mindset and decision-making style, not generic commitment levels.
         """
         
         # Call the OpenAI API with reduced tokens
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Use 3.5 for faster response
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt_for_ai}
             ],
             temperature=0.7,
-            max_tokens=150
+            max_tokens=120
         )
         
         return response.choices[0].message.content.strip()
@@ -174,23 +177,41 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
         if score_type == "cmi":
             system_prompt = f"""
             Generate a Commitment Momentum Index (CMI) score (0-100) for a {role}.
-            CMI measures forward motion vs idle curiosity - is the person researching or lining up next steps?
-            High CMI means decision moving from "thinking about it" to "doing it."
-            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            CMI measures how actively they're moving toward a decision vs just browsing.
+            
+            Score guidelines:
+            - 80-100: Actively evaluating vendors, requesting demos, or comparing options
+            - 60-79: Past initial research phase, exploring specific solutions
+            - 40-59: Early research mode, gathering information
+            - 20-39: Casual browsing, no immediate timeline
+            
+            Return JSON with "score" and "explanation" (describe their likely stage, not generic commitment level).
             """
         elif score_type == "rbfs":
             system_prompt = f"""
             Generate a Risk-Barrier Focus Score (RBFS) (0-100) for a {role}.
-            RBFS measures how sensitive the person is to downside and friction.
-            High RBFS flags risk-averse prospects who need assurance before moving.
-            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            RBFS measures how much they focus on potential downsides vs benefits.
+            
+            Score guidelines:
+            - 80-100: Highly cautious, needs extensive proof and references
+            - 60-79: Moderately risk-aware, wants clear implementation plan
+            - 40-59: Balanced risk assessment, standard due diligence
+            - 20-39: Risk-tolerant, focuses more on upside potential
+            
+            Return JSON with "score" and "explanation" (describe their risk evaluation style).
             """
         else:  # ias
             system_prompt = f"""
             Generate an Identity Alignment Signal (IAS) score (0-100) for a {role}.
-            IAS measures whether the choice fits their self-image/goals.
-            High IAS means prospect feels personally aligned, emotional friction drops.
-            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            IAS measures how well this type of solution fits their professional identity and goals.
+            
+            Score guidelines:
+            - 80-100: Perfect fit for their role, directly impacts their success metrics
+            - 60-79: Good alignment with their responsibilities and objectives
+            - 40-59: Moderate fit, some relevance to their role
+            - 20-39: Peripheral to their core responsibilities
+            
+            Return JSON with "score" and "explanation" (describe the professional fit).
             """
         
         # Call the OpenAI API with minimal tokens
@@ -268,26 +289,31 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     
     # Extract candidate's first name for personalization
     first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
+    company = candidate_data.get("company", "their organization") if candidate_data else "their organization"
     
     # Use first name if available, otherwise use role-based reference
     name_ref = first_name if first_name else "This professional"
     
-    # Base insights by role
+    # More specific insights by role focusing on decision-making style
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_insight = f"{name_ref} appreciates data-driven conversations with specific examples and measurable outcomes."
+        base_insight = f"{name_ref} likely evaluates tools based on technical specifications, integration capabilities, and developer experience rather than high-level business benefits."
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_insight = f"{name_ref} values strategic discussions focused on business impact and competitive positioning."
-    elif any(sales in role_lower for sales in ["sales", "account", "business development"]):
-        base_insight = f"{name_ref} responds well to conversations about market opportunities and growth potential."
+        base_insight = f"{name_ref} probably focuses on ROI, competitive advantage, and how solutions align with {company}'s strategic objectives when making vendor decisions."
+    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+        base_insight = f"{name_ref} likely prioritizes tools that directly impact pipeline generation, conversion rates, and quota attainment over features that don't drive revenue."
+    elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
+        base_insight = f"{name_ref} probably evaluates solutions based on attribution capabilities, campaign performance metrics, and integration with existing martech stack."
+    elif any(ops in role_lower for ops in ["operations", "manager", "director", "coordinator"]):
+        base_insight = f"{name_ref} likely focuses on efficiency gains, process automation, and ease of implementation when considering new operational tools."
     else:
-        base_insight = f"{name_ref} engages best with personalized discussions about their specific business needs and goals."
+        base_insight = f"{name_ref} probably evaluates new solutions based on how they solve specific pain points in their current workflow and deliver measurable improvements."
     
     # Check for personal research patterns
     research_data = simulate_personal_research_patterns()
     
     if research_data["personal_research"]:
         # Add personal research context to the insight
-        personal_addition = f" {name_ref} {research_data['engagement_note']}, indicating this is a priority and the timing is right for engagement."
+        personal_addition = f" They've been researching solutions during personal time, suggesting this is a high-priority initiative."
         return base_insight + personal_addition
     
     return base_insight
@@ -296,16 +322,19 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     """Generate a fallback CMI score based on role with personal research simulation."""
     role_lower = role.lower()
     
-    # Base scores by role
+    # Base scores by role with specific explanations
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_score = 85
-        base_explanation = "Forward motion"
+        base_score = 75
+        base_explanation = "Likely evaluating technical specifications and integration options"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         base_score = 80
-        base_explanation = "Lining up next steps"
+        base_explanation = "Probably comparing strategic options and ROI scenarios"
+    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+        base_score = 85
+        base_explanation = "Actively seeking tools to improve performance metrics"
     else:
         base_score = 70
-        base_explanation = "Past research phase"
+        base_explanation = "Exploring solutions for current workflow challenges"
     
     # Simulate personal research patterns
     research_data = simulate_personal_research_patterns()
@@ -313,7 +342,7 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     if research_data["personal_research"]:
         # Boost CMI score for personal research patterns
         boosted_score = min(100, base_score + research_data["cmi_boost"])
-        enhanced_explanation = f"Personal interest - {research_data['engagement_note']}"
+        enhanced_explanation = "Researching solutions during personal time - high priority initiative"
         
         return {
             "score": boosted_score,
@@ -332,15 +361,23 @@ def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
     
     # Finance and legal roles tend to be more risk-averse
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        return {"score": 85, "explanation": "Highly sensitive"}
+        return {"score": 85, "explanation": "Needs extensive proof points and security documentation"}
     
     # Executive roles often balance risk and opportunity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 70, "explanation": "Moderately sensitive"}
+        return {"score": 65, "explanation": "Wants clear implementation roadmap and success metrics"}
+    
+    # Sales roles are often more risk-tolerant for performance gains
+    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+        return {"score": 45, "explanation": "Willing to try new approaches if they drive results"}
+    
+    # Technical roles focus on implementation risks
+    elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
+        return {"score": 70, "explanation": "Concerned about technical integration and system stability"}
     
     # Default for other roles
     else:
-        return {"score": 60, "explanation": "Low sensitivity"}
+        return {"score": 60, "explanation": "Standard due diligence approach to new solutions"}
 
 def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     """Generate a fallback IAS score based on role."""
@@ -348,12 +385,20 @@ def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     
     # Technical specialists often strongly identify with their expertise
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        return {"score": 85, "explanation": "Fits self-image"}
+        return {"score": 80, "explanation": "Tools that enhance technical capabilities align with professional identity"}
     
     # Executive roles often have strong professional identity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 80, "explanation": "Strong alignment"}
+        return {"score": 85, "explanation": "Strategic solutions that drive business outcomes fit leadership role"}
+    
+    # Sales roles strongly identify with performance and results
+    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+        return {"score": 90, "explanation": "Performance-enhancing tools directly support success metrics and career growth"}
+    
+    # Marketing roles identify with growth and customer acquisition
+    elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
+        return {"score": 85, "explanation": "Growth-driving tools align with marketing objectives and professional goals"}
     
     # Default for other roles
     else:
-        return {"score": 70, "explanation": "Moderate fit"}
+        return {"score": 75, "explanation": "Solutions that improve job performance align with professional objectives"}
