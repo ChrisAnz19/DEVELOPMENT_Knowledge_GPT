@@ -61,20 +61,15 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         
         # Create a focused prompt based on behavioral metrics
         system_prompt = """
-        Generate an engagement strategy based on these behavioral metrics:
+        Generate a high-level approach for engaging with this prospect based on their behavioral profile.
         
-        1. Commitment Momentum Index (CMI): Forward motion vs idle curiosity
-           - High CMI: Decision moving from "thinking about it" to "doing it"
-           - Timing outreach to this upswing dramatically lifts response rates
+        Consider:
+        - Commitment Momentum Index (CMI): Are they in research mode or ready to act?
+        - Risk-Barrier Focus Score (RBFS): How sensitive are they to risks and friction?
+        - Identity Alignment Signal (IAS): Does this opportunity fit their self-image and goals?
         
-        2. Risk-Barrier Focus Score (RBFS): How sensitive to downside and friction
-           - High RBFS: Risk-averse prospects need assurance (case studies, guarantees, references)
-        
-        3. Identity Alignment Signal (IAS): Whether choice fits their self-image/goals
-           - High IAS: Prospect feels personally aligned, emotional friction drops
-           - Low IAS: Must reframe narrative to their aspirations
-        
-        Provide 2-3 sentences of specific, actionable guidance for outreach timing and approach.
+        Provide 2-3 sentences describing how to approach them if you were offering what they're looking for.
+        Keep it conversational and high-level - no specific tactics, timing, or formatting.
         """
         
         name_instruction = f"The candidate's first name is '{first_name}'. " if first_name else "Use their role title. "
@@ -193,7 +188,7 @@ def enhance_behavioral_data_ai(
     except Exception:
         # Return a default insight and scores
         return {
-            "behavioral_insight": "This professional responds best to personalized engagement focusing on their specific business challenges.",
+            "behavioral_insight": "This professional engages best with personalized discussions about their specific business needs and goals.",
             "scores": {
                 "cmi": {"score": 70, "explanation": "Forward motion"},
                 "rbfs": {"score": 60, "explanation": "Moderately sensitive"},
@@ -215,19 +210,19 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     
     # Technical roles
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return f"{name_ref} responds best to detailed, evidence-based communication with concrete examples and performance metrics."
+        return f"{name_ref} appreciates data-driven conversations with specific examples and measurable outcomes."
     
     # Executive roles
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return f"{name_ref} values direct communication and strategic impact. Focus on clear ROI metrics and competitive advantages."
+        return f"{name_ref} values strategic discussions focused on business impact and competitive positioning."
     
     # Sales roles
     elif any(sales in role_lower for sales in ["sales", "account", "business development"]):
-        return f"{name_ref} responds best to competitive differentiation and concrete outcomes that help exceed goals."
+        return f"{name_ref} responds well to conversations about market opportunities and growth potential."
     
     # Default for other roles
     else:
-        return f"{name_ref} responds best to personalized engagement focusing on their specific business challenges."
+        return f"{name_ref} engages best with personalized discussions about their specific business needs and goals."
 
 def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     """Generate a fallback CMI score based on role."""

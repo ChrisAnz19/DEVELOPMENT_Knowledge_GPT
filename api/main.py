@@ -179,7 +179,7 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 except Exception:
                     title = candidate.get('title', 'professional')
                     candidate["behavioral_data"] = {
-                        "behavioral_insight": f"This {title} responds best to personalized engagement focusing on their specific business challenges.",
+                        "behavioral_insight": f"This {title} engages best with personalized discussions about their specific business needs and goals.",
                         "scores": {
                             "cmi": {"score": 70, "explanation": "Forward motion"},
                             "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
