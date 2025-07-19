@@ -61,10 +61,18 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         
         # Create a focused prompt based on behavioral metrics
         system_prompt = """
-        Generate an engagement strategy based on behavioral metrics:
-        - Commitment Momentum Index (CMI): Forward motion vs idle curiosity
-        - Risk-Barrier Focus Score (RBFS): How sensitive to downside and friction
-        - Identity Alignment Signal (IAS): Whether choice fits their self-image/goals
+        Generate an engagement strategy based on these behavioral metrics:
+        
+        1. Commitment Momentum Index (CMI): Forward motion vs idle curiosity
+           - High CMI: Decision moving from "thinking about it" to "doing it"
+           - Timing outreach to this upswing dramatically lifts response rates
+        
+        2. Risk-Barrier Focus Score (RBFS): How sensitive to downside and friction
+           - High RBFS: Risk-averse prospects need assurance (case studies, guarantees, references)
+        
+        3. Identity Alignment Signal (IAS): Whether choice fits their self-image/goals
+           - High IAS: Prospect feels personally aligned, emotional friction drops
+           - Low IAS: Must reframe narrative to their aspirations
         
         Provide 2-3 sentences of specific, actionable guidance for outreach timing and approach.
         """
@@ -103,11 +111,28 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
             else:
                 return generate_fallback_ias_score(role)
         
-        # Create a simplified prompt
-        system_prompt = f"""
-        Generate a {score_type.upper()} score (0-100) for a {role}.
-        Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
-        """
+        # Create a specific prompt based on score type
+        if score_type == "cmi":
+            system_prompt = f"""
+            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role}.
+            CMI measures forward motion vs idle curiosity - is the person researching or lining up next steps?
+            High CMI means decision moving from "thinking about it" to "doing it."
+            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            """
+        elif score_type == "rbfs":
+            system_prompt = f"""
+            Generate a Risk-Barrier Focus Score (RBFS) (0-100) for a {role}.
+            RBFS measures how sensitive the person is to downside and friction.
+            High RBFS flags risk-averse prospects who need assurance before moving.
+            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            """
+        else:  # ias
+            system_prompt = f"""
+            Generate an Identity Alignment Signal (IAS) score (0-100) for a {role}.
+            IAS measures whether the choice fits their self-image/goals.
+            High IAS means prospect feels personally aligned, emotional friction drops.
+            Return only a JSON object with "score" (0-100) and "explanation" (short phrase).
+            """
         
         # Call the OpenAI API with minimal tokens
         response = openai_client.chat.completions.create(
