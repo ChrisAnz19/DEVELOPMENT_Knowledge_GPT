@@ -65,7 +65,6 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "Only use these exact People Search parameters:\n\n"
         "Organization filters (arrays or integers):\n"
         "- organization_locations[] (e.g. [\"New York\", \"San Francisco\"])\n"
-        "- q_organization_keyword_tags[] (e.g. [\"Software\", \"Technology\"])\n"
         "- organization_num_employees_ranges[] (e.g. [\"1,10\", \"11,50\"])\n\n"
         "Person filters:\n"
         "- person_titles[] (e.g. [\"CEO\", \"CTO\", \"Sales Director\"])\n"
@@ -76,8 +75,8 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "1. Use ONLY the parameter names listed above\n"
         "2. Keep filters simple - avoid complex combinations\n"
         "3. Use arrays for multiple values\n"
-        "4. Don't use revenue_range, technology_uids, or other complex filters\n"
-        "5. Focus on basic location, title, and seniority filters\n"
+        "4. DO NOT use q_organization_keyword_tags[] - it causes API errors\n"
+        "5. Focus on person titles, locations, and seniority levels only\n"
         "6. Return ONLY valid JSON, inside a single markdown code block (triple backticks, json). No extra text, no explanation, no comments.\n"
         "7. The JSON must have keys: organization_filters, person_filters, reasoning."
     )
@@ -120,7 +119,6 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
 
     org_list_keys = [
         "organization_locations",
-        "q_organization_keyword_tags",
         "organization_num_employees_ranges"
     ]
     person_list_keys = [
