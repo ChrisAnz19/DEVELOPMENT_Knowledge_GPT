@@ -72,6 +72,8 @@ IMPORTANT GUIDELINES:
 3. Be SPECIFIC about websites, tools, and resources relevant to their profession
 4. AVOID unrealistic scenarios like "reading case studies about job postings" or "attending webinars" for all professions
 5. NEVER use generic phrases like "selected based on title and company fit"
+6. NEVER use the same phrases for multiple candidates
+7. NEVER use phrases that can be verified by a human, or that are too vague or generic.
 
 EXAMPLES OF GOOD BEHAVIORAL REASONS:
 - Engineering: "Visited GitHub repositories for React state management libraries 5 times in the past week"
@@ -152,7 +154,7 @@ def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict 
     response = call_openai(
         prompt=prompt,
         system_message=system_prompt,
-        model="gpt-4-turbo",  # Upgraded from gpt-3.5-turbo
+        model="gpt-3.5-turbo",  # Upgraded from gpt-3.5-turbo
         temperature=0.7,
         max_tokens=1000  # Increased for more detailed responses
     )

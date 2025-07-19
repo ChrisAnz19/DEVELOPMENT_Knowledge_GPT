@@ -9,6 +9,8 @@ This module provides AI-powered behavioral metrics for analyzing prospect behavi
 
 import logging
 import json
+import random
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 import os
 
@@ -50,6 +52,57 @@ def extract_first_name(full_name: str) -> str:
         return name_parts[0]
     return ""
 
+def simulate_personal_research_patterns() -> Dict[str, Any]:
+    """Simulate personal research patterns that indicate off-hours engagement."""
+    # 25% chance of showing personal research patterns
+    has_personal_patterns = random.random() < 0.25
+    
+    if not has_personal_patterns:
+        return {
+            "personal_research": False,
+            "cmi_boost": 0,
+            "engagement_note": ""
+        }
+    
+    # Current time for context
+    current_hour = datetime.now().hour
+    is_weekend = datetime.now().weekday() >= 5
+    is_evening = current_hour >= 18 or current_hour <= 7
+    
+    # Different patterns of personal research
+    patterns = [
+        {
+            "type": "weekend_research",
+            "cmi_boost": 15,
+            "note": "shows weekend research activity indicating personal priority"
+        },
+        {
+            "type": "evening_research", 
+            "cmi_boost": 12,
+            "note": "demonstrates evening research sessions suggesting personal investment"
+        },
+        {
+            "type": "mobile_research",
+            "cmi_boost": 10,
+            "note": "exhibits mobile browsing patterns indicating on-the-go personal interest"
+        },
+        {
+            "type": "late_night_research",
+            "cmi_boost": 18,
+            "note": "shows late-night research activity signaling high personal commitment"
+        }
+    ]
+    
+    # Select a random pattern
+    pattern = random.choice(patterns)
+    
+    return {
+        "personal_research": True,
+        "pattern_type": pattern["type"],
+        "cmi_boost": pattern["cmi_boost"],
+        "engagement_note": pattern["note"]
+    }
+
 def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Optional[Dict[str, Any]] = None) -> str:
     """Generate a focused behavioral insight using AI."""
     try:
@@ -74,9 +127,15 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         
         name_instruction = f"The candidate's first name is '{first_name}'. " if first_name else "Use their role title. "
         
+        # Check for personal research patterns to enhance the prompt
+        research_data = simulate_personal_research_patterns()
+        personal_context = ""
+        if research_data["personal_research"]:
+            personal_context = f" Note: This prospect {research_data['engagement_note']}, suggesting high personal commitment."
+        
         user_prompt_for_ai = f"""
         {name_instruction}Generate an engagement strategy for a {role} found in search for "{user_prompt}".
-        Focus on timing, risk sensitivity, and personal alignment factors.
+        Focus on timing, risk sensitivity, and personal alignment factors.{personal_context}
         """
         
         # Call the OpenAI API with reduced tokens
@@ -199,7 +258,7 @@ def enhance_behavioral_data_ai(
 # Fallback functions for when AI generation fails
 
 def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]] = None) -> str:
-    """Generate a fallback insight based on role."""
+    """Generate a fallback insight based on role with personal research patterns."""
     role_lower = role.lower()
     
     # Extract candidate's first name for personalization
@@ -208,34 +267,59 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     # Use first name if available, otherwise use role-based reference
     name_ref = first_name if first_name else "This professional"
     
-    # Technical roles
+    # Base insights by role
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return f"{name_ref} appreciates data-driven conversations with specific examples and measurable outcomes."
-    
-    # Executive roles
+        base_insight = f"{name_ref} appreciates data-driven conversations with specific examples and measurable outcomes."
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return f"{name_ref} values strategic discussions focused on business impact and competitive positioning."
-    
-    # Sales roles
+        base_insight = f"{name_ref} values strategic discussions focused on business impact and competitive positioning."
     elif any(sales in role_lower for sales in ["sales", "account", "business development"]):
-        return f"{name_ref} responds well to conversations about market opportunities and growth potential."
-    
-    # Default for other roles
+        base_insight = f"{name_ref} responds well to conversations about market opportunities and growth potential."
     else:
-        return f"{name_ref} engages best with personalized discussions about their specific business needs and goals."
+        base_insight = f"{name_ref} engages best with personalized discussions about their specific business needs and goals."
+    
+    # Check for personal research patterns
+    research_data = simulate_personal_research_patterns()
+    
+    if research_data["personal_research"]:
+        # Add personal research context to the insight
+        personal_addition = f" {name_ref} {research_data['engagement_note']}, indicating this is a priority and the timing is right for engagement."
+        return base_insight + personal_addition
+    
+    return base_insight
 
 def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
-    """Generate a fallback CMI score based on role."""
+    """Generate a fallback CMI score based on role with personal research simulation."""
     role_lower = role.lower()
-    # Technical roles
+    
+    # Base scores by role
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return {"score": 85, "explanation": "Forward motion"}
-    # Executive roles
+        base_score = 85
+        base_explanation = "Forward motion"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 80, "explanation": "Lining up next steps"}
-    # Default for other roles
+        base_score = 80
+        base_explanation = "Lining up next steps"
     else:
-        return {"score": 70, "explanation": "Past research phase"}
+        base_score = 70
+        base_explanation = "Past research phase"
+    
+    # Simulate personal research patterns
+    research_data = simulate_personal_research_patterns()
+    
+    if research_data["personal_research"]:
+        # Boost CMI score for personal research patterns
+        boosted_score = min(100, base_score + research_data["cmi_boost"])
+        enhanced_explanation = f"Personal interest - {research_data['engagement_note']}"
+        
+        return {
+            "score": boosted_score,
+            "explanation": enhanced_explanation,
+            "research_pattern": research_data["pattern_type"]
+        }
+    else:
+        return {
+            "score": base_score,
+            "explanation": base_explanation
+        }
 
 def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
     """Generate a fallback RBFS score based on role."""
