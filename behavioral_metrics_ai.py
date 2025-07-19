@@ -52,6 +52,65 @@ def extract_first_name(full_name: str) -> str:
         return name_parts[0]
     return ""
 
+def analyze_search_context(user_prompt: str) -> dict:
+    """
+    Analyze the user's search context to understand what they're actually looking for.
+    
+    Returns:
+        Dictionary with context analysis including purchase type, decision factors, etc.
+    """
+    prompt_lower = user_prompt.lower()
+    
+    # Personal purchase indicators
+    personal_purchases = [
+        "new car", "car", "vehicle", "auto", "house", "home", "apartment", 
+        "vacation", "travel", "insurance", "loan", "mortgage", "credit card",
+        "phone", "laptop", "computer", "furniture", "appliance"
+    ]
+    
+    # Business/professional service indicators  
+    business_services = [
+        "crm", "software", "tool", "platform", "system", "solution", "service",
+        "consultant", "agency", "vendor", "provider", "contractor", "freelancer"
+    ]
+    
+    # Job/career indicators
+    career_related = [
+        "job", "position", "role", "career", "opportunity", "hire", "recruit",
+        "employment", "work", "candidate"
+    ]
+    
+    # Investment/financial indicators
+    investment_related = [
+        "investment", "stock", "fund", "portfolio", "advisor", "financial planner",
+        "wealth management", "retirement", "401k"
+    ]
+    
+    # Determine primary context
+    context_type = "business"  # default
+    decision_factors = []
+    
+    if any(term in prompt_lower for term in personal_purchases):
+        context_type = "personal_purchase"
+        decision_factors = ["price", "quality", "features", "reviews", "warranty", "personal_fit"]
+    elif any(term in prompt_lower for term in career_related):
+        context_type = "career_opportunity" 
+        decision_factors = ["compensation", "growth_potential", "company_culture", "role_fit", "location"]
+    elif any(term in prompt_lower for term in investment_related):
+        context_type = "financial_decision"
+        decision_factors = ["returns", "risk", "fees", "track_record", "expertise"]
+    elif any(term in prompt_lower for term in business_services):
+        context_type = "business_solution"
+        decision_factors = ["roi", "integration", "scalability", "support", "pricing"]
+    
+    return {
+        "context_type": context_type,
+        "decision_factors": decision_factors,
+        "is_personal": context_type in ["personal_purchase", "career_opportunity"],
+        "is_business": context_type in ["business_solution"],
+        "is_financial": context_type == "financial_decision"
+    }
+
 def simulate_personal_research_patterns() -> Dict[str, Any]:
     """Simulate personal research patterns that indicate off-hours engagement."""
     # 25% chance of showing personal research patterns
@@ -113,20 +172,31 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
         company = candidate_data.get("company", "their company") if candidate_data else "their company"
         
-        # Create a more specific prompt for sales engagement insights
-        system_prompt = """
-        You are a sales psychology expert. Generate a practical behavioral insight for engaging with this prospect.
+        # Analyze the search context to understand what the user is actually looking for
+        search_context_analysis = analyze_search_context(user_prompt)
+        
+        # Create a context-aware prompt for behavioral insights
+        system_prompt = f"""
+        You are a behavioral psychology expert analyzing how to engage with this prospect based on BOTH their professional role AND what they're actually looking for.
+        
+        CRITICAL: Analyze the search context to understand what the user wants:
+        - If searching for "new car" → personal purchase decision, not business tool
+        - If searching for "CRM" → business software decision
+        - If searching for "job" → career opportunity, not product sale
+        - If searching for "consultant" → service provider evaluation
+        
+        Generate insights about their decision-making style for THIS SPECIFIC CONTEXT, not generic business advice.
         
         Focus on:
-        - What motivates them professionally based on their role
-        - How they likely evaluate new solutions or vendors
-        - What communication style would resonate with them
-        - What concerns or priorities they probably have
+        - How they likely evaluate THIS TYPE of decision (personal vs business vs career)
+        - What motivates them in THIS SPECIFIC context
+        - What concerns or priorities they have for THIS PARTICULAR need
+        - How their professional background influences THIS DECISION
         
-        Be specific and actionable. Avoid generic phrases like "high commitment" or "risk sensitive."
-        Instead, focus on practical insights about their decision-making style and professional priorities.
-        
-        IMPORTANT: Use "they/them" pronouns, never "The [role title]". Provide 2-3 detailed sentences with specific engagement guidance.
+        IMPORTANT: 
+        - Use "they/them" pronouns, never "The [role title]"
+        - Provide 2-3 detailed sentences with context-specific engagement guidance
+        - Match the advice to what they're actually shopping for, not their job title
         """
         
         name_ref = first_name if first_name else "This professional"
@@ -141,9 +211,17 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         Role: {role}
         Company: {company}
         Search context: "{user_prompt}"
+        Context analysis: {search_context_analysis}
         
-        Generate a behavioral insight about how {name_ref} likely evaluates and makes decisions about new solutions in their role.{research_context}
-        Focus on their professional mindset and decision-making style, not generic commitment levels.
+        Generate a behavioral insight about how {name_ref} likely evaluates and makes decisions in THIS SPECIFIC CONTEXT.{research_context}
+        
+        Key considerations:
+        - Context type: {search_context_analysis['context_type']}
+        - Decision factors: {', '.join(search_context_analysis['decision_factors'])}
+        - Is personal decision: {search_context_analysis['is_personal']}
+        - Is business decision: {search_context_analysis['is_business']}
+        
+        Focus on their decision-making style for THIS PARTICULAR need, not generic business advice.
         """
         
         # Call the OpenAI API with sufficient tokens for detailed response
@@ -160,9 +238,9 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         return response.choices[0].message.content.strip()
         
     except Exception:
-        return generate_fallback_insight(role, candidate_data)
+        return generate_fallback_insight(role, candidate_data, user_prompt)
 
-def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
+def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict[str, Any]:
     """Generate a behavioral score using AI."""
     try:
         if not openai_client:
@@ -173,20 +251,28 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
             else:
                 return generate_fallback_ias_score(role)
         
-        # Create a specific prompt based on score type
+        # Analyze context for more accurate scoring
+        context_analysis = analyze_search_context(user_prompt)
+        
+        # Create a context-aware prompt based on score type
         if score_type == "cmi":
             system_prompt = f"""
-            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role}.
-            CMI measures how actively they're moving toward a decision vs just browsing.
+            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role} in this context: "{user_prompt}"
             
-            Score guidelines:
-            - 80-100: Actively evaluating vendors, requesting demos, or comparing options
-            - 60-79: Past initial research phase, exploring specific solutions
-            - 40-59: Early research mode, gathering information
-            - 20-39: Casual browsing, no immediate timeline
+            IMPORTANT: Consider what they're actually looking for:
+            - Personal purchases (car, house): Different urgency than business tools
+            - Career opportunities: Timeline depends on current job satisfaction
+            - Business solutions: Urgency varies by pain point severity
+            
+            CMI measures how actively they're moving toward THIS SPECIFIC decision vs just browsing.
+            
+            Context-aware scoring:
+            - Personal purchases: Consider seasonal factors, life events, current need urgency
+            - Career moves: Consider job market, career stage, current role satisfaction
+            - Business solutions: Consider budget cycles, pain point severity, competitive pressure
             
             Return JSON with "score" and "explanation". 
-            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing their likely decision stage.
+            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing their likely decision stage for THIS CONTEXT.
             """
         elif score_type == "rbfs":
             system_prompt = f"""
@@ -258,10 +344,10 @@ def enhance_behavioral_data_ai(
         # Generate a focused behavioral insight
         behavioral_insight = generate_focused_insight_ai(role, user_prompt, candidate_data)
         
-        # Generate the three behavioral scores in parallel
-        cmi_score = generate_score_ai("cmi", role)
-        rbfs_score = generate_score_ai("rbfs", role)
-        ias_score = generate_score_ai("ias", role)
+        # Generate the three behavioral scores in parallel with context
+        cmi_score = generate_score_ai("cmi", role, user_prompt)
+        rbfs_score = generate_score_ai("rbfs", role, user_prompt)
+        ias_score = generate_score_ai("ias", role, user_prompt)
         
         # Create the enhanced behavioral data
         return {
@@ -286,8 +372,8 @@ def enhance_behavioral_data_ai(
 
 # Fallback functions for when AI generation fails
 
-def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]] = None) -> str:
-    """Generate a fallback insight based on role with personal research patterns."""
+def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]] = None, user_prompt: str = "") -> str:
+    """Generate a context-aware fallback insight based on role and search context."""
     role_lower = role.lower()
     
     # Extract candidate's first name for personalization
@@ -297,26 +383,47 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     # Use first name if available, otherwise use role-based reference
     name_ref = first_name if first_name else "This professional"
     
-    # More specific insights by role focusing on decision-making style
-    if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_insight = f"{name_ref} likely evaluates tools based on technical specifications, integration capabilities, and developer experience rather than high-level business benefits."
-    elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_insight = f"{name_ref} probably focuses on ROI, competitive advantage, and how solutions align with {company}'s strategic objectives when making vendor decisions."
-    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_insight = f"{name_ref} likely prioritizes tools that directly impact pipeline generation, conversion rates, and quota attainment over features that don't drive revenue."
-    elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
-        base_insight = f"{name_ref} probably evaluates solutions based on attribution capabilities, campaign performance metrics, and integration with existing martech stack."
-    elif any(ops in role_lower for ops in ["operations", "manager", "director", "coordinator"]):
-        base_insight = f"{name_ref} likely focuses on efficiency gains, process automation, and ease of implementation when considering new operational tools."
+    # Analyze search context to provide relevant insights
+    context_analysis = analyze_search_context(user_prompt)
+    
+    # Generate context-aware insights
+    if context_analysis["context_type"] == "personal_purchase":
+        # Personal purchase decision-making
+        if any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
+            base_insight = f"{name_ref} likely approaches personal purchases with the same analytical mindset they use for business decisions, researching options thoroughly and considering long-term value over immediate cost savings."
+        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+            base_insight = f"{name_ref} probably evaluates personal purchases by comparing features and benefits across multiple options, leveraging their negotiation skills to secure the best deal."
+        elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
+            base_insight = f"{name_ref} likely researches personal purchases extensively, reading reviews, comparing specifications, and prioritizing quality and reliability over brand recognition."
+        else:
+            base_insight = f"{name_ref} probably takes a methodical approach to personal purchases, weighing practical benefits against cost and seeking recommendations from trusted sources."
+            
+    elif context_analysis["context_type"] == "career_opportunity":
+        # Career decision-making
+        if any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
+            base_insight = f"{name_ref} likely evaluates career opportunities based on strategic growth potential, company vision alignment, and the ability to make significant organizational impact."
+        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+            base_insight = f"{name_ref} probably focuses on compensation structure, territory potential, and company growth trajectory when considering new career opportunities."
+        else:
+            base_insight = f"{name_ref} likely prioritizes role growth potential, company culture fit, and professional development opportunities when evaluating career moves."
+            
     else:
-        base_insight = f"{name_ref} probably evaluates new solutions based on how they solve specific pain points in their current workflow and deliver measurable improvements."
+        # Business solution decision-making (default)
+        if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
+            base_insight = f"{name_ref} likely evaluates business tools based on technical specifications, integration capabilities, and developer experience rather than high-level business benefits."
+        elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
+            base_insight = f"{name_ref} probably focuses on ROI, competitive advantage, and how solutions align with {company}'s strategic objectives when making vendor decisions."
+        elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
+            base_insight = f"{name_ref} likely prioritizes tools that directly impact pipeline generation, conversion rates, and quota attainment over features that don't drive revenue."
+        else:
+            base_insight = f"{name_ref} probably evaluates new solutions based on how they solve specific pain points in their current workflow and deliver measurable improvements."
     
     # Check for personal research patterns
     research_data = simulate_personal_research_patterns()
     
     if research_data["personal_research"]:
         # Add personal research context to the insight
-        personal_addition = f" They've been researching solutions during personal time, suggesting this is a high-priority initiative."
+        personal_addition = f" They've been researching options during personal time, suggesting this is a high-priority decision for them."
         return base_insight + personal_addition
     
     return base_insight
