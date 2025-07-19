@@ -126,7 +126,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         Be specific and actionable. Avoid generic phrases like "high commitment" or "risk sensitive."
         Instead, focus on practical insights about their decision-making style and professional priorities.
         
-        Keep it to 1-2 sentences maximum.
+        IMPORTANT: Use "they/them" pronouns, never "The [role title]". Keep response to 15-25 words maximum.
         """
         
         name_ref = first_name if first_name else "This professional"
@@ -185,7 +185,8 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
             - 40-59: Early research mode, gathering information
             - 20-39: Casual browsing, no immediate timeline
             
-            Return JSON with "score" and "explanation" (describe their likely stage, not generic commitment level).
+            Return JSON with "score" and "explanation". 
+            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing their likely decision stage.
             """
         elif score_type == "rbfs":
             system_prompt = f"""
@@ -198,7 +199,8 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
             - 40-59: Balanced risk assessment, standard due diligence
             - 20-39: Risk-tolerant, focuses more on upside potential
             
-            Return JSON with "score" and "explanation" (describe their risk evaluation style).
+            Return JSON with "score" and "explanation".
+            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing their risk evaluation style.
             """
         else:  # ias
             system_prompt = f"""
@@ -211,7 +213,8 @@ def generate_score_ai(score_type: str, role: str) -> Dict[str, Any]:
             - 40-59: Moderate fit, some relevance to their role
             - 20-39: Peripheral to their core responsibilities
             
-            Return JSON with "score" and "explanation" (describe the professional fit).
+            Return JSON with "score" and "explanation".
+            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing the professional fit.
             """
         
         # Call the OpenAI API with minimal tokens
@@ -322,19 +325,19 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     """Generate a fallback CMI score based on role with personal research simulation."""
     role_lower = role.lower()
     
-    # Base scores by role with specific explanations
+    # Base scores by role with specific explanations (8-12 words, using "they")
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
         base_score = 75
-        base_explanation = "Likely evaluating technical specifications and integration options"
+        base_explanation = "They're likely evaluating technical specifications and integration options"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
         base_score = 80
-        base_explanation = "Probably comparing strategic options and ROI scenarios"
+        base_explanation = "They're probably comparing strategic options and ROI scenarios"
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
         base_score = 85
-        base_explanation = "Actively seeking tools to improve performance metrics"
+        base_explanation = "They're actively seeking tools to improve performance metrics"
     else:
         base_score = 70
-        base_explanation = "Exploring solutions for current workflow challenges"
+        base_explanation = "They're exploring solutions for current workflow challenges"
     
     # Simulate personal research patterns
     research_data = simulate_personal_research_patterns()
@@ -342,7 +345,7 @@ def generate_fallback_cmi_score(role: str) -> Dict[str, Any]:
     if research_data["personal_research"]:
         # Boost CMI score for personal research patterns
         boosted_score = min(100, base_score + research_data["cmi_boost"])
-        enhanced_explanation = "Researching solutions during personal time - high priority initiative"
+        enhanced_explanation = "They're researching solutions during personal time - high priority"
         
         return {
             "score": boosted_score,
@@ -359,46 +362,46 @@ def generate_fallback_rbfs_score(role: str) -> Dict[str, Any]:
     """Generate a fallback RBFS score based on role."""
     role_lower = role.lower()
     
-    # Finance and legal roles tend to be more risk-averse
+    # Finance and legal roles tend to be more risk-averse (8-12 words, using "they")
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        return {"score": 85, "explanation": "Needs extensive proof points and security documentation"}
+        return {"score": 85, "explanation": "They need extensive proof points and security documentation"}
     
     # Executive roles often balance risk and opportunity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 65, "explanation": "Wants clear implementation roadmap and success metrics"}
+        return {"score": 65, "explanation": "They want clear implementation roadmap and success metrics"}
     
     # Sales roles are often more risk-tolerant for performance gains
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        return {"score": 45, "explanation": "Willing to try new approaches if they drive results"}
+        return {"score": 45, "explanation": "They're willing to try new approaches if they drive results"}
     
     # Technical roles focus on implementation risks
     elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        return {"score": 70, "explanation": "Concerned about technical integration and system stability"}
+        return {"score": 70, "explanation": "They're concerned about technical integration and system stability"}
     
     # Default for other roles
     else:
-        return {"score": 60, "explanation": "Standard due diligence approach to new solutions"}
+        return {"score": 60, "explanation": "They take standard due diligence approach to new solutions"}
 
 def generate_fallback_ias_score(role: str) -> Dict[str, Any]:
     """Generate a fallback IAS score based on role."""
     role_lower = role.lower()
     
-    # Technical specialists often strongly identify with their expertise
+    # Technical specialists often strongly identify with their expertise (8-12 words, using "they")
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        return {"score": 80, "explanation": "Tools that enhance technical capabilities align with professional identity"}
+        return {"score": 80, "explanation": "Technical tools that enhance their capabilities align with professional identity"}
     
     # Executive roles often have strong professional identity
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        return {"score": 85, "explanation": "Strategic solutions that drive business outcomes fit leadership role"}
+        return {"score": 85, "explanation": "Strategic solutions that drive business outcomes fit their leadership role"}
     
     # Sales roles strongly identify with performance and results
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        return {"score": 90, "explanation": "Performance-enhancing tools directly support success metrics and career growth"}
+        return {"score": 90, "explanation": "Performance tools directly support their success metrics and career growth"}
     
     # Marketing roles identify with growth and customer acquisition
     elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
-        return {"score": 85, "explanation": "Growth-driving tools align with marketing objectives and professional goals"}
+        return {"score": 85, "explanation": "Growth-driving tools align with their marketing objectives and professional goals"}
     
     # Default for other roles
     else:
-        return {"score": 75, "explanation": "Solutions that improve job performance align with professional objectives"}
+        return {"score": 75, "explanation": "Solutions that improve job performance align with their professional objectives"}
