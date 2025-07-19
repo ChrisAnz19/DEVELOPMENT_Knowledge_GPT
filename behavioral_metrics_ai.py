@@ -132,9 +132,15 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         personal_context = ""
         if research_data["personal_research"]:
             personal_context = f" Note: This prospect {research_data['engagement_note']}, suggesting high personal commitment."
-        
+
+        # Detect if the user prompt implies a job search
+        job_search_keywords = ["looking for a role", "job", "hire", "candidate", "position", "career move"]
+        is_job_context = any(k in user_prompt.lower() for k in job_search_keywords)
+
+        job_clause = " The prospect is *not* assumed to be looking for a job." if not is_job_context else ""
+
         user_prompt_for_ai = f"""
-        {name_instruction}Generate an engagement strategy for a {role} found in search for "{user_prompt}".
+        {name_instruction}Generate an engagement strategy for a {role} found in search for \"{user_prompt}\".{job_clause}
         Focus on timing, risk sensitivity, and personal alignment factors.{personal_context}
         """
         

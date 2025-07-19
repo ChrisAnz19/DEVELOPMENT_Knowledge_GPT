@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 import uuid
 import sys
 import os
+import re
+import httpx
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -34,6 +36,45 @@ from database import (
     store_people_to_database, get_people_for_search
 )
 from behavioral_metrics_ai import enhance_behavioral_data_ai
+
+# Cache for public figure checks to avoid repeated requests
+_public_figure_cache: Dict[str, bool] = {}
+
+async def is_public_figure(full_name: str) -> bool:
+    """Return True if Wikipedia search suggests this person is a well-known public figure."""
+    name_key = full_name.lower().strip()
+    if not name_key:
+        return False
+    if name_key in _public_figure_cache:
+        return _public_figure_cache[name_key]
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://en.wikipedia.org/w/api.php",
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": full_name,
+                    "format": "json",
+                    "srlimit": 1
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            search_results = data.get("query", {}).get("search", [])
+            if not search_results:
+                _public_figure_cache[name_key] = False
+                return False
+            top = search_results[0]
+            title = top.get("title", "").lower()
+            snippet = re.sub(r"<[^>]+>", "", top.get("snippet", "")).lower()
+            famous = name_key in title or name_key in snippet
+            _public_figure_cache[name_key] = famous
+            return famous
+    except Exception:
+        # On any error, assume not famous to avoid false positives
+        _public_figure_cache[name_key] = False
+        return False
 
 app = FastAPI(title="Knowledge_GPT API", version="1.0.0")
 
@@ -138,6 +179,22 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         #     except Exception:
         #         # Any other error, continue without LinkedIn data
         #         pass
+        
+        # Filter out non-US locations and known public figures via Wikipedia
+        filtered_people = []
+        for p in people:
+            if not isinstance(p, dict):
+                continue
+            # Location must mention United States / USA
+            loc = (p.get("location") or p.get("country") or "").lower()
+            if loc and not ("united states" in loc or "usa" in loc):
+                continue
+            # Exclude well-known public figures
+            name_val = (p.get("name") or "").strip()
+            if name_val and await is_public_figure(name_val):
+                continue
+            filtered_people.append(p)
+        people = filtered_people
         
         candidates = []
         try:
@@ -259,6 +316,45 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
     try:
         if not request.prompt or not request.prompt.strip():
             raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+        
+        # Validate prompt for ridiculous or inappropriate content
+        prompt_lower = request.prompt.lower().strip()
+        
+        # Check for obviously inappropriate requests
+        inappropriate_patterns = [
+            "celebrities", "famous people", "movie stars", "actors", "singers", "athletes",
+            "president", "ceo of apple", "ceo of google", "ceo of microsoft", "ceo of amazon",
+            "elon musk", "jeff bezos", "mark zuckerberg", "bill gates", "larry fink",
+            "politicians", "senators", "congress", "white house", "government officials",
+            "royalty", "prince", "princess", "king", "queen", "duke", "duchess"
+        ]
+        
+        for pattern in inappropriate_patterns:
+            if pattern in prompt_lower:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Search request appears to be looking for well-known public figures. Please search for specific professional roles or industries instead."
+                )
+        
+        # Check for overly vague or nonsensical requests
+        vague_patterns = [
+            "find me someone", "find me a person", "find me anybody",
+            "anyone who", "somebody who", "a person who",
+            "random people", "random person", "any person"
+        ]
+        
+        if any(pattern in prompt_lower for pattern in vague_patterns):
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide more specific search criteria. What role, industry, or professional background are you looking for?"
+            )
+        
+        # Check for requests that are too broad
+        if len(prompt_lower.split()) < 3:
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide more detailed search criteria. Include role, industry, or specific requirements."
+            )
         
         if request.max_candidates and (request.max_candidates < 1 or request.max_candidates > 10):
             raise HTTPException(status_code=400, detail="max_candidates must be between 1 and 10")
