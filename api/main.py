@@ -350,5 +350,6 @@ async def delete_search(request_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting search: {str(e)}")
 
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# Render uses the start command: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+# if __name__ == "__main__":
+#     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
