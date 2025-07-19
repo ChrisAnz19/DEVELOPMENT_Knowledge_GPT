@@ -142,9 +142,36 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         candidates = []
         try:
             if people:
-                candidates = select_top_candidates(prompt, people)
+                # Select top candidates via assessment module
+                top_basic = select_top_candidates(prompt, people)
+                
+                # Merge full Apollo details back into the lightweight objects returned
+                candidates = []
+                if top_basic and isinstance(top_basic, list):
+                    for basic in top_basic:
+                        # Find match in original list by linkedin_url or email or name
+                        match = None
+                        for p in people:
+                            if not isinstance(p, dict):
+                                continue
+                            if (
+                                (basic.get("linkedin_url") and basic.get("linkedin_url") == p.get("linkedin_url")) or
+                                (basic.get("email") and basic.get("email") == p.get("email")) or
+                                (basic.get("name") and basic.get("name") == p.get("name"))
+                            ):
+                                match = p
+                                break
+                        merged = {**basic}
+                        if match:
+                            merged.update(match)  # keep enriched fields (photo, company, etc.)
+                        candidates.append(merged)
+                
+                # Fallback if merging failed
                 if not candidates:
                     candidates = people[:max_candidates]
+            
+            if not candidates:
+                candidates = people[:max_candidates]
         except Exception:
             candidates = people[:max_candidates] if people else []
         
