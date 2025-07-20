@@ -69,17 +69,22 @@ def analyze_role_relevance(role: str, search_context: str) -> dict:
         "devops": ["cloud", "infrastructure", "deployment", "monitoring", "automation", "security"],
         
         # Sales roles
-        "sales": ["crm", "sales tools", "pipeline", "lead generation", "prospecting", "revenue", "quota"],
+        "sales": ["crm", "sales tools", "pipeline", "lead generation", "prospecting", "revenue", "quota", "cold email", "outbound"],
         "account": ["crm", "sales tools", "client management", "relationship", "revenue"],
-        "business development": ["crm", "sales tools", "partnerships", "growth", "revenue"],
+        "business development": ["crm", "sales tools", "partnerships", "growth", "revenue", "lead generation"],
         
         # Marketing roles
-        "marketing": ["marketing automation", "analytics", "campaigns", "content", "social media", "advertising"],
-        "growth": ["marketing automation", "analytics", "campaigns", "growth hacking", "conversion"],
+        "marketing": ["marketing automation", "analytics", "campaigns", "content", "social media", "advertising", "email marketing", "lead generation"],
+        "growth": ["marketing automation", "analytics", "campaigns", "growth hacking", "conversion", "lead generation"],
         "content": ["content management", "cms", "social media", "publishing", "seo"],
         
+        # Agency/Owner roles
+        "owner": ["business tools", "marketing", "sales", "lead generation", "client acquisition", "cold email", "outbound", "automation"],
+        "founder": ["business tools", "marketing", "sales", "lead generation", "client acquisition", "cold email", "outbound", "automation"],
+        "agency": ["marketing", "advertising", "lead generation", "client acquisition", "cold email", "outbound", "campaigns"],
+        
         # Executive roles
-        "ceo": ["strategy", "analytics", "business intelligence", "enterprise", "leadership"],
+        "ceo": ["strategy", "analytics", "business intelligence", "enterprise", "leadership", "business tools"],
         "cto": ["technology", "software", "infrastructure", "security", "enterprise"],
         "cfo": ["finance", "accounting", "analytics", "business intelligence", "compliance"],
         

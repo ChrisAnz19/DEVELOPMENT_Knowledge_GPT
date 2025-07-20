@@ -265,16 +265,32 @@ def _generate_industry_enhancement(prompt: str, detected_products: List[str]) ->
     """Generate industry-specific enhancement based on context."""
     prompt_lower = prompt.lower()
     
+    # Agency/Marketing specific contexts
+    agency_contexts = {
+        "outbound agency": "Focus on marketing agencies, lead generation companies, and sales consulting firms",
+        "marketing agency": "Target marketing agencies, advertising firms, and digital marketing companies",
+        "agency owner": "Focus on marketing agencies, advertising firms, and business service companies",
+        "cold email": "Target companies that do outbound marketing, lead generation, or sales outreach",
+        "email marketing": "Focus on marketing agencies, SaaS companies, and e-commerce businesses",
+        "lead generation": "Target lead generation companies, marketing agencies, and sales consulting firms"
+    }
+    
+    # Check for agency/marketing contexts first
+    for context, enhancement in agency_contexts.items():
+        if context in prompt_lower:
+            return enhancement
+    
     # Industry-specific enhancements
     industry_contexts = {
         "saas": "Focus on SaaS and cloud-first companies",
-        "software": "Target software and technology companies",
+        "software": "Target software and technology companies", 
         "enterprise": "Focus on enterprise-level organizations with 500+ employees",
         "startup": "Target startups and high-growth companies",
         "healthcare": "Focus on healthcare and medical device companies",
         "finance": "Target financial services and fintech companies",
         "retail": "Focus on retail and e-commerce companies",
-        "manufacturing": "Target manufacturing and industrial companies"
+        "manufacturing": "Target manufacturing and industrial companies",
+        "consulting": "Focus on consulting firms and professional services companies"
     }
     
     for industry, enhancement in industry_contexts.items():

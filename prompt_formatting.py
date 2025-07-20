@@ -83,7 +83,8 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "8. Return ONLY valid JSON with proper structure - NO markdown code blocks\n"
         "9. The JSON must have exactly these keys: organization_filters, person_filters, reasoning\n"
         "10. Each filter value must be an array, even for single values\n\n"
-        "EXAMPLE CORRECT FORMAT:\n"
+        "EXAMPLE CORRECT FORMATS:\n"
+        "For CMO search:\n"
         "{\n"
         "  \"organization_filters\": {\n"
         "    \"organization_locations\": [\"Florida\"]\n"
@@ -94,6 +95,18 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         "    \"include_similar_titles\": true\n"
         "  },\n"
         "  \"reasoning\": \"Looking for CMOs in Florida companies\"\n"
+        "}\n\n"
+        "For agency owner search:\n"
+        "{\n"
+        "  \"organization_filters\": {\n"
+        "    \"q_organization_keyword_tags\": [\"marketing\", \"advertising\", \"agency\"]\n"
+        "  },\n"
+        "  \"person_filters\": {\n"
+        "    \"person_titles\": [\"Owner\", \"Founder\", \"CEO\", \"President\"],\n"
+        "    \"person_seniorities\": [\"c_suite\"],\n"
+        "    \"include_similar_titles\": true\n"
+        "  },\n"
+        "  \"reasoning\": \"Looking for agency owners at marketing/advertising companies\"\n"
         "}"
     )
     
@@ -107,6 +120,11 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
     )
     
     if not filters:
+        # Generate fallback filters based on prompt analysis
+        fallback_filters = generate_fallback_filters(prompt)
+        if fallback_filters:
+            return fallback_filters
+        
         return {
             "organization_filters": {},
             "person_filters": {},
@@ -158,3 +176,62 @@ def parse_prompt_to_internal_database_filters(prompt: str) -> dict:
         filters["person_filters"]["include_similar_titles"] = True
 
     return filters
+
+
+def generate_fallback_filters(prompt: str) -> dict:
+    """Generate fallback filters when OpenAI is not available."""
+    prompt_lower = prompt.lower()
+    
+    # Agency owner patterns
+    if any(term in prompt_lower for term in ["agency owner", "outbound agency", "marketing agency"]):
+        return {
+            "organization_filters": {
+                "q_organization_keyword_tags": ["marketing", "advertising", "agency"]
+            },
+            "person_filters": {
+                "person_titles": ["Owner", "Founder", "CEO", "President"],
+                "person_seniorities": ["c_suite"],
+                "include_similar_titles": True
+            },
+            "reasoning": "Fallback filters for agency owner search - targeting marketing/advertising agencies"
+        }
+    
+    # CMO patterns
+    if any(term in prompt_lower for term in ["cmo", "chief marketing officer"]):
+        return {
+            "organization_filters": {},
+            "person_filters": {
+                "person_titles": ["CMO", "Chief Marketing Officer"],
+                "person_seniorities": ["c_suite"],
+                "include_similar_titles": True
+            },
+            "reasoning": "Fallback filters for CMO search"
+        }
+    
+    # Sales manager patterns
+    if any(term in prompt_lower for term in ["sales manager", "sales director"]):
+        return {
+            "organization_filters": {},
+            "person_filters": {
+                "person_titles": ["Sales Manager", "Sales Director"],
+                "person_seniorities": ["manager", "director"],
+                "include_similar_titles": True
+            },
+            "reasoning": "Fallback filters for sales manager search"
+        }
+    
+    # CTO patterns
+    if any(term in prompt_lower for term in ["cto", "chief technology officer"]):
+        return {
+            "organization_filters": {
+                "q_organization_keyword_tags": ["technology", "software"]
+            },
+            "person_filters": {
+                "person_titles": ["CTO", "Chief Technology Officer"],
+                "person_seniorities": ["c_suite"],
+                "include_similar_titles": True
+            },
+            "reasoning": "Fallback filters for CTO search at technology companies"
+        }
+    
+    return None
