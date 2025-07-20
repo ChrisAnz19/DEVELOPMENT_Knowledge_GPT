@@ -499,10 +499,11 @@ def enhance_behavioral_data_for_multiple_candidates(
     
     enhanced_candidates = []
     generated_insights = []
+    used_patterns = set()  # Track used patterns to avoid repetition
     
-    for candidate in candidates:
+    for i, candidate in enumerate(candidates):
         try:
-            # Generate behavioral data for this candidate
+            # Generate behavioral data for this candidate with uniqueness context
             behavioral_data = enhance_behavioral_data_ai({}, [candidate], user_prompt)
             
             # Check for insight uniqueness
@@ -513,34 +514,149 @@ def enhance_behavioral_data_for_multiple_candidates(
                 
                 # Check if this insight is too similar to previous ones
                 all_insights = generated_insights + [insight]
-                unique_insights = validate_response_uniqueness(all_insights, similarity_threshold=0.7)
+                unique_insights = validate_response_uniqueness(all_insights, similarity_threshold=0.6)  # Stricter threshold
                 
-                # If the new insight is not unique, generate a fallback
+                # If the new insight is not unique, generate a diverse fallback
                 if len(unique_insights) <= len(generated_insights):
                     role = candidate.get("title", "professional")
-                    insight = generate_fallback_insight(role, candidate, user_prompt)
+                    insight = generate_diverse_fallback_insight(role, candidate, user_prompt, used_patterns, i)
                     behavioral_data["behavioral_insight"] = insight
                 
                 generated_insights.append(insight)
+            
+            # Ensure diverse scores as well
+            scores = behavioral_data.get("scores", {})
+            if scores:
+                # Add some variation to scores to avoid identical values
+                scores = add_score_variation(scores, i)
+                behavioral_data["scores"] = scores
             
             # Add behavioral data to candidate
             candidate["behavioral_data"] = behavioral_data
             enhanced_candidates.append(candidate)
             
         except Exception as e:
-            # Fallback for any errors
+            # Fallback for any errors with diversity
             role = candidate.get("title", "professional")
             candidate["behavioral_data"] = {
-                "behavioral_insight": generate_fallback_insight(role, candidate, user_prompt),
-                "scores": {
+                "behavioral_insight": generate_diverse_fallback_insight(role, candidate, user_prompt, used_patterns, i),
+                "scores": add_score_variation({
                     "cmi": generate_fallback_cmi_score(role, user_prompt),
                     "rbfs": generate_fallback_rbfs_score(role, user_prompt),
                     "ias": generate_fallback_ias_score(role, user_prompt)
-                }
+                }, i)
             }
             enhanced_candidates.append(candidate)
     
     return enhanced_candidates
+
+
+def generate_diverse_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]], user_prompt: str, used_patterns: set, candidate_index: int) -> str:
+    """Generate diverse fallback insights that avoid repetition."""
+    role_lower = role.lower()
+    
+    # Create diverse insight pools based on role and context
+    role_insights = {
+        "owner": [
+            "They prioritize ROI and immediate business impact when evaluating new tools.",
+            "They prefer solutions that integrate seamlessly with existing workflows.",
+            "They make decisions quickly but want clear proof of value first.",
+            "They focus on tools that can scale with business growth.",
+            "They evaluate based on competitive advantage and market positioning."
+        ],
+        "founder": [
+            "They think strategically about long-term business implications.",
+            "They balance innovation with practical implementation concerns.", 
+            "They seek solutions that align with company vision and values.",
+            "They prefer tools that offer flexibility and customization options.",
+            "They evaluate based on potential for business transformation."
+        ],
+        "ceo": [
+            "They delegate technical evaluation while maintaining strategic oversight.",
+            "They focus on solutions that drive measurable business outcomes.",
+            "They prefer executive-level presentations with clear success metrics.",
+            "They make decisions based on competitive positioning and market advantage.",
+            "They evaluate tools for their potential to accelerate company objectives."
+        ],
+        "cmo": [
+            "They evaluate tools based on marketing performance and attribution capabilities.",
+            "They prefer solutions with strong analytics and reporting features.",
+            "They focus on tools that enhance customer acquisition and retention.",
+            "They seek platforms that integrate with existing marketing technology stack.",
+            "They prioritize solutions that demonstrate clear marketing ROI."
+        ],
+        "manager": [
+            "They balance team needs with budget constraints and approval processes.",
+            "They involve team members in evaluation to ensure user adoption.",
+            "They prefer solutions with strong training and support resources.",
+            "They focus on tools that improve team productivity and collaboration.",
+            "They evaluate based on ease of implementation and change management."
+        ]
+    }
+    
+    # Get role-specific insights
+    insights_pool = []
+    for role_key, insights in role_insights.items():
+        if role_key in role_lower:
+            insights_pool = insights
+            break
+    
+    # Fallback to generic insights if no role match
+    if not insights_pool:
+        insights_pool = [
+            "They take a methodical approach to evaluating new solutions.",
+            "They prefer vendors with proven track records and strong support.",
+            "They evaluate tools based on practical implementation and outcomes.",
+            "They seek solutions that offer clear value and measurable results.",
+            "They balance innovation with risk management in their decisions."
+        ]
+    
+    # Select insight that hasn't been used
+    available_insights = [insight for insight in insights_pool if insight not in used_patterns]
+    
+    if not available_insights:
+        # If all insights used, add variation to existing ones
+        base_insight = insights_pool[candidate_index % len(insights_pool)]
+        variations = [
+            f"{base_insight} They also consider implementation timeline carefully.",
+            f"{base_insight} They typically involve stakeholders in the decision process.",
+            f"{base_insight} They prefer phased rollouts to minimize risk.",
+            f"{base_insight} They value ongoing vendor relationships and support."
+        ]
+        selected_insight = variations[candidate_index % len(variations)]
+    else:
+        selected_insight = available_insights[candidate_index % len(available_insights)]
+    
+    used_patterns.add(selected_insight)
+    return selected_insight
+
+
+def add_score_variation(scores: Dict[str, Any], candidate_index: int) -> Dict[str, Any]:
+    """Add subtle variation to scores to avoid identical values."""
+    import random
+    
+    # Set seed based on candidate index for consistent but different results
+    random.seed(candidate_index + 42)
+    
+    varied_scores = {}
+    for score_type, score_data in scores.items():
+        if isinstance(score_data, dict) and "score" in score_data:
+            base_score = score_data["score"]
+            # Add variation of ±5 points
+            variation = random.randint(-5, 5)
+            new_score = max(0, min(100, base_score + variation))
+            
+            varied_scores[score_type] = {
+                "score": new_score,
+                "explanation": score_data.get("explanation", "")
+            }
+        else:
+            varied_scores[score_type] = score_data
+    
+    # Reset random seed
+    random.seed()
+    
+    return varied_scores
 
 # Fallback functions for when AI generation fails
 
@@ -621,36 +737,65 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     return base_insight
 
 def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
-    """Generate a relevance-adjusted fallback CMI score."""
+    """Generate a relevance-adjusted fallback CMI score with diversity."""
     role_lower = role.lower()
     
     # Analyze role relevance to adjust scores
     role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
     
-    # Base scores by role
+    # Diverse explanations by role and engagement level
+    role_explanations = {
+        "high": {
+            "owner": ["Actively comparing solutions to drive business growth", "Evaluating tools for immediate implementation", "Researching options to gain competitive advantage"],
+            "founder": ["Exploring strategic tools for company scaling", "Assessing solutions for long-term business impact", "Investigating platforms to accelerate growth"],
+            "ceo": ["Reviewing enterprise solutions for organizational efficiency", "Evaluating strategic tools for market positioning", "Considering platforms for business transformation"],
+            "manager": ["Researching tools to improve team performance", "Evaluating solutions for workflow optimization", "Exploring options to enhance productivity"],
+            "default": ["Actively evaluating solutions for implementation", "Researching tools for business improvement", "Comparing options for strategic advantage"]
+        },
+        "medium": {
+            "owner": ["Moderately interested, weighing business benefits", "Exploring options without immediate urgency", "Researching solutions for future consideration"],
+            "founder": ["Considering tools for potential implementation", "Evaluating options for strategic planning", "Researching solutions for business development"],
+            "ceo": ["Reviewing options for organizational needs", "Considering solutions for future initiatives", "Exploring tools for strategic evaluation"],
+            "manager": ["Assessing tools for team requirements", "Exploring options for process improvement", "Considering solutions for operational needs"],
+            "default": ["Moderately interested, exploring available options", "Researching solutions without immediate pressure", "Evaluating tools for potential implementation"]
+        },
+        "low": {
+            "default": ["Casually browsing, minimal immediate interest", "Limited engagement, requires compelling value", "Browsing options with low commitment level"]
+        }
+    }
+    
+    # Base scores by role with some variation
+    import random
+    random.seed(hash(role + user_prompt) % 1000)  # Consistent but varied based on role+prompt
+    
     if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_score = 75
-        base_explanation = "They're likely evaluating technical specifications and integration options"
+        base_score = random.randint(70, 80)
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = 80
-        base_explanation = "They're probably comparing strategic options and ROI scenarios"
+        base_score = random.randint(75, 85)
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = 85
-        base_explanation = "They're actively seeking tools to improve performance metrics"
+        base_score = random.randint(80, 90)
     else:
-        base_score = 70
-        base_explanation = "They're exploring solutions for current workflow challenges"
+        base_score = random.randint(65, 75)
     
     # Adjust score based on role relevance
     adjusted_score = int(base_score * role_relevance["adjustment_factor"])
     
-    # Adjust explanation based on engagement level
-    if role_relevance["engagement_level"] == "low":
-        adjusted_explanation = "They're casually browsing, minimal commitment to this area"
-    elif role_relevance["engagement_level"] == "medium":
-        adjusted_explanation = "They're moderately interested, exploring options without urgency"
+    # Select diverse explanation
+    engagement_level = role_relevance["engagement_level"]
+    role_key = None
+    for key in ["owner", "founder", "ceo", "manager"]:
+        if key in role_lower:
+            role_key = key
+            break
+    
+    if engagement_level in role_explanations and role_key in role_explanations[engagement_level]:
+        explanations = role_explanations[engagement_level][role_key]
+    elif engagement_level in role_explanations:
+        explanations = role_explanations[engagement_level]["default"]
     else:
-        adjusted_explanation = base_explanation
+        explanations = role_explanations["medium"]["default"]
+    
+    adjusted_explanation = random.choice(explanations)
     
     # Simulate personal research patterns
     research_data = simulate_personal_research_patterns()
@@ -658,12 +803,11 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, A
     if research_data["personal_research"] and role_relevance["engagement_level"] != "low":
         # Only boost if relevance is medium or high
         boosted_score = min(100, adjusted_score + research_data["cmi_boost"])
-        enhanced_explanation = "They're researching options during personal time - higher priority"
+        enhanced_explanation = "Researching solutions during personal time - elevated priority"
         
         return {
             "score": boosted_score,
-            "explanation": enhanced_explanation,
-            "research_pattern": research_data["pattern_type"]
+            "explanation": enhanced_explanation
         }
     else:
         return {
@@ -672,76 +816,128 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, A
         }
 
 def generate_fallback_rbfs_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
-    """Generate a relevance-adjusted fallback RBFS score."""
+    """Generate a relevance-adjusted fallback RBFS score with diversity."""
     role_lower = role.lower()
     
     # Analyze role relevance - low relevance = higher risk sensitivity
     role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
     
-    # Base scores by role
+    # Diverse explanations by role and risk level
+    import random
+    random.seed(hash(role + user_prompt + "rbfs") % 1000)
+    
+    risk_explanations = {
+        "high": [
+            "Requires extensive validation and proof points",
+            "Needs comprehensive security and compliance review", 
+            "Demands detailed risk assessment and mitigation plans",
+            "Seeks multiple references and case studies"
+        ],
+        "medium": [
+            "Wants clear implementation roadmap and success metrics",
+            "Prefers moderate validation before proceeding",
+            "Seeks balanced risk-reward evaluation",
+            "Requires standard due diligence and vendor assessment"
+        ],
+        "low": [
+            "Willing to try new approaches if they show promise",
+            "Takes calculated risks for potential competitive advantage",
+            "Focuses more on opportunity than potential downsides",
+            "Comfortable with innovative solutions and early adoption"
+        ]
+    }
+    
+    # Base scores by role with variation
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        base_score = 85
-        base_explanation = "They need extensive proof points and security documentation"
+        base_score = random.randint(80, 90)
+        risk_level = "high"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = 65
-        base_explanation = "They want clear implementation roadmap and success metrics"
+        base_score = random.randint(60, 70)
+        risk_level = "medium"
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = 45
-        base_explanation = "They're willing to try new approaches if they drive results"
+        base_score = random.randint(40, 50)
+        risk_level = "low"
     elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_score = 70
-        base_explanation = "They're concerned about technical integration and system stability"
+        base_score = random.randint(65, 75)
+        risk_level = "medium"
     else:
-        base_score = 60
-        base_explanation = "They take standard due diligence approach to new solutions"
+        base_score = random.randint(55, 65)
+        risk_level = "medium"
     
     # Adjust score - LOWER relevance = HIGHER risk sensitivity (inverse relationship)
     if role_relevance["engagement_level"] == "low":
-        # Low relevance = higher risk sensitivity (they're more cautious about unfamiliar areas)
-        adjusted_score = min(90, base_score + 20)
-        adjusted_explanation = "They're cautious about areas outside their expertise"
+        # Low relevance = higher risk sensitivity
+        adjusted_score = min(90, base_score + random.randint(15, 25))
+        adjusted_explanation = "Cautious about areas outside their core expertise"
     elif role_relevance["engagement_level"] == "medium":
-        adjusted_score = base_score + 5
-        adjusted_explanation = "They want moderate validation before proceeding"
+        adjusted_score = base_score + random.randint(0, 10)
+        adjusted_explanation = random.choice(risk_explanations["medium"])
     else:
         adjusted_score = base_score
-        adjusted_explanation = base_explanation
+        adjusted_explanation = random.choice(risk_explanations[risk_level])
     
     return {"score": adjusted_score, "explanation": adjusted_explanation}
 
 def generate_fallback_ias_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
-    """Generate a relevance-adjusted fallback IAS score."""
+    """Generate a relevance-adjusted fallback IAS score with diversity."""
     role_lower = role.lower()
     
     # Analyze role relevance to adjust scores
     role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
     
-    # Base scores by role
+    # Diverse explanations by role and alignment level
+    import random
+    random.seed(hash(role + user_prompt + "ias") % 1000)
+    
+    alignment_explanations = {
+        "high": {
+            "owner": ["Directly impacts business growth and competitive positioning", "Aligns with entrepreneurial goals and success metrics", "Supports core business objectives and market advantage"],
+            "founder": ["Fits strategic vision for company development", "Aligns with leadership responsibilities and growth goals", "Supports long-term business building objectives"],
+            "ceo": ["Matches executive focus on organizational performance", "Aligns with strategic leadership and business outcomes", "Supports company-wide objectives and market positioning"],
+            "sales": ["Directly supports revenue generation and quota achievement", "Aligns with performance metrics and career advancement", "Matches core responsibility for business development"],
+            "marketing": ["Fits marketing objectives and growth initiatives", "Aligns with customer acquisition and brand building", "Supports campaign effectiveness and ROI goals"],
+            "default": ["Strongly aligns with professional responsibilities", "Fits core job functions and success metrics", "Supports career objectives and performance goals"]
+        },
+        "medium": {
+            "default": ["Moderate alignment with professional objectives", "Partially supports daily responsibilities", "Some relevance to role requirements", "Fits certain aspects of job function"]
+        },
+        "low": {
+            "default": ["Limited alignment with core responsibilities", "Minimal relevance to primary job functions", "Outside main area of professional focus", "Peripheral to core role requirements"]
+        }
+    }
+    
+    # Base scores by role with variation
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        base_score = 80
-        base_explanation = "Technical tools that enhance their capabilities align with professional identity"
+        base_score = random.randint(75, 85)
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = 85
-        base_explanation = "Strategic solutions that drive business outcomes fit their leadership role"
+        base_score = random.randint(80, 90)
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = 90
-        base_explanation = "Performance tools directly support their success metrics and career growth"
+        base_score = random.randint(85, 95)
     elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
-        base_score = 85
-        base_explanation = "Growth-driving tools align with their marketing objectives and professional goals"
+        base_score = random.randint(80, 90)
     else:
-        base_score = 75
-        base_explanation = "Solutions that improve job performance align with their professional objectives"
+        base_score = random.randint(70, 80)
     
     # Adjust score based on role relevance
     adjusted_score = int(base_score * role_relevance["adjustment_factor"])
     
-    # Adjust explanation based on relevance
-    if role_relevance["engagement_level"] == "low":
-        adjusted_explanation = "This area has minimal alignment with their core professional responsibilities"
-    elif role_relevance["engagement_level"] == "medium":
-        adjusted_explanation = "Moderate alignment with their professional objectives and daily responsibilities"
+    # Select diverse explanation
+    engagement_level = role_relevance["engagement_level"]
+    role_key = None
+    for key in ["owner", "founder", "ceo", "sales", "marketing"]:
+        if key in role_lower:
+            role_key = key
+            break
+    
+    if engagement_level == "high" and role_key in alignment_explanations["high"]:
+        explanations = alignment_explanations["high"][role_key]
+    elif engagement_level == "high":
+        explanations = alignment_explanations["high"]["default"]
+    elif engagement_level in alignment_explanations:
+        explanations = alignment_explanations[engagement_level]["default"]
     else:
-        adjusted_explanation = base_explanation
+        explanations = alignment_explanations["medium"]["default"]
+    
+    adjusted_explanation = random.choice(explanations)
     
     return {"score": adjusted_score, "explanation": adjusted_explanation}
