@@ -83,6 +83,14 @@ def analyze_role_relevance(role: str, search_context: str) -> dict:
         "founder": ["business tools", "marketing", "sales", "lead generation", "client acquisition", "cold email", "outbound", "automation"],
         "agency": ["marketing", "advertising", "lead generation", "client acquisition", "cold email", "outbound", "campaigns"],
         
+        # Investment/Finance roles
+        "portfolio": ["investment", "portfolio", "fund", "capital", "financial", "climate", "esg", "sustainable", "returns"],
+        "investment": ["investment", "portfolio", "fund", "capital", "financial", "climate", "esg", "sustainable", "returns"],
+        "fund": ["investment", "portfolio", "fund", "capital", "financial", "climate", "esg", "sustainable", "returns"],
+        "capital": ["investment", "portfolio", "fund", "capital", "financial", "climate", "esg", "sustainable", "returns"],
+        "wealth": ["investment", "portfolio", "fund", "capital", "financial", "wealth management", "asset management"],
+        "asset": ["investment", "portfolio", "fund", "capital", "financial", "asset management", "wealth management"],
+        
         # Executive roles
         "ceo": ["strategy", "analytics", "business intelligence", "enterprise", "leadership", "business tools"],
         "cto": ["technology", "software", "infrastructure", "security", "enterprise"],
@@ -130,6 +138,11 @@ def analyze_role_relevance(role: str, search_context: str) -> dict:
     # Check for career-related (always highly relevant)
     career_terms = ["job", "position", "role", "career", "opportunity"]
     if any(term in search_lower for term in career_terms):
+        relevance_score = min(1.0, relevance_score + 0.4)
+    
+    # Check for investment-related (highly relevant for finance professionals)
+    investment_terms = ["investment", "invest", "fund", "capital", "portfolio", "climate", "esg", "sustainable", "financial"]
+    if any(term in search_lower for term in investment_terms):
         relevance_score = min(1.0, relevance_score + 0.4)
     
     # Determine engagement level based on relevance
@@ -182,8 +195,10 @@ def analyze_search_context(user_prompt: str) -> dict:
     
     # Investment/financial indicators
     investment_related = [
-        "investment", "stock", "fund", "portfolio", "advisor", "financial planner",
-        "wealth management", "retirement", "401k"
+        "investment", "invest", "stock", "fund", "portfolio", "advisor", "financial planner",
+        "wealth management", "retirement", "401k", "climate", "esg", "sustainable",
+        "green investment", "impact investing", "venture capital", "private equity",
+        "hedge fund", "asset management", "capital", "funding", "finance"
     ]
     
     # Determine primary context
@@ -198,7 +213,7 @@ def analyze_search_context(user_prompt: str) -> dict:
         decision_factors = ["compensation", "growth_potential", "company_culture", "role_fit", "location"]
     elif any(term in prompt_lower for term in investment_related):
         context_type = "financial_decision"
-        decision_factors = ["returns", "risk", "fees", "track_record", "expertise"]
+        decision_factors = ["returns", "risk_assessment", "due_diligence", "track_record", "market_conditions", "portfolio_fit"]
     elif any(term in prompt_lower for term in business_services):
         context_type = "business_solution"
         decision_factors = ["roi", "integration", "scalability", "support", "pricing"]
@@ -743,26 +758,49 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, A
     # Analyze role relevance to adjust scores
     role_relevance = analyze_role_relevance(role, user_prompt) if user_prompt else {"adjustment_factor": 0.7, "engagement_level": "medium"}
     
-    # Diverse explanations by role and engagement level
-    role_explanations = {
-        "high": {
-            "owner": ["Actively comparing solutions to drive business growth", "Evaluating tools for immediate implementation", "Researching options to gain competitive advantage"],
-            "founder": ["Exploring strategic tools for company scaling", "Assessing solutions for long-term business impact", "Investigating platforms to accelerate growth"],
-            "ceo": ["Reviewing enterprise solutions for organizational efficiency", "Evaluating strategic tools for market positioning", "Considering platforms for business transformation"],
-            "manager": ["Researching tools to improve team performance", "Evaluating solutions for workflow optimization", "Exploring options to enhance productivity"],
-            "default": ["Actively evaluating solutions for implementation", "Researching tools for business improvement", "Comparing options for strategic advantage"]
-        },
-        "medium": {
-            "owner": ["Moderately interested, weighing business benefits", "Exploring options without immediate urgency", "Researching solutions for future consideration"],
-            "founder": ["Considering tools for potential implementation", "Evaluating options for strategic planning", "Researching solutions for business development"],
-            "ceo": ["Reviewing options for organizational needs", "Considering solutions for future initiatives", "Exploring tools for strategic evaluation"],
-            "manager": ["Assessing tools for team requirements", "Exploring options for process improvement", "Considering solutions for operational needs"],
-            "default": ["Moderately interested, exploring available options", "Researching solutions without immediate pressure", "Evaluating tools for potential implementation"]
-        },
-        "low": {
-            "default": ["Casually browsing, minimal immediate interest", "Limited engagement, requires compelling value", "Browsing options with low commitment level"]
+    # Context-aware explanations by role and engagement level
+    context_analysis = analyze_search_context(user_prompt)
+    
+    if context_analysis["context_type"] == "financial_decision":
+        role_explanations = {
+            "high": {
+                "owner": ["Actively evaluating investment opportunities for portfolio growth", "Conducting due diligence on potential investments", "Researching opportunities to diversify holdings"],
+                "founder": ["Exploring strategic investments for company funding", "Assessing capital opportunities for business scaling", "Investigating funding sources for growth initiatives"],
+                "ceo": ["Reviewing investment options for organizational capital", "Evaluating strategic financial opportunities", "Considering investments for business expansion"],
+                "cfo": ["Analyzing investment opportunities for treasury management", "Evaluating financial instruments for capital optimization", "Researching investment strategies for risk management"],
+                "default": ["Actively evaluating investment opportunities", "Researching financial options for portfolio growth", "Comparing investment alternatives for capital allocation"]
+            },
+            "medium": {
+                "owner": ["Moderately interested in investment opportunities", "Exploring financial options without immediate urgency", "Researching investments for future consideration"],
+                "founder": ["Considering funding options for strategic planning", "Evaluating investment opportunities for business development", "Researching capital sources for future needs"],
+                "ceo": ["Reviewing financial options for organizational planning", "Considering investment opportunities for future initiatives", "Exploring capital strategies for strategic evaluation"],
+                "cfo": ["Assessing investment options for financial planning", "Exploring opportunities for treasury optimization", "Considering financial instruments for risk management"],
+                "default": ["Moderately interested in investment options", "Researching financial opportunities without immediate pressure", "Evaluating investments for potential allocation"]
+            },
+            "low": {
+                "default": ["Casually browsing investment options", "Limited interest in current financial opportunities", "Minimal urgency for investment decisions"]
+            }
         }
-    }
+    else:
+        role_explanations = {
+            "high": {
+                "owner": ["Actively comparing solutions to drive business growth", "Evaluating tools for immediate implementation", "Researching options to gain competitive advantage"],
+                "founder": ["Exploring strategic tools for company scaling", "Assessing solutions for long-term business impact", "Investigating platforms to accelerate growth"],
+                "ceo": ["Reviewing enterprise solutions for organizational efficiency", "Evaluating strategic tools for market positioning", "Considering platforms for business transformation"],
+                "manager": ["Researching tools to improve team performance", "Evaluating solutions for workflow optimization", "Exploring options to enhance productivity"],
+                "default": ["Actively evaluating solutions for implementation", "Researching tools for business improvement", "Comparing options for strategic advantage"]
+            },
+            "medium": {
+                "owner": ["Moderately interested, weighing business benefits", "Exploring options without immediate urgency", "Researching solutions for future consideration"],
+                "founder": ["Considering tools for potential implementation", "Evaluating options for strategic planning", "Researching solutions for business development"],
+                "ceo": ["Reviewing options for organizational needs", "Considering solutions for future initiatives", "Exploring tools for strategic evaluation"],
+                "manager": ["Assessing tools for team requirements", "Exploring options for process improvement", "Considering solutions for operational needs"],
+                "default": ["Moderately interested, exploring available options", "Researching solutions without immediate pressure", "Evaluating tools for potential implementation"]
+            },
+            "low": {
+                "default": ["Casually browsing, minimal immediate interest", "Limited engagement, requires compelling value", "Browsing options with low commitment level"]
+            }
+        }
     
     # Base scores by role with some variation
     import random
@@ -826,26 +864,51 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "") -> Dict[str, 
     import random
     random.seed(hash(role + user_prompt + "rbfs") % 1000)
     
-    risk_explanations = {
-        "high": [
-            "Requires extensive validation and proof points",
-            "Needs comprehensive security and compliance review", 
-            "Demands detailed risk assessment and mitigation plans",
-            "Seeks multiple references and case studies"
-        ],
-        "medium": [
-            "Wants clear implementation roadmap and success metrics",
-            "Prefers moderate validation before proceeding",
-            "Seeks balanced risk-reward evaluation",
-            "Requires standard due diligence and vendor assessment"
-        ],
-        "low": [
-            "Willing to try new approaches if they show promise",
-            "Takes calculated risks for potential competitive advantage",
-            "Focuses more on opportunity than potential downsides",
-            "Comfortable with innovative solutions and early adoption"
-        ]
-    }
+    # Context-aware risk explanations
+    context_analysis = analyze_search_context(user_prompt)
+    
+    if context_analysis["context_type"] == "financial_decision":
+        risk_explanations = {
+            "high": [
+                "Requires extensive due diligence and financial analysis",
+                "Needs comprehensive risk assessment and market validation", 
+                "Demands detailed performance history and regulatory compliance",
+                "Seeks multiple references and third-party evaluations"
+            ],
+            "medium": [
+                "Wants clear investment thesis and performance projections",
+                "Prefers moderate due diligence before committing capital",
+                "Seeks balanced risk-return evaluation and market analysis",
+                "Requires standard financial documentation and track record"
+            ],
+            "low": [
+                "Willing to consider emerging opportunities with growth potential",
+                "Takes calculated investment risks for portfolio diversification",
+                "Focuses more on upside potential than downside protection",
+                "Comfortable with innovative investment strategies"
+            ]
+        }
+    else:
+        risk_explanations = {
+            "high": [
+                "Requires extensive validation and proof points",
+                "Needs comprehensive security and compliance review", 
+                "Demands detailed risk assessment and mitigation plans",
+                "Seeks multiple references and case studies"
+            ],
+            "medium": [
+                "Wants clear implementation roadmap and success metrics",
+                "Prefers moderate validation before proceeding",
+                "Seeks balanced risk-reward evaluation",
+                "Requires standard due diligence and vendor assessment"
+            ],
+            "low": [
+                "Willing to try new approaches if they show promise",
+                "Takes calculated risks for potential competitive advantage",
+                "Focuses more on opportunity than potential downsides",
+                "Comfortable with innovative solutions and early adoption"
+            ]
+        }
     
     # Base scores by role with variation
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
@@ -889,22 +952,42 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "") -> Dict[str, A
     import random
     random.seed(hash(role + user_prompt + "ias") % 1000)
     
-    alignment_explanations = {
-        "high": {
-            "owner": ["Directly impacts business growth and competitive positioning", "Aligns with entrepreneurial goals and success metrics", "Supports core business objectives and market advantage"],
-            "founder": ["Fits strategic vision for company development", "Aligns with leadership responsibilities and growth goals", "Supports long-term business building objectives"],
-            "ceo": ["Matches executive focus on organizational performance", "Aligns with strategic leadership and business outcomes", "Supports company-wide objectives and market positioning"],
-            "sales": ["Directly supports revenue generation and quota achievement", "Aligns with performance metrics and career advancement", "Matches core responsibility for business development"],
-            "marketing": ["Fits marketing objectives and growth initiatives", "Aligns with customer acquisition and brand building", "Supports campaign effectiveness and ROI goals"],
-            "default": ["Strongly aligns with professional responsibilities", "Fits core job functions and success metrics", "Supports career objectives and performance goals"]
-        },
-        "medium": {
-            "default": ["Moderate alignment with professional objectives", "Partially supports daily responsibilities", "Some relevance to role requirements", "Fits certain aspects of job function"]
-        },
-        "low": {
-            "default": ["Limited alignment with core responsibilities", "Minimal relevance to primary job functions", "Outside main area of professional focus", "Peripheral to core role requirements"]
+    # Context-aware alignment explanations
+    context_analysis = analyze_search_context(user_prompt)
+    
+    if context_analysis["context_type"] == "financial_decision":
+        alignment_explanations = {
+            "high": {
+                "owner": ["Directly impacts portfolio performance and financial goals", "Aligns with investment strategy and wealth building", "Supports long-term financial objectives"],
+                "founder": ["Fits investment philosophy and capital allocation strategy", "Aligns with portfolio diversification and growth goals", "Supports strategic financial planning"],
+                "ceo": ["Matches fiduciary responsibilities and investment oversight", "Aligns with organizational financial strategy", "Supports institutional investment objectives"],
+                "cfo": ["Directly supports financial planning and risk management", "Aligns with treasury and investment responsibilities", "Matches financial stewardship role"],
+                "default": ["Strongly aligns with investment objectives", "Fits financial planning and wealth management goals", "Supports portfolio strategy and risk tolerance"]
+            },
+            "medium": {
+                "default": ["Moderate fit with investment portfolio", "Partially aligns with financial objectives", "Some relevance to investment strategy", "Fits certain portfolio allocation needs"]
+            },
+            "low": {
+                "default": ["Limited alignment with investment focus", "Minimal relevance to current portfolio strategy", "Outside primary investment criteria", "Peripheral to core financial objectives"]
+            }
         }
-    }
+    else:
+        alignment_explanations = {
+            "high": {
+                "owner": ["Directly impacts business growth and competitive positioning", "Aligns with entrepreneurial goals and success metrics", "Supports core business objectives and market advantage"],
+                "founder": ["Fits strategic vision for company development", "Aligns with leadership responsibilities and growth goals", "Supports long-term business building objectives"],
+                "ceo": ["Matches executive focus on organizational performance", "Aligns with strategic leadership and business outcomes", "Supports company-wide objectives and market positioning"],
+                "sales": ["Directly supports revenue generation and quota achievement", "Aligns with performance metrics and career advancement", "Matches core responsibility for business development"],
+                "marketing": ["Fits marketing objectives and growth initiatives", "Aligns with customer acquisition and brand building", "Supports campaign effectiveness and ROI goals"],
+                "default": ["Strongly aligns with professional responsibilities", "Fits core job functions and success metrics", "Supports career objectives and performance goals"]
+            },
+            "medium": {
+                "default": ["Moderate alignment with professional objectives", "Partially supports daily responsibilities", "Some relevance to role requirements", "Fits certain aspects of job function"]
+            },
+            "low": {
+                "default": ["Limited alignment with core responsibilities", "Minimal relevance to primary job functions", "Outside main area of professional focus", "Peripheral to core role requirements"]
+            }
+        }
     
     # Base scores by role with variation
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
