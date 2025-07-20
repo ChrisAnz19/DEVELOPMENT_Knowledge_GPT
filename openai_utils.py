@@ -125,12 +125,34 @@ def extract_json_from_response(response_text: str) -> Optional[dict]:
     Extract the first valid JSON object from a string, even if extra data is present.
     """
     try:
-        # Find the first {...} block
-        match = re.search(r'(\{.*?\})', response_text, re.DOTALL)
-        if match:
-            return json.loads(match.group(1))
+        # Remove markdown code blocks if present
+        response_text = re.sub(r'```json\s*', '', response_text)
+        response_text = re.sub(r'```\s*$', '', response_text)
+        
+        # Find the first {...} block with proper nesting
+        brace_count = 0
+        start_idx = -1
+        
+        for i, char in enumerate(response_text):
+            if char == '{':
+                if start_idx == -1:
+                    start_idx = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_idx != -1:
+                    json_str = response_text[start_idx:i+1]
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError:
+                        continue
+        
+        # Fallback: try to parse the whole response
+        return json.loads(response_text.strip())
+        
     except Exception as e:
-        logger.error(f"Still failed to parse JSON: {e}")
+        logger.error(f"Failed to extract JSON: {e}")
+        logger.debug(f"Response was: {response_text}")
     return None
 
 def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
