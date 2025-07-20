@@ -295,22 +295,27 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 if linkedin_url and not linkedin_url.startswith("http"):
                     candidate["linkedin_url"] = f"https://{linkedin_url}"
         
-        # Generate behavioral data for each candidate individually
-        for candidate in candidates:
-            if isinstance(candidate, dict):
-                try:
-                    candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
-                    candidate["behavioral_data"] = candidate_behavioral_data
-                except Exception:
-                    title = candidate.get('title', 'professional')
-                    candidate["behavioral_data"] = {
-                        "behavioral_insight": f"This {title} engages best with personalized discussions about their specific business needs and goals.",
-                        "scores": {
-                            "cmi": {"score": 70, "explanation": "Forward motion"},
-                            "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
-                            "ias": {"score": 75, "explanation": "Fits self-image"}
+        # Generate behavioral data for all candidates with uniqueness validation
+        try:
+            from behavioral_metrics_ai import enhance_behavioral_data_for_multiple_candidates
+            candidates = enhance_behavioral_data_for_multiple_candidates(candidates, prompt)
+        except Exception as e:
+            # Fallback: generate behavioral data for each candidate individually
+            for candidate in candidates:
+                if isinstance(candidate, dict):
+                    try:
+                        candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
+                        candidate["behavioral_data"] = candidate_behavioral_data
+                    except Exception:
+                        title = candidate.get('title', 'professional')
+                        candidate["behavioral_data"] = {
+                            "behavioral_insight": f"This {title} engages best with personalized discussions about their specific business needs and goals.",
+                            "scores": {
+                                "cmi": {"score": 70, "explanation": "Forward motion"},
+                                "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
+                                "ias": {"score": 75, "explanation": "Fits self-image"}
+                            }
                         }
-                    }
         
         search_db_id = search_data.get("id")
         if search_db_id:

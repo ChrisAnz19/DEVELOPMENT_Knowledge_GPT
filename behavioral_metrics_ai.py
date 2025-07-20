@@ -261,65 +261,75 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
     """Generate a focused behavioral insight using AI."""
     try:
         if not openai_client:
-            return generate_fallback_insight(role, candidate_data)
-        
-        # Extract candidate's first name for personalization
-        first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
-        company = candidate_data.get("company", "their company") if candidate_data else "their company"
+            return generate_fallback_insight(role, candidate_data, user_prompt)
         
         # Analyze the search context and role relevance
         search_context_analysis = analyze_search_context(user_prompt)
         role_relevance = analyze_role_relevance(role, user_prompt)
         
-        # Create a concise, relevance-aware prompt for behavioral insights
+        # Create a more sophisticated prompt that avoids generic responses
         system_prompt = f"""
-        Generate a concise behavioral insight for engaging with this prospect.
-        
-        RELEVANCE ANALYSIS:
-        - Role-need relevance: {role_relevance['relevance_score']:.2f}
+        You are an expert at analyzing professional behavior patterns. Generate a specific, actionable insight about how this person approaches decisions.
+
+        CONTEXT:
+        - Role: {role}
+        - Search context: {user_prompt}
+        - Relevance score: {role_relevance['relevance_score']:.2f}
         - Engagement level: {role_relevance['engagement_level']}
-        - Context: {search_context_analysis['context_type']}
         
-        RESPONSE RULES:
-        - Keep to 1-2 sentences maximum (under 40 words)
-        - Use "they" pronouns, never mention their title
-        - Match advice to their actual engagement level:
-          * HIGH relevance: Active evaluation, detailed research
-          * MEDIUM relevance: Moderate interest, some research  
-          * LOW relevance: Casual browsing, minimal commitment
-        - Focus on decision-making style, not feature lists
-        - Be specific and actionable
+        REQUIREMENTS:
+        1. Write exactly 1-2 sentences (25-40 words)
+        2. Use "they" pronouns only
+        3. Focus on decision-making style, not job description
+        4. Be specific to their engagement level:
+           - HIGH (0.8+): Active evaluation, comparing options, ready to move forward
+           - MEDIUM (0.5-0.8): Interested but cautious, moderate research phase
+           - LOW (0.3-0.5): Casual browsing, minimal commitment
+        5. Avoid generic phrases like "business needs" or "professional goals"
+        6. Make it actionable for sales engagement
+        
+        EXAMPLES OF GOOD INSIGHTS:
+        - "They research extensively before decisions, preferring detailed demos over high-level pitches."
+        - "They move quickly once convinced, but need clear ROI data upfront."
+        - "They involve team members in evaluation, requiring consensus-building approaches."
         """
         
-        name_ref = first_name if first_name else "This professional"
-        
-        # Check for personal research patterns to enhance the prompt
+        # Check for personal research patterns to enhance context
         research_data = simulate_personal_research_patterns()
         research_context = ""
-        if research_data["personal_research"]:
-            research_context = f" They've been researching solutions outside business hours, indicating personal investment in finding the right tool."
+        if research_data["personal_research"] and role_relevance['engagement_level'] != "low":
+            research_context = " (Note: Shows after-hours research activity suggesting higher priority)"
 
         user_prompt_for_ai = f"""
-        Search: "{user_prompt}"
         Role: {role}
-        Relevance: {role_relevance['engagement_level']} ({role_relevance['relevance_score']:.2f})
+        Search: "{user_prompt}"
+        Engagement: {role_relevance['engagement_level']} relevance{research_context}
         
-        Generate a concise insight about how they evaluate decisions in this context.{research_context}
-        Focus on their decision-making approach, not their title or context details.
+        Generate a specific behavioral insight about their decision-making approach.
         """
         
-        # Call the OpenAI API with limited tokens for concise response
+        # Call the OpenAI API with optimized parameters
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt_for_ai}
             ],
-            temperature=0.7,
-            max_tokens=80  # Reduced for concise responses
+            temperature=0.6,  # Slightly reduced for more consistent quality
+            max_tokens=60,    # Reduced for conciseness
+            presence_penalty=0.3,  # Encourage unique phrasing
+            frequency_penalty=0.2   # Reduce repetitive language
         )
         
-        return response.choices[0].message.content.strip()
+        insight = response.choices[0].message.content.strip()
+        
+        # Validate the insight quality
+        if len(insight.split()) < 10 or any(generic in insight.lower() for generic in [
+            "business needs", "professional goals", "specific requirements", "their role"
+        ]):
+            return generate_fallback_insight(role, candidate_data, user_prompt)
+        
+        return insight
         
     except Exception:
         return generate_fallback_insight(role, candidate_data, user_prompt)
@@ -424,7 +434,7 @@ def enhance_behavioral_data_ai(
     candidates: List[Dict[str, Any]],
     user_prompt: str
 ) -> Dict[str, Any]:
-    """Enhance behavioral data with AI-generated insights and scores."""
+    """Enhance behavioral data with AI-generated insights and scores, ensuring uniqueness across candidates."""
     try:
         # Extract candidate data from the first candidate if available
         candidate_data = candidates[0] if candidates else {}
@@ -435,7 +445,7 @@ def enhance_behavioral_data_ai(
         # Generate a focused behavioral insight
         behavioral_insight = generate_focused_insight_ai(role, user_prompt, candidate_data)
         
-        # Generate the three behavioral scores in parallel with context
+        # Generate the three behavioral scores with context
         cmi_score = generate_score_ai("cmi", role, user_prompt)
         rbfs_score = generate_score_ai("rbfs", role, user_prompt)
         ias_score = generate_score_ai("ias", role, user_prompt)
@@ -451,15 +461,81 @@ def enhance_behavioral_data_ai(
         }
         
     except Exception:
-        # Return a default insight and scores
+        # Return a contextual fallback based on role
+        role = candidate_data.get("title", "professional") if candidates else "professional"
+        fallback_insight = generate_fallback_insight(role, candidate_data, user_prompt)
+        
         return {
-            "behavioral_insight": "This professional engages best with personalized discussions about their specific business needs and goals.",
+            "behavioral_insight": fallback_insight,
             "scores": {
-                "cmi": {"score": 70, "explanation": "Forward motion"},
-                "rbfs": {"score": 60, "explanation": "Moderately sensitive"},
-                "ias": {"score": 75, "explanation": "Fits self-image"}
+                "cmi": generate_fallback_cmi_score(role, user_prompt),
+                "rbfs": generate_fallback_rbfs_score(role, user_prompt),
+                "ias": generate_fallback_ias_score(role, user_prompt)
             }
         }
+
+
+def enhance_behavioral_data_for_multiple_candidates(
+    candidates: List[Dict[str, Any]],
+    user_prompt: str
+) -> List[Dict[str, Any]]:
+    """
+    Enhance behavioral data for multiple candidates while ensuring diverse, non-duplicative insights.
+    
+    Args:
+        candidates: List of candidate dictionaries
+        user_prompt: The user's search prompt
+        
+    Returns:
+        List of candidates with enhanced behavioral data
+    """
+    if not candidates:
+        return []
+    
+    enhanced_candidates = []
+    generated_insights = []
+    
+    for candidate in candidates:
+        try:
+            # Generate behavioral data for this candidate
+            behavioral_data = enhance_behavioral_data_ai({}, [candidate], user_prompt)
+            
+            # Check for insight uniqueness
+            insight = behavioral_data.get("behavioral_insight", "")
+            if insight:
+                # Import the uniqueness validation from openai_utils
+                from openai_utils import validate_response_uniqueness
+                
+                # Check if this insight is too similar to previous ones
+                all_insights = generated_insights + [insight]
+                unique_insights = validate_response_uniqueness(all_insights, similarity_threshold=0.7)
+                
+                # If the new insight is not unique, generate a fallback
+                if len(unique_insights) <= len(generated_insights):
+                    role = candidate.get("title", "professional")
+                    insight = generate_fallback_insight(role, candidate, user_prompt)
+                    behavioral_data["behavioral_insight"] = insight
+                
+                generated_insights.append(insight)
+            
+            # Add behavioral data to candidate
+            candidate["behavioral_data"] = behavioral_data
+            enhanced_candidates.append(candidate)
+            
+        except Exception as e:
+            # Fallback for any errors
+            role = candidate.get("title", "professional")
+            candidate["behavioral_data"] = {
+                "behavioral_insight": generate_fallback_insight(role, candidate, user_prompt),
+                "scores": {
+                    "cmi": generate_fallback_cmi_score(role, user_prompt),
+                    "rbfs": generate_fallback_rbfs_score(role, user_prompt),
+                    "ias": generate_fallback_ias_score(role, user_prompt)
+                }
+            }
+            enhanced_candidates.append(candidate)
+    
+    return enhanced_candidates
 
 # Fallback functions for when AI generation fails
 
@@ -467,39 +543,75 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     """Generate a context-aware fallback insight based on role and search context."""
     role_lower = role.lower()
     
-    # Extract candidate's first name for personalization
-    first_name = extract_first_name(candidate_data.get("name", "")) if candidate_data else ""
-    company = candidate_data.get("company", "their organization") if candidate_data else "their organization"
-    
-    # Use first name if available, otherwise use role-based reference
-    name_ref = first_name if first_name else "This professional"
-    
-    # Analyze search context to provide relevant insights
+    # Analyze search context and role relevance
     context_analysis = analyze_search_context(user_prompt)
-    
-    # Generate concise, context-aware insights based on relevance
     role_relevance = analyze_role_relevance(role, user_prompt)
     
-    if context_analysis["context_type"] == "personal_purchase":
-        base_insight = f"They approach personal purchases analytically, prioritizing long-term value and thorough research."
-    elif context_analysis["context_type"] == "career_opportunity":
-        base_insight = f"They evaluate career moves based on growth potential, compensation, and strategic fit."
+    # Role-specific decision-making patterns
+    role_patterns = {
+        "engineer": [
+            "They prioritize technical specifications and integration capabilities over marketing claims.",
+            "They prefer hands-on trials and detailed documentation before making decisions.",
+            "They research extensively, comparing technical architectures and performance metrics."
+        ],
+        "manager": [
+            "They balance team needs with budget constraints, requiring clear ROI justification.",
+            "They involve stakeholders in decisions, preferring consensus-building approaches.",
+            "They evaluate solutions based on team adoption potential and training requirements."
+        ],
+        "director": [
+            "They focus on strategic alignment and long-term scalability over immediate features.",
+            "They require executive-level presentations with clear business impact metrics.",
+            "They delegate technical evaluation while maintaining oversight of strategic fit."
+        ],
+        "ceo": [
+            "They make decisions quickly once convinced, but need compelling business case upfront.",
+            "They prefer high-level strategic discussions over detailed feature comparisons.",
+            "They evaluate solutions based on competitive advantage and market positioning."
+        ],
+        "sales": [
+            "They move fast when they see clear revenue impact and quota achievement potential.",
+            "They prefer solutions that integrate with existing workflows and require minimal training.",
+            "They evaluate based on peer success stories and immediate performance gains."
+        ]
+    }
+    
+    # Select appropriate pattern based on role
+    selected_patterns = []
+    for role_key, patterns in role_patterns.items():
+        if role_key in role_lower:
+            selected_patterns = patterns
+            break
+    
+    # Fallback to generic patterns if no role match
+    if not selected_patterns:
+        selected_patterns = [
+            "They take a methodical approach, researching options thoroughly before committing.",
+            "They prefer solutions with proven track records and strong support systems.",
+            "They evaluate based on practical implementation and measurable outcomes."
+        ]
+    
+    # Adjust based on engagement level
+    if role_relevance["engagement_level"] == "low":
+        # For low relevance, indicate casual interest
+        base_insight = "They browse casually in this area, requiring compelling reasons to engage further."
+    elif role_relevance["engagement_level"] == "medium":
+        # For medium relevance, show moderate interest
+        import random
+        base_insight = random.choice([
+            "They show measured interest, researching options without immediate urgency.",
+            "They evaluate solutions methodically, taking time to assess fit and value.",
+            "They approach decisions cautiously, preferring to understand all implications first."
+        ])
     else:
-        # Business solution - adjust based on role relevance
-        if role_relevance["engagement_level"] == "high":
-            base_insight = f"They actively evaluate solutions with detailed analysis and clear success criteria."
-        elif role_relevance["engagement_level"] == "medium":
-            base_insight = f"They show moderate interest, researching options without immediate urgency."
-        else:
-            base_insight = f"They browse casually with minimal commitment to this area."
+        # For high relevance, use role-specific pattern
+        import random
+        base_insight = random.choice(selected_patterns)
     
-    # Check for personal research patterns
+    # Add research pattern context if applicable
     research_data = simulate_personal_research_patterns()
-    
-    if research_data["personal_research"]:
-        # Add personal research context to the insight
-        personal_addition = f" They've been researching options during personal time, suggesting this is a high-priority decision for them."
-        return base_insight + personal_addition
+    if research_data["personal_research"] and role_relevance["engagement_level"] != "low":
+        base_insight += " Their after-hours research activity suggests this is a higher priority."
     
     return base_insight
 

@@ -162,27 +162,39 @@ def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
 def call_openai_for_json(
     prompt: str,
     expected_keys: Optional[List[str]] = None,
+    validate_response: bool = True,
     **kwargs
 ) -> Optional[Dict[str, Any]]:
     """
-    OpenAI API call that expects and parses JSON response
+    OpenAI API call that expects and parses JSON response with validation
     
     Args:
         prompt: The user prompt/message
         expected_keys: Optional list of expected keys in the JSON response
+        validate_response: Whether to validate the response structure
         **kwargs: Parameters to pass to call_openai
     
     Returns:
         Parsed JSON dict or None if failed
     """
     # Add JSON formatting instruction to prompt
-    json_prompt = f"{prompt}\n\nPlease respond with valid JSON only."
+    json_prompt = f"{prompt}\n\nRespond with valid JSON only. No additional text or explanation."
     if expected_keys:
-        json_prompt += f"\nExpected keys: {', '.join(expected_keys)}"
+        json_prompt += f"\nRequired JSON keys: {', '.join(expected_keys)}"
+        json_prompt += f"\nExample format: {{{', '.join([f'\\"{key}\\": \\\"value\\\"' for key in expected_keys])}}}"
     
     response = call_openai_with_retry(json_prompt, **kwargs)
     if response:
-        return parse_json_response(response)
+        parsed_response = parse_json_response(response)
+        
+        # Validate response if requested
+        if validate_response and parsed_response and expected_keys:
+            missing_keys = [key for key in expected_keys if key not in parsed_response]
+            if missing_keys:
+                logger.warning(f"Response missing expected keys: {missing_keys}")
+                return None
+        
+        return parsed_response
     return None
 
 # Convenience functions for common use cases
@@ -210,8 +222,95 @@ def generate_content(content_type: str, topic: str, **kwargs) -> Optional[str]:
     prompt = prompts.get(content_type, f"Generate {content_type} about: {topic}")
     return call_openai(prompt, **kwargs)
 
+def validate_response_uniqueness(responses: List[str], similarity_threshold: float = 0.8) -> List[str]:
+    """
+    Validate that responses are sufficiently unique to avoid duplication.
+    
+    Args:
+        responses: List of response strings to validate
+        similarity_threshold: Threshold for considering responses too similar (0.0-1.0)
+        
+    Returns:
+        List of unique responses
+    """
+    if len(responses) <= 1:
+        return responses
+    
+    unique_responses = []
+    
+    for response in responses:
+        is_unique = True
+        response_words = set(response.lower().split())
+        
+        for existing in unique_responses:
+            existing_words = set(existing.lower().split())
+            
+            # Calculate Jaccard similarity (intersection over union)
+            if len(response_words) > 0 and len(existing_words) > 0:
+                intersection = len(response_words.intersection(existing_words))
+                union = len(response_words.union(existing_words))
+                similarity = intersection / union
+                
+                if similarity > similarity_threshold:
+                    is_unique = False
+                    break
+        
+        if is_unique:
+            unique_responses.append(response)
+    
+    return unique_responses
+
+
+def generate_diverse_prompts(base_prompt: str, count: int = 3) -> List[str]:
+    """
+    Generate diverse variations of a base prompt to encourage unique responses.
+    
+    Args:
+        base_prompt: The base prompt to vary
+        count: Number of variations to generate
+        
+    Returns:
+        List of prompt variations
+    """
+    variations = [base_prompt]  # Include original
+    
+    # Add perspective variations
+    perspective_prefixes = [
+        "From a strategic perspective, ",
+        "Considering their daily workflow, ",
+        "Based on their decision-making style, ",
+        "Looking at their professional priorities, "
+    ]
+    
+    # Add context variations
+    context_suffixes = [
+        " Focus on their evaluation process.",
+        " Emphasize their decision criteria.",
+        " Consider their implementation approach.",
+        " Think about their stakeholder involvement."
+    ]
+    
+    for i in range(1, min(count, len(perspective_prefixes) + 1)):
+        if i <= len(perspective_prefixes):
+            variation = perspective_prefixes[i-1] + base_prompt.lower()
+        else:
+            variation = base_prompt + context_suffixes[(i-1) % len(context_suffixes)]
+        variations.append(variation)
+    
+    return variations[:count]
+
+
 if __name__ == "__main__":
     # Test the OpenAI functions
     test_prompt = "What is the capital of France?"
     result = call_openai(test_prompt, temperature=0.1)
-    print(f"Test result: {result}") 
+    print(f"Test result: {result}")
+    
+    # Test uniqueness validation
+    test_responses = [
+        "They prefer detailed analysis before making decisions.",
+        "They like thorough research and detailed analysis before deciding.",
+        "They move quickly once they have all the information needed."
+    ]
+    unique_responses = validate_response_uniqueness(test_responses)
+    print(f"Unique responses: {len(unique_responses)} out of {len(test_responses)}") 
