@@ -452,7 +452,8 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
 def enhance_behavioral_data_ai(
     behavioral_data: Dict[str, Any],
     candidates: List[Dict[str, Any]],
-    user_prompt: str
+    user_prompt: str,
+    candidate_index: int = 0
 ) -> Dict[str, Any]:
     """Enhance behavioral data with AI-generated insights and scores, ensuring uniqueness across candidates."""
     try:
@@ -462,36 +463,45 @@ def enhance_behavioral_data_ai(
         # Get the prospect's role
         role = candidate_data.get("title", "professional")
         
-        # Generate a focused behavioral insight
+        # Generate a focused behavioral insight with diversity
         behavioral_insight = generate_focused_insight_ai(role, user_prompt, candidate_data)
         
-        # Generate the three behavioral scores with context
+        # Generate the three behavioral scores with context and variation
         cmi_score = generate_score_ai("cmi", role, user_prompt)
         rbfs_score = generate_score_ai("rbfs", role, user_prompt)
         ias_score = generate_score_ai("ias", role, user_prompt)
         
+        # Add score variation to prevent identical values
+        scores = {
+            "cmi": cmi_score,
+            "rbfs": rbfs_score,
+            "ias": ias_score
+        }
+        varied_scores = add_score_variation(scores, candidate_index)
+        
         # Create the enhanced behavioral data
         return {
             "behavioral_insight": behavioral_insight,
-            "scores": {
-                "cmi": cmi_score,
-                "rbfs": rbfs_score,
-                "ias": ias_score
-            }
+            "scores": varied_scores
         }
         
     except Exception:
-        # Return a contextual fallback based on role
+        # Return a contextual fallback based on role with diversity
         role = candidate_data.get("title", "professional") if candidates else "professional"
-        fallback_insight = generate_fallback_insight(role, candidate_data, user_prompt)
+        
+        # Generate diverse fallback data
+        fallback_insight = generate_diverse_fallback_insight(role, candidate_data, user_prompt, set(), candidate_index)
+        
+        fallback_scores = {
+            "cmi": generate_fallback_cmi_score(role, user_prompt, candidate_index),
+            "rbfs": generate_fallback_rbfs_score(role, user_prompt, candidate_index),
+            "ias": generate_fallback_ias_score(role, user_prompt, candidate_index)
+        }
+        varied_scores = add_score_variation(fallback_scores, candidate_index)
         
         return {
             "behavioral_insight": fallback_insight,
-            "scores": {
-                "cmi": generate_fallback_cmi_score(role, user_prompt),
-                "rbfs": generate_fallback_rbfs_score(role, user_prompt),
-                "ias": generate_fallback_ias_score(role, user_prompt)
-            }
+            "scores": varied_scores
         }
 
 
@@ -751,8 +761,8 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     
     return base_insight
 
-def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
-    """Generate a relevance-adjusted fallback CMI score with diversity."""
+def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_index: int = 0) -> Dict[str, Any]:
+    """Generate a relevance-adjusted fallback CMI score with guaranteed diversity."""
     role_lower = role.lower()
     
     # Analyze role relevance to adjust scores
@@ -763,97 +773,77 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "") -> Dict[str, A
     
     if context_analysis["context_type"] == "financial_decision":
         role_explanations = {
-            "high": {
-                "owner": ["Actively evaluating investment opportunities for portfolio growth", "Conducting due diligence on potential investments", "Researching opportunities to diversify holdings"],
-                "founder": ["Exploring strategic investments for company funding", "Assessing capital opportunities for business scaling", "Investigating funding sources for growth initiatives"],
-                "ceo": ["Reviewing investment options for organizational capital", "Evaluating strategic financial opportunities", "Considering investments for business expansion"],
-                "cfo": ["Analyzing investment opportunities for treasury management", "Evaluating financial instruments for capital optimization", "Researching investment strategies for risk management"],
-                "default": ["Actively evaluating investment opportunities", "Researching financial options for portfolio growth", "Comparing investment alternatives for capital allocation"]
-            },
-            "medium": {
-                "owner": ["Moderately interested in investment opportunities", "Exploring financial options without immediate urgency", "Researching investments for future consideration"],
-                "founder": ["Considering funding options for strategic planning", "Evaluating investment opportunities for business development", "Researching capital sources for future needs"],
-                "ceo": ["Reviewing financial options for organizational planning", "Considering investment opportunities for future initiatives", "Exploring capital strategies for strategic evaluation"],
-                "cfo": ["Assessing investment options for financial planning", "Exploring opportunities for treasury optimization", "Considering financial instruments for risk management"],
-                "default": ["Moderately interested in investment options", "Researching financial opportunities without immediate pressure", "Evaluating investments for potential allocation"]
-            },
-            "low": {
-                "default": ["Casually browsing investment options", "Limited interest in current financial opportunities", "Minimal urgency for investment decisions"]
-            }
+            "high": [
+                "Actively evaluating investment opportunities for portfolio growth",
+                "Conducting comprehensive due diligence on potential investments", 
+                "Researching diversification opportunities across asset classes",
+                "Comparing investment alternatives for optimal capital allocation",
+                "Analyzing market conditions for strategic investment timing"
+            ],
+            "medium": [
+                "Moderately interested in exploring investment opportunities",
+                "Researching financial options without immediate urgency",
+                "Evaluating investments for future portfolio consideration",
+                "Assessing market trends for potential investment timing",
+                "Considering investment options for strategic planning"
+            ],
+            "low": [
+                "Casually browsing investment options with minimal urgency",
+                "Limited interest in current financial opportunities", 
+                "Showing minimal commitment to investment decisions",
+                "Browsing financial options without immediate intent",
+                "Displaying casual interest in investment alternatives"
+            ]
         }
     else:
         role_explanations = {
-            "high": {
-                "owner": ["Actively comparing solutions to drive business growth", "Evaluating tools for immediate implementation", "Researching options to gain competitive advantage"],
-                "founder": ["Exploring strategic tools for company scaling", "Assessing solutions for long-term business impact", "Investigating platforms to accelerate growth"],
-                "ceo": ["Reviewing enterprise solutions for organizational efficiency", "Evaluating strategic tools for market positioning", "Considering platforms for business transformation"],
-                "manager": ["Researching tools to improve team performance", "Evaluating solutions for workflow optimization", "Exploring options to enhance productivity"],
-                "default": ["Actively evaluating solutions for implementation", "Researching tools for business improvement", "Comparing options for strategic advantage"]
-            },
-            "medium": {
-                "owner": ["Moderately interested, weighing business benefits", "Exploring options without immediate urgency", "Researching solutions for future consideration"],
-                "founder": ["Considering tools for potential implementation", "Evaluating options for strategic planning", "Researching solutions for business development"],
-                "ceo": ["Reviewing options for organizational needs", "Considering solutions for future initiatives", "Exploring tools for strategic evaluation"],
-                "manager": ["Assessing tools for team requirements", "Exploring options for process improvement", "Considering solutions for operational needs"],
-                "default": ["Moderately interested, exploring available options", "Researching solutions without immediate pressure", "Evaluating tools for potential implementation"]
-            },
-            "low": {
-                "default": ["Casually browsing, minimal immediate interest", "Limited engagement, requires compelling value", "Browsing options with low commitment level"]
-            }
+            "high": [
+                "Actively comparing solutions to drive business growth",
+                "Evaluating tools for immediate implementation and ROI",
+                "Researching options to gain competitive market advantage", 
+                "Investigating platforms to accelerate business objectives",
+                "Assessing solutions for strategic organizational impact"
+            ],
+            "medium": [
+                "Moderately interested, weighing business benefits carefully",
+                "Exploring options without immediate implementation urgency",
+                "Researching solutions for future strategic consideration",
+                "Evaluating tools for potential operational improvement",
+                "Considering solutions for long-term business planning"
+            ],
+            "low": [
+                "Casually browsing with minimal immediate interest",
+                "Limited engagement, requiring compelling value proposition",
+                "Browsing options with low commitment level",
+                "Showing minimal urgency for solution evaluation",
+                "Displaying casual interest without immediate intent"
+            ]
         }
     
-    # Base scores by role with some variation
-    import random
-    random.seed(hash(role + user_prompt) % 1000)  # Consistent but varied based on role+prompt
+    # Deterministic score variation based on candidate index
+    base_scores = {
+        "high": [85, 78, 82, 75, 88],
+        "medium": [65, 58, 62, 55, 68], 
+        "low": [35, 28, 32, 25, 38]
+    }
     
-    if any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_score = random.randint(70, 80)
-    elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = random.randint(75, 85)
-    elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = random.randint(80, 90)
-    else:
-        base_score = random.randint(65, 75)
+    engagement_level = role_relevance["engagement_level"]
+    score_options = base_scores.get(engagement_level, base_scores["medium"])
+    base_score = score_options[candidate_index % len(score_options)]
     
     # Adjust score based on role relevance
     adjusted_score = int(base_score * role_relevance["adjustment_factor"])
     
-    # Select diverse explanation
-    engagement_level = role_relevance["engagement_level"]
-    role_key = None
-    for key in ["owner", "founder", "ceo", "manager"]:
-        if key in role_lower:
-            role_key = key
-            break
+    # Select explanation deterministically based on candidate index
+    explanations = role_explanations.get(engagement_level, role_explanations["medium"])
+    adjusted_explanation = explanations[candidate_index % len(explanations)]
     
-    if engagement_level in role_explanations and role_key in role_explanations[engagement_level]:
-        explanations = role_explanations[engagement_level][role_key]
-    elif engagement_level in role_explanations:
-        explanations = role_explanations[engagement_level]["default"]
-    else:
-        explanations = role_explanations["medium"]["default"]
-    
-    adjusted_explanation = random.choice(explanations)
-    
-    # Simulate personal research patterns
-    research_data = simulate_personal_research_patterns()
-    
-    if research_data["personal_research"] and role_relevance["engagement_level"] != "low":
-        # Only boost if relevance is medium or high
-        boosted_score = min(100, adjusted_score + research_data["cmi_boost"])
-        enhanced_explanation = "Researching solutions during personal time - elevated priority"
-        
-        return {
-            "score": boosted_score,
-            "explanation": enhanced_explanation
-        }
-    else:
-        return {
-            "score": adjusted_score,
-            "explanation": adjusted_explanation
-        }
+    return {
+        "score": adjusted_score,
+        "explanation": adjusted_explanation
+    }
 
-def generate_fallback_rbfs_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
+def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_index: int = 0) -> Dict[str, Any]:
     """Generate a relevance-adjusted fallback RBFS score with diversity."""
     role_lower = role.lower()
     
@@ -927,21 +917,26 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "") -> Dict[str, 
         base_score = random.randint(55, 65)
         risk_level = "medium"
     
+    # Deterministic score and explanation selection
+    base_scores = [base_score, base_score + 5, base_score - 3, base_score + 8, base_score - 5]
+    adjusted_score = base_scores[candidate_index % len(base_scores)]
+    
     # Adjust score - LOWER relevance = HIGHER risk sensitivity (inverse relationship)
     if role_relevance["engagement_level"] == "low":
         # Low relevance = higher risk sensitivity
-        adjusted_score = min(90, base_score + random.randint(15, 25))
+        adjusted_score = min(90, adjusted_score + 20)
         adjusted_explanation = "Cautious about areas outside their core expertise"
     elif role_relevance["engagement_level"] == "medium":
-        adjusted_score = base_score + random.randint(0, 10)
-        adjusted_explanation = random.choice(risk_explanations["medium"])
+        adjusted_score = min(90, adjusted_score + 5)
+        explanations = risk_explanations["medium"]
+        adjusted_explanation = explanations[candidate_index % len(explanations)]
     else:
-        adjusted_score = base_score
-        adjusted_explanation = random.choice(risk_explanations[risk_level])
+        explanations = risk_explanations[risk_level]
+        adjusted_explanation = explanations[candidate_index % len(explanations)]
     
     return {"score": adjusted_score, "explanation": adjusted_explanation}
 
-def generate_fallback_ias_score(role: str, user_prompt: str = "") -> Dict[str, Any]:
+def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_index: int = 0) -> Dict[str, Any]:
     """Generate a relevance-adjusted fallback IAS score with diversity."""
     role_lower = role.lower()
     

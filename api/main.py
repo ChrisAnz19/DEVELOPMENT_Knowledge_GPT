@@ -300,21 +300,28 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             from behavioral_metrics_ai import enhance_behavioral_data_for_multiple_candidates
             candidates = enhance_behavioral_data_for_multiple_candidates(candidates, prompt)
         except Exception as e:
-            # Fallback: generate behavioral data for each candidate individually
-            for candidate in candidates:
+            # Fallback: generate behavioral data for each candidate individually with diversity
+            for i, candidate in enumerate(candidates):
                 if isinstance(candidate, dict):
                     try:
-                        candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt)
+                        candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt, candidate_index=i)
                         candidate["behavioral_data"] = candidate_behavioral_data
                     except Exception:
+                        from behavioral_metrics_ai import generate_diverse_fallback_insight, add_score_variation
                         title = candidate.get('title', 'professional')
+                        
+                        # Generate diverse fallback with variation
+                        fallback_insight = generate_diverse_fallback_insight(title, candidate, prompt, set(), i)
+                        base_scores = {
+                            "cmi": {"score": 70, "explanation": "Forward motion"},
+                            "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
+                            "ias": {"score": 75, "explanation": "Fits self-image"}
+                        }
+                        varied_scores = add_score_variation(base_scores, i)
+                        
                         candidate["behavioral_data"] = {
-                            "behavioral_insight": f"This {title} engages best with personalized discussions about their specific business needs and goals.",
-                            "scores": {
-                                "cmi": {"score": 70, "explanation": "Forward motion"},
-                                "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
-                                "ias": {"score": 75, "explanation": "Fits self-image"}
-                            }
+                            "behavioral_insight": fallback_insight,
+                            "scores": varied_scores
                         }
         
         search_db_id = search_data.get("id")
