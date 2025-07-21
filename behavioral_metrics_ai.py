@@ -167,74 +167,90 @@ def analyze_role_relevance(role: str, search_context: str) -> dict:
 def analyze_search_context(user_prompt: str) -> dict:
     """
     Analyze the user's search context to understand what they're actually looking for.
+    Uses a more flexible approach that can identify various context types.
     
     Returns:
-        Dictionary with context analysis including purchase type, decision factors, etc.
+        Dictionary with context analysis including context type, decision factors, etc.
     """
     prompt_lower = user_prompt.lower()
     
-    # Personal purchase indicators (truly personal items)
-    personal_purchases = [
-        "new car", "car", "vehicle", "auto", "house", "home", "apartment", 
-        "vacation", "travel", "personal insurance", "personal loan", "mortgage", "credit card",
-        "phone", "personal laptop", "furniture", "appliance"
-    ]
+    # Define context categories with their indicators
+    context_categories = {
+        "legal_services": [
+            "attorney", "lawyer", "law firm", "legal services", "legal advice", "legal counsel",
+            "divorce attorney", "family law", "criminal defense", "personal injury", "estate planning",
+            "immigration lawyer", "corporate law", "intellectual property", "patent attorney"
+        ],
+        "real_estate": [
+            "real estate", "property", "office space", "commercial property", "commercial real estate",
+            "retail space", "industrial space", "warehouse", "lease", "rent", "buy property",
+            "commercial building", "office building", "square feet", "sqft", "location"
+        ],
+        "personal_purchase": [
+            "new car", "car", "vehicle", "auto", "house", "home", "apartment", 
+            "vacation", "travel", "personal insurance", "personal loan", "mortgage", "credit card",
+            "phone", "personal laptop", "furniture", "appliance"
+        ],
+        "career_opportunity": [
+            "job", "position", "role", "career", "opportunity", "hire", "recruit",
+            "employment", "work", "candidate"
+        ],
+        "financial_decision": [
+            "investment", "invest", "stock", "fund", "portfolio", "advisor", "financial planner",
+            "wealth management", "retirement", "401k", "climate", "esg", "sustainable",
+            "green investment", "impact investing", "venture capital", "private equity",
+            "hedge fund", "asset management", "capital", "funding", "finance"
+        ],
+        "business_solution": [
+            "crm", "software", "tool", "platform", "system", "solution", "service",
+            "consultant", "agency", "vendor", "provider", "contractor", "freelancer",
+            "marketing automation", "analytics", "business intelligence", "enterprise"
+        ],
+        "healthcare": [
+            "doctor", "physician", "medical", "healthcare", "health", "hospital", "clinic",
+            "specialist", "treatment", "therapy", "diagnosis", "patient", "medicine"
+        ],
+        "education": [
+            "school", "university", "college", "education", "course", "degree", "learning",
+            "training", "teacher", "professor", "student", "academic", "curriculum"
+        ]
+    }
     
-    # Real estate indicators
-    real_estate = [
-        "real estate", "property", "office space", "commercial property", "commercial real estate",
-        "retail space", "industrial space", "warehouse", "lease", "rent", "buy property",
-        "commercial building", "office building", "square feet", "sqft", "location"
-    ]
+    # Determine primary context by checking for indicators
+    context_type = "general_business"  # default
+    context_matches = {}
     
-    # Business/professional service indicators (includes CRM, software, etc.)
-    business_services = [
-        "crm", "software", "tool", "platform", "system", "solution", "service",
-        "consultant", "agency", "vendor", "provider", "contractor", "freelancer",
-        "marketing automation", "analytics", "business intelligence", "enterprise"
-    ]
+    # Count matches for each context category
+    for category, indicators in context_categories.items():
+        match_count = sum(1 for term in indicators if term in prompt_lower)
+        if match_count > 0:
+            context_matches[category] = match_count
     
-    # Job/career indicators
-    career_related = [
-        "job", "position", "role", "career", "opportunity", "hire", "recruit",
-        "employment", "work", "candidate"
-    ]
+    # Select the category with the most matches
+    if context_matches:
+        context_type = max(context_matches.items(), key=lambda x: x[1])[0]
     
-    # Investment/financial indicators
-    investment_related = [
-        "investment", "invest", "stock", "fund", "portfolio", "advisor", "financial planner",
-        "wealth management", "retirement", "401k", "climate", "esg", "sustainable",
-        "green investment", "impact investing", "venture capital", "private equity",
-        "hedge fund", "asset management", "capital", "funding", "finance"
-    ]
+    # Define decision factors based on context type
+    decision_factors_map = {
+        "legal_services": ["expertise", "experience", "reputation", "case success rate", "client service"],
+        "real_estate": ["location", "price", "size", "amenities", "accessibility", "lease terms"],
+        "personal_purchase": ["price", "quality", "features", "reviews", "warranty", "personal_fit"],
+        "career_opportunity": ["compensation", "growth_potential", "company_culture", "role_fit", "location"],
+        "financial_decision": ["returns", "risk_assessment", "due_diligence", "track_record", "market_conditions"],
+        "business_solution": ["roi", "integration", "scalability", "support", "pricing"],
+        "healthcare": ["expertise", "experience", "availability", "location", "insurance coverage"],
+        "education": ["quality", "reputation", "curriculum", "cost", "location", "career outcomes"]
+    }
     
-    # Determine primary context
-    context_type = "business"  # default
-    decision_factors = []
+    decision_factors = decision_factors_map.get(context_type, ["value", "quality", "fit", "reliability"])
     
-    if any(term in prompt_lower for term in real_estate):
-        context_type = "real_estate"
-        decision_factors = ["location", "price", "size", "amenities", "accessibility", "lease terms"]
-    elif any(term in prompt_lower for term in personal_purchases):
-        context_type = "personal_purchase"
-        decision_factors = ["price", "quality", "features", "reviews", "warranty", "personal_fit"]
-    elif any(term in prompt_lower for term in career_related):
-        context_type = "career_opportunity" 
-        decision_factors = ["compensation", "growth_potential", "company_culture", "role_fit", "location"]
-    elif any(term in prompt_lower for term in investment_related):
-        context_type = "financial_decision"
-        decision_factors = ["returns", "risk_assessment", "due_diligence", "track_record", "market_conditions", "portfolio_fit"]
-    elif any(term in prompt_lower for term in business_services):
-        context_type = "business_solution"
-        decision_factors = ["roi", "integration", "scalability", "support", "pricing"]
-    
+    # Create a simplified context result
     return {
         "context_type": context_type,
         "decision_factors": decision_factors,
         "is_personal": context_type in ["personal_purchase", "career_opportunity"],
-        "is_business": context_type in ["business_solution"],
-        "is_real_estate": context_type == "real_estate",
-        "is_financial": context_type == "financial_decision"
+        "is_business": context_type in ["business_solution", "general_business"],
+        "is_specialized": context_type in ["legal_services", "real_estate", "healthcare", "education", "financial_decision"]
     }
 
 def simulate_personal_research_patterns() -> Dict[str, Any]:
@@ -289,7 +305,7 @@ def simulate_personal_research_patterns() -> Dict[str, Any]:
     }
 
 def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Optional[Dict[str, Any]] = None) -> str:
-    """Generate a focused behavioral insight using AI."""
+    """Generate a focused behavioral insight using AI with dynamic context awareness."""
     try:
         if not openai_client:
             return generate_fallback_insight(role, candidate_data, user_prompt)
@@ -297,16 +313,25 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         # Analyze the search context and role relevance
         search_context_analysis = analyze_search_context(user_prompt)
         role_relevance = analyze_role_relevance(role, user_prompt)
+        context_type = search_context_analysis["context_type"]
         
-        # Create a more sophisticated prompt that avoids generic responses
+        # Create a more sophisticated prompt that avoids generic responses and is context-aware
         system_prompt = f"""
         You are an expert at analyzing professional behavior patterns. Generate a specific, actionable insight about how this person approaches decisions.
 
         CONTEXT:
         - Role: {role}
         - Search context: {user_prompt}
+        - Context type: {context_type}
         - Relevance score: {role_relevance['relevance_score']:.2f}
         - Engagement level: {role_relevance['engagement_level']}
+        
+        CRITICAL INSTRUCTIONS:
+        1. The insight MUST be contextually appropriate for {context_type}
+        2. NEVER mention "implementation plans" unless specifically relevant to {context_type}
+        3. NEVER use generic software/technology language for non-technology contexts
+        4. Tailor your language to the specific domain of {context_type}
+        5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
         
         REQUIREMENTS:
         1. Write exactly 1-2 sentences (25-40 words)
@@ -317,12 +342,13 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
            - MEDIUM (0.5-0.8): Interested but cautious, moderate research phase
            - LOW (0.3-0.5): Casual browsing, minimal commitment
         5. Avoid generic phrases like "business needs" or "professional goals"
-        6. Make it actionable for sales engagement
+        6. Make it actionable for engagement
         
-        EXAMPLES OF GOOD INSIGHTS:
-        - "They research extensively before decisions, preferring detailed demos over high-level pitches."
-        - "They move quickly once convinced, but need clear ROI data upfront."
-        - "They involve team members in evaluation, requiring consensus-building approaches."
+        EXAMPLES OF GOOD INSIGHTS BY CONTEXT:
+        - Legal: "They research case precedents thoroughly before adopting new legal technologies, prioritizing ethical compliance over efficiency gains."
+        - Real Estate: "They evaluate properties based on location and client accessibility first, considering price as a secondary factor."
+        - Healthcare: "They consult extensively with colleagues before adopting new treatment approaches, requiring solid evidence-based research."
+        - Business: "They research extensively before decisions, preferring detailed demos over high-level pitches."
         """
         
         # Check for personal research patterns to enhance context
@@ -366,7 +392,7 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         return generate_fallback_insight(role, candidate_data, user_prompt)
 
 def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict[str, Any]:
-    """Generate a behavioral score using AI."""
+    """Generate a behavioral score using AI with dynamic context awareness."""
     try:
         if not openai_client:
             if score_type == "cmi":
@@ -380,50 +406,77 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
         context_analysis = analyze_search_context(user_prompt)
         role_relevance = analyze_role_relevance(role, user_prompt)
         
+        # Extract context type for more specific prompting
+        context_type = context_analysis["context_type"]
+        
+        # Create a context-aware base prompt
+        context_description = f"a {role} looking for {context_type} related to: \"{user_prompt}\""
+        
         # Create a relevance-aware prompt based on score type
         if score_type == "cmi":
             system_prompt = f"""
-            Generate a Commitment Momentum Index (CMI) score (0-100) for a {role} looking for: "{user_prompt}"
+            Generate a Commitment Momentum Index (CMI) score (0-100) for {context_description}
             
-            CRITICAL RELEVANCE FACTOR:
+            CONTEXT INFORMATION:
+            - Context type: {context_type}
             - Role-need relevance: {role_relevance['relevance_score']:.2f} (0.0 = irrelevant, 1.0 = highly relevant)
             - Engagement level: {role_relevance['engagement_level']}
-            - Expected behavior: {role_relevance['behavioral_modifier']}
+            
+            CRITICAL INSTRUCTIONS:
+            1. The explanation MUST be contextually appropriate for {context_type}
+            2. NEVER mention "implementation plans" unless specifically relevant to {context_type}
+            3. NEVER use generic software/technology language for non-technology contexts
+            4. Tailor your language to the specific domain of {context_type}
+            5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
             
             RELEVANCE-BASED SCORING RULES:
-            - HIGH relevance (0.8+): 70-95 CMI - Active evaluation, comparing options, ready to move
+            - HIGH relevance (0.8+): 70-95 CMI - Active evaluation, comparing options, ready to decide
             - MEDIUM relevance (0.5-0.8): 40-70 CMI - Interested but not urgent, moderate research
             - LOW relevance (0.3-0.5): 15-40 CMI - Casual browsing, low commitment, minimal urgency
-            
-            EXAMPLES:
-            - Sales Manager + CRM = HIGH relevance → 80+ CMI (actively evaluating)
-            - Sales Manager + Cybersecurity = LOW relevance → 25 CMI (casual browsing)
-            - Engineer + Development Tools = HIGH relevance → 85+ CMI (detailed evaluation)
-            - Engineer + HR Software = LOW relevance → 20 CMI (minimal interest)
-            
-            Adjust the score based on logical role-need alignment. Don't assume high commitment if the need doesn't match their role.
             
             Return JSON with "score" and "explanation". 
             For explanation: Use "they" pronouns. Keep to 8-12 words reflecting their TRUE engagement level.
             """
         elif score_type == "rbfs":
             system_prompt = f"""
-            Generate a Risk-Barrier Focus Score (RBFS) (0-100) for a {role}.
-            RBFS measures how much they focus on potential downsides vs benefits.
+            Generate a Risk-Barrier Focus Score (RBFS) (0-100) for {context_description}
+            
+            CONTEXT INFORMATION:
+            - Context type: {context_type}
+            - Role-need relevance: {role_relevance['relevance_score']:.2f}
+            - Engagement level: {role_relevance['engagement_level']}
+            
+            CRITICAL INSTRUCTIONS:
+            1. The explanation MUST be contextually appropriate for {context_type}
+            2. NEVER mention "implementation plans" unless specifically relevant to {context_type}
+            3. NEVER use generic software/technology language for non-technology contexts
+            4. Tailor your language to the specific domain of {context_type}
+            5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
             
             Score guidelines:
-            - 80-100: Highly cautious, needs extensive proof and references
-            - 60-79: Moderately risk-aware, wants clear implementation plan
+            - 80-100: Highly cautious, needs extensive proof and validation
+            - 60-79: Moderately risk-aware, wants clear evidence and assurances
             - 40-59: Balanced risk assessment, standard due diligence
             - 20-39: Risk-tolerant, focuses more on upside potential
             
             Return JSON with "score" and "explanation".
-            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing their risk evaluation style.
+            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing their risk evaluation style.
             """
         else:  # ias
             system_prompt = f"""
-            Generate an Identity Alignment Signal (IAS) score (0-100) for a {role}.
-            IAS measures how well this type of solution fits their professional identity and goals.
+            Generate an Identity Alignment Signal (IAS) score (0-100) for {context_description}
+            
+            CONTEXT INFORMATION:
+            - Context type: {context_type}
+            - Role-need relevance: {role_relevance['relevance_score']:.2f}
+            - Engagement level: {role_relevance['engagement_level']}
+            
+            CRITICAL INSTRUCTIONS:
+            1. The explanation MUST be contextually appropriate for {context_type}
+            2. NEVER mention "implementation plans" unless specifically relevant to {context_type}
+            3. NEVER use generic software/technology language for non-technology contexts
+            4. Tailor your language to the specific domain of {context_type}
+            5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
             
             Score guidelines:
             - 80-100: Perfect fit for their role, directly impacts their success metrics
@@ -432,7 +485,7 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
             - 20-39: Peripheral to their core responsibilities
             
             Return JSON with "score" and "explanation".
-            For explanation: Use "they" or "them" pronouns, not "The [role]". Keep to 8-12 words describing the professional fit.
+            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing the professional fit.
             """
         
         # Call the OpenAI API with minimal tokens
@@ -724,44 +777,83 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     # Analyze search context and role relevance
     context_analysis = analyze_search_context(user_prompt)
     role_relevance = analyze_role_relevance(role, user_prompt)
+    context_type = context_analysis["context_type"]
     
-    # Role-specific decision-making patterns
-    role_patterns = {
-        "engineer": [
-            "They prioritize technical specifications and integration capabilities over marketing claims.",
-            "They prefer hands-on trials and detailed documentation before making decisions.",
-            "They research extensively, comparing technical architectures and performance metrics."
-        ],
-        "manager": [
-            "They balance team needs with budget constraints, requiring clear ROI justification.",
-            "They involve stakeholders in decisions, preferring consensus-building approaches.",
-            "They evaluate solutions based on team adoption potential and training requirements."
-        ],
-        "director": [
-            "They focus on strategic alignment and long-term scalability over immediate features.",
-            "They require executive-level presentations with clear business impact metrics.",
-            "They delegate technical evaluation while maintaining oversight of strategic fit."
-        ],
-        "ceo": [
-            "They make decisions quickly once convinced, but need compelling business case upfront.",
-            "They prefer high-level strategic discussions over detailed feature comparisons.",
-            "They evaluate solutions based on competitive advantage and market positioning."
-        ],
-        "sales": [
-            "They move fast when they see clear revenue impact and quota achievement potential.",
-            "They prefer solutions that integrate with existing workflows and require minimal training.",
-            "They evaluate based on peer success stories and immediate performance gains."
-        ]
+    # Define patterns based on context type first, then role
+    context_patterns = {
+        "legal_services": {
+            "attorney": [
+                "They thoroughly research precedents and case law before adopting new approaches.",
+                "They prioritize client outcomes and ethical considerations in all decisions.",
+                "They evaluate options based on both legal merit and practical application."
+            ],
+            "default": [
+                "They carefully evaluate legal implications before making decisions.",
+                "They balance client needs with legal best practices in their approach.",
+                "They research thoroughly, considering both precedent and practical outcomes."
+            ]
+        },
+        "real_estate": {
+            "default": [
+                "They evaluate properties based on location and accessibility first, then price.",
+                "They balance immediate space needs with long-term growth considerations.",
+                "They research market trends thoroughly before making property decisions."
+            ]
+        },
+        "healthcare": {
+            "default": [
+                "They prioritize patient outcomes and evidence-based approaches in decisions.",
+                "They balance clinical best practices with practical implementation considerations.",
+                "They research thoroughly before adopting new treatment methodologies."
+            ]
+        },
+        "default": {
+            "engineer": [
+                "They prioritize technical specifications and integration capabilities over marketing claims.",
+                "They prefer hands-on trials and detailed documentation before making decisions.",
+                "They research extensively, comparing technical architectures and performance metrics."
+            ],
+            "manager": [
+                "They balance team needs with budget constraints, requiring clear ROI justification.",
+                "They involve stakeholders in decisions, preferring consensus-building approaches.",
+                "They evaluate solutions based on team adoption potential and training requirements."
+            ],
+            "director": [
+                "They focus on strategic alignment and long-term scalability over immediate features.",
+                "They require executive-level presentations with clear business impact metrics.",
+                "They delegate technical evaluation while maintaining oversight of strategic fit."
+            ],
+            "ceo": [
+                "They make decisions quickly once convinced, but need compelling business case upfront.",
+                "They prefer high-level strategic discussions over detailed feature comparisons.",
+                "They evaluate solutions based on competitive advantage and market positioning."
+            ],
+            "sales": [
+                "They move fast when they see clear revenue impact and quota achievement potential.",
+                "They prefer solutions that integrate with existing workflows and require minimal training.",
+                "They evaluate based on peer success stories and immediate performance gains."
+            ],
+            "default": [
+                "They research thoroughly before making decisions, comparing multiple options.",
+                "They balance practical needs with long-term considerations in their approach.",
+                "They evaluate options based on both immediate fit and future potential."
+            ]
+        }
     }
     
-    # Select appropriate pattern based on role
-    selected_patterns = []
-    for role_key, patterns in role_patterns.items():
-        if role_key in role_lower:
-            selected_patterns = patterns
+    # First try to get context-specific patterns
+    context_specific_patterns = context_patterns.get(context_type, context_patterns["default"])
+    
+    # Then try to get role-specific patterns within that context
+    role_key = "default"
+    for key in context_specific_patterns.keys():
+        if key in role_lower:
+            role_key = key
             break
     
-    # Fallback to generic patterns if no role match
+    selected_patterns = context_specific_patterns.get(role_key, context_specific_patterns.get("default", []))
+    
+    # Fallback to generic patterns if no patterns found
     if not selected_patterns:
         selected_patterns = [
             "They take a methodical approach, researching options thoroughly before committing.",
@@ -776,14 +868,16 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
     elif role_relevance["engagement_level"] == "medium":
         # For medium relevance, show moderate interest
         import random
+        random.seed(hash(role + user_prompt + str(candidate_index)) % 1000)
         base_insight = random.choice([
             "They show measured interest, researching options without immediate urgency.",
-            "They evaluate solutions methodically, taking time to assess fit and value.",
+            "They evaluate methodically, taking time to assess fit and value.",
             "They approach decisions cautiously, preferring to understand all implications first."
         ])
     else:
-        # For high relevance, use role-specific pattern
+        # For high relevance, use context and role-specific pattern
         import random
+        random.seed(hash(role + user_prompt + str(candidate_index)) % 1000)
         base_insight = random.choice(selected_patterns)
     
     # Add research pattern context if applicable
@@ -803,7 +897,31 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware explanations by role and engagement level
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_real_estate"]:
+    if context_analysis["is_legal"]:
+        role_explanations = {
+            "high": [
+                "Actively researching legal technology solutions for immediate implementation",
+                "Engaged in detailed evaluation of legal AI tools for practice", 
+                "Comparing multiple legal tech platforms with specific requirements",
+                "Requesting demos and consultations for legal software",
+                "Actively seeking to modernize legal practice with technology"
+            ],
+            "medium": [
+                "Exploring legal technology options with moderate interest",
+                "Researching how AI might enhance their legal practice",
+                "Considering legal tech adoption in the coming months",
+                "Gathering information on legal software capabilities",
+                "Evaluating potential benefits of legal tech for client service"
+            ],
+            "low": [
+                "Casually browsing legal technology options",
+                "Preliminary research on legal AI without immediate plans", 
+                "Early-stage exploration of legal tech possibilities",
+                "Gathering basic information about legal software",
+                "Initial consideration of how technology might fit legal practice"
+            ]
+        }
+    elif context_analysis["is_real_estate"]:
         role_explanations = {
             "high": [
                 "Actively touring properties and comparing location options",
@@ -913,7 +1031,28 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
     # Context-aware risk explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_real_estate"]:
+    if context_analysis["is_legal"]:
+        risk_explanations = {
+            "high": [
+                "Thoroughly evaluates legal tech security and compliance features",
+                "Carefully assesses vendor reputation and technology reliability",
+                "Conducts detailed analysis of data privacy implications",
+                "Prioritizes ethical considerations in legal AI adoption"
+            ],
+            "medium": [
+                "Balances innovation benefits with practice disruption concerns",
+                "Considers both client benefits and implementation challenges",
+                "Evaluates technology reliability alongside practical application",
+                "Weighs efficiency gains against learning curve"
+            ],
+            "low": [
+                "Focuses primarily on innovative capabilities and client perception",
+                "Prioritizes cutting-edge features over established reliability",
+                "Values potential competitive advantage over implementation complexity",
+                "Makes decisions based on peer adoption and industry trends"
+            ]
+        }
+    elif context_analysis["is_real_estate"]:
         risk_explanations = {
             "high": [
                 "Thoroughly evaluates location factors and market trends",
@@ -1027,7 +1166,23 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware alignment explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_real_estate"]:
+    if context_analysis["is_legal"]:
+        alignment_explanations = {
+            "high": {
+                "attorney": ["Directly enhances legal practice efficiency and client service", "Perfect fit for modernizing case management approach", "Aligns with legal expertise and practice needs"],
+                "lawyer": ["Directly supports legal analysis and client representation", "Matches legal workflow and practice requirements", "Enhances professional capabilities in legal practice"],
+                "partner": ["Aligns with firm leadership and practice development goals", "Supports strategic legal service enhancement", "Directly impacts firm competitiveness and client service"],
+                "associate": ["Enhances legal research and case preparation capabilities", "Supports professional development in legal practice", "Aligns with daily legal workflow requirements"],
+                "default": ["Directly relevant to legal practice needs", "Aligns with legal expertise and client service", "Supports case management and legal analysis"]
+            },
+            "medium": {
+                "default": ["Moderately relevant to legal practice needs", "Partially aligns with legal workflow", "Offers some benefits for case management", "Could enhance certain aspects of legal work"]
+            },
+            "low": {
+                "default": ["Limited relevance to current legal practice", "Minimal alignment with legal workflow needs", "Peripheral to core legal services", "Basic fit for legal practice requirements"]
+            }
+        }
+    elif context_analysis["is_real_estate"]:
         alignment_explanations = {
             "high": {
                 "owner": ["Perfect location match for business growth needs", "Ideal space configuration for operational requirements", "Optimal property features for business objectives"],
