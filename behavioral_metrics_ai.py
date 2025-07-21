@@ -180,6 +180,13 @@ def analyze_search_context(user_prompt: str) -> dict:
         "phone", "personal laptop", "furniture", "appliance"
     ]
     
+    # Real estate indicators
+    real_estate = [
+        "real estate", "property", "office space", "commercial property", "commercial real estate",
+        "retail space", "industrial space", "warehouse", "lease", "rent", "buy property",
+        "commercial building", "office building", "square feet", "sqft", "location"
+    ]
+    
     # Business/professional service indicators (includes CRM, software, etc.)
     business_services = [
         "crm", "software", "tool", "platform", "system", "solution", "service",
@@ -205,7 +212,10 @@ def analyze_search_context(user_prompt: str) -> dict:
     context_type = "business"  # default
     decision_factors = []
     
-    if any(term in prompt_lower for term in personal_purchases):
+    if any(term in prompt_lower for term in real_estate):
+        context_type = "real_estate"
+        decision_factors = ["location", "price", "size", "amenities", "accessibility", "lease terms"]
+    elif any(term in prompt_lower for term in personal_purchases):
         context_type = "personal_purchase"
         decision_factors = ["price", "quality", "features", "reviews", "warranty", "personal_fit"]
     elif any(term in prompt_lower for term in career_related):
@@ -223,6 +233,7 @@ def analyze_search_context(user_prompt: str) -> dict:
         "decision_factors": decision_factors,
         "is_personal": context_type in ["personal_purchase", "career_opportunity"],
         "is_business": context_type in ["business_solution"],
+        "is_real_estate": context_type == "real_estate",
         "is_financial": context_type == "financial_decision"
     }
 
@@ -792,7 +803,31 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware explanations by role and engagement level
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["context_type"] == "financial_decision":
+    if context_analysis["is_real_estate"]:
+        role_explanations = {
+            "high": [
+                "Actively touring properties and comparing location options",
+                "Engaged in detailed space planning and lease negotiations", 
+                "Comparing multiple properties with specific requirements in mind",
+                "Requesting detailed floor plans and site visits",
+                "Actively evaluating locations for immediate business needs"
+            ],
+            "medium": [
+                "Researching location options for future expansion plans",
+                "Exploring real estate options with mid-term timeline",
+                "Comparing property features without immediate urgency",
+                "Gathering information on market rates and availability",
+                "Evaluating space requirements for potential relocation"
+            ],
+            "low": [
+                "Casually browsing commercial real estate options",
+                "Preliminary research without immediate space needs", 
+                "Early-stage exploration of potential locations",
+                "Gathering basic market information without timeline pressure",
+                "Initial consideration of future space requirements"
+            ]
+        }
+    elif context_analysis["context_type"] == "financial_decision":
         role_explanations = {
             "high": [
                 "Actively evaluating investment opportunities for portfolio growth",
@@ -878,7 +913,28 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
     # Context-aware risk explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["context_type"] == "financial_decision":
+    if context_analysis["is_real_estate"]:
+        risk_explanations = {
+            "high": [
+                "Thoroughly evaluates location factors and market trends",
+                "Carefully assesses property condition and future maintenance needs",
+                "Conducts detailed analysis of lease terms and restrictions",
+                "Prioritizes thorough inspection and location assessment"
+            ],
+            "medium": [
+                "Balances location benefits with budget considerations",
+                "Considers both short-term needs and long-term property value",
+                "Evaluates space requirements alongside financial constraints",
+                "Weighs accessibility against cost factors"
+            ],
+            "low": [
+                "Focuses primarily on location and immediate availability",
+                "Prioritizes quick move-in timeline over detailed assessment",
+                "Values flexibility and amenities over long-term considerations",
+                "Makes decisions based on first impressions and gut feeling"
+            ]
+        }
+    elif context_analysis["context_type"] == "financial_decision":
         risk_explanations = {
             "high": [
                 "Requires extensive due diligence and financial analysis",
@@ -971,7 +1027,23 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware alignment explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["context_type"] == "financial_decision":
+    if context_analysis["is_real_estate"]:
+        alignment_explanations = {
+            "high": {
+                "owner": ["Perfect location match for business growth needs", "Ideal space configuration for operational requirements", "Optimal property features for business objectives"],
+                "founder": ["Aligns perfectly with company expansion strategy", "Matches growth vision and space requirements", "Supports strategic business location needs"],
+                "ceo": ["Directly impacts company positioning and operations", "Aligns with executive vision for workspace needs", "Supports organizational growth objectives"],
+                "cto": ["Provides ideal infrastructure for technical operations", "Aligns with technology deployment requirements", "Supports IT infrastructure and connectivity needs"],
+                "default": ["Perfectly matches spatial and location requirements", "Aligns with organizational workspace strategy", "Supports business location objectives"]
+            },
+            "medium": {
+                "default": ["Good fit for most space requirements", "Meets basic location and facility needs", "Reasonable match for business location criteria", "Satisfies primary workspace requirements"]
+            },
+            "low": {
+                "default": ["Meets minimal location requirements", "Basic fit for space needs", "Acceptable but not ideal location match", "Functional but limited alignment with space criteria"]
+            }
+        }
+    elif context_analysis["context_type"] == "financial_decision":
         alignment_explanations = {
             "high": {
                 "owner": ["Directly impacts portfolio performance and financial goals", "Aligns with investment strategy and wealth building", "Supports long-term financial objectives"],
