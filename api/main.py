@@ -295,12 +295,39 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 if linkedin_url and not linkedin_url.startswith("http"):
                     candidate["linkedin_url"] = f"https://{linkedin_url}"
         
-        # Generate behavioral data for all candidates with uniqueness validation
+        # Generate behavioral data for all candidates with enhanced uniqueness validation
         try:
             from behavioral_metrics_ai import enhance_behavioral_data_for_multiple_candidates
+            
+            # Create a set to track used insights across all candidates
+            used_insights = set()
+            used_patterns = set()
+            
+            # Enhanced call with uniqueness tracking
             candidates = enhance_behavioral_data_for_multiple_candidates(candidates, prompt)
+            
+            # Additional uniqueness check across all candidates
+            for i, candidate in enumerate(candidates):
+                if isinstance(candidate, dict) and "behavioral_data" in candidate:
+                    insight = candidate["behavioral_data"].get("behavioral_insight", "")
+                    
+                    # If this insight is too similar to one we've seen before, regenerate it
+                    from openai_utils import validate_response_uniqueness
+                    if insight in used_insights or len(validate_response_uniqueness([insight] + list(used_insights), 0.5)) <= len(used_insights):
+                        from behavioral_metrics_ai import generate_diverse_fallback_insight, add_score_variation
+                        title = candidate.get('title', 'professional')
+                        
+                        # Generate truly diverse fallback
+                        new_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i + 100)  # Add offset to ensure different pattern
+                        candidate["behavioral_data"]["behavioral_insight"] = new_insight
+                        used_patterns.add(new_insight)
+                    
+                    # Track this insight for future uniqueness checks
+                    used_insights.add(candidate["behavioral_data"].get("behavioral_insight", ""))
+                    
         except Exception as e:
             # Fallback: generate behavioral data for each candidate individually with diversity
+            used_patterns = set()
             for i, candidate in enumerate(candidates):
                 if isinstance(candidate, dict):
                     try:
@@ -311,7 +338,8 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                         title = candidate.get('title', 'professional')
                         
                         # Generate diverse fallback with variation
-                        fallback_insight = generate_diverse_fallback_insight(title, candidate, prompt, set(), i)
+                        fallback_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i)
+                        used_patterns.add(fallback_insight)
                         base_scores = {
                             "cmi": {"score": 70, "explanation": "Forward motion"},
                             "rbfs": {"score": 65, "explanation": "Moderately sensitive"},

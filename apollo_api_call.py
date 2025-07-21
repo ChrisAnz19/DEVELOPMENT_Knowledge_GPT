@@ -106,7 +106,15 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
                     # Add https:// if missing
                     enriched_person["linkedin_url"] = f"https://{linkedin_url}"
                 
+                # Check if this person is in the exclusion list
+                from database import is_person_excluded_in_database
+                
                 if enriched_person.get("linkedin_url"):
+                    # Skip if this person is in the exclusion database
+                    if is_person_excluded_in_database(enriched_person.get("linkedin_url")):
+                        print(f"[Internal Database] Skipped (excluded): {enriched_person.get('name', 'Unknown')}")
+                        continue
+                        
                     enriched.append(enriched_person)
                     company_name = enriched_person.get("company", "Unknown Company")
                     print(f"[Internal Database] Enriched and kept: {enriched_person.get('name', 'Unknown')} at {company_name} ({enriched_person.get('linkedin_url')}) - Photo: {'Yes' if profile_photo_url else 'No'}")

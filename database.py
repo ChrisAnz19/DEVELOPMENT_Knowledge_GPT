@@ -1,5 +1,6 @@
 import json
 from typing import Dict, List, Any, Optional
+from datetime import datetime, timezone
 
 try:
     from supabase_client import supabase
@@ -120,7 +121,24 @@ def store_people_to_database(search_id: int, people: List[Dict[str, Any]]) -> bo
             if 'linkedin_url' in filtered_person and not filtered_person['linkedin_url'].startswith('http'):
                 filtered_person['linkedin_url'] = f"https://{filtered_person['linkedin_url']}"
             
+            # Store the person in the database
             supabase.table("people").insert(filtered_person).execute()
+            
+            # Also add to exclusions to prevent returning in future searches
+            if 'linkedin_url' in filtered_person and filtered_person['linkedin_url']:
+                try:
+                    # Only add to exclusions if not already there
+                    if not is_person_excluded_in_database(filtered_person['linkedin_url']):
+                        exclusion_data = {
+                            'linkedin_url': filtered_person['linkedin_url'],
+                            'name': filtered_person.get('name', ''),
+                            'reason': 'Previously returned in search results',
+                            'created_at': datetime.now(timezone.utc).isoformat() if 'datetime' in globals() else None
+                        }
+                        supabase.table("exclusions").insert(exclusion_data).execute()
+                except Exception:
+                    # Continue even if exclusion fails
+                    pass
         
         return True
         

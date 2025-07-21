@@ -539,7 +539,7 @@ def enhance_behavioral_data_for_multiple_candidates(
                 
                 # Check if this insight is too similar to previous ones
                 all_insights = generated_insights + [insight]
-                unique_insights = validate_response_uniqueness(all_insights, similarity_threshold=0.6)  # Stricter threshold
+                unique_insights = validate_response_uniqueness(all_insights, similarity_threshold=0.5)  # Stricter threshold for better uniqueness
                 
                 # If the new insight is not unique, generate a diverse fallback
                 if len(unique_insights) <= len(generated_insights):
@@ -579,6 +579,27 @@ def enhance_behavioral_data_for_multiple_candidates(
 def generate_diverse_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]], user_prompt: str, used_patterns: set, candidate_index: int) -> str:
     """Generate diverse fallback insights that avoid repetition."""
     role_lower = role.lower()
+    
+    # Check for personal purchase context first
+    context_type = analyze_search_context(user_prompt).get("context_type", "")
+    if context_type == "personal_purchase":
+        # Special insights for personal purchase scenarios (cars, homes, etc.)
+        personal_insights = [
+            "They research extensively before making personal purchases, comparing features and reviews.",
+            "They prioritize quality and durability in personal buying decisions.",
+            "They balance price considerations with long-term value in their purchases.",
+            "They seek recommendations from trusted sources before making significant purchases.",
+            "They evaluate personal purchases based on practical needs rather than status.",
+            "They consider long-term ownership costs beyond the initial purchase price.",
+            "They prefer hands-on experience with products before committing to major purchases."
+        ]
+        
+        # Select insight that hasn't been used
+        available_insights = [insight for insight in personal_insights if insight not in used_patterns]
+        if available_insights:
+            selected_insight = available_insights[candidate_index % len(available_insights)]
+            used_patterns.add(selected_insight)
+            return selected_insight
     
     # Create diverse insight pools based on role and context
     role_insights = {
