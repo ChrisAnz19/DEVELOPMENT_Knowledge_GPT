@@ -152,7 +152,10 @@ IMPORTANT GUIDELINES:
 4. AVOID unrealistic scenarios like "reading case studies about job postings" or "attending webinars" for all professions
 5. NEVER use generic phrases like "selected based on title and company fit"
 6. NEVER use the same phrases for multiple candidates
-7. NEVER use phrases that can be verified by a human, or that are too vague or generic.
+7. NEVER use phrases that can be verified by a human, or that are too vague or generic
+8. NEVER mention specific industries (like "real estate" or "healthcare") UNLESS they are explicitly mentioned in the user request
+9. For industry-specific references, use "their industry" or "their field" instead of naming a specific industry
+10. Focus on the specific product/service mentioned in the request (like "CRM" or "marketing automation") rather than inventing an industry context
 
 EXAMPLES OF GOOD BEHAVIORAL REASONS:
 - Engineering: "Visited GitHub repositories for React state management libraries 5 times in the past week"
@@ -165,6 +168,8 @@ EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 - "Attended webinars on job postings" (unrealistic for most professionals)
 - "Read case studies about the industry" (too vague)
 - "Showed interest in the field" (not specific enough)
+- "Researched case studies on successful CRM implementations in the real estate industry" (mentioning specific industry not in prompt)
+- "Analyzed healthcare marketing strategies" (mentioning specific industry not in prompt)
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
@@ -430,23 +435,23 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
             "junior": [
                 "Explored various social media analytics tools, comparing features and pricing",
                 "Studied content marketing strategies through online courses over a two-week period",
-                "Analyzed successful {marketing_channel} campaigns in the {industry_sector} industry",
+                "Analyzed successful {marketing_channel} campaigns for similar companies",
                 "Tracked performance metrics for {marketing_channel} across multiple platforms"
             ],
             "mid": [
                 "Compared marketing automation platforms, focusing on {marketing_feature} capabilities",
                 "Researched customer journey mapping tools, then explored implementation strategies",
                 "Analyzed competitor {marketing_channel} strategies over a three-month period",
-                "Studied attribution models for multi-channel campaigns, focusing on {industry_sector} applications"
+                "Studied attribution models for multi-channel campaigns relevant to their business"
             ],
             "senior": [
                 "Evaluated enterprise marketing platforms with focus on integration and analytics capabilities",
-                "Researched advanced segmentation strategies for {industry_sector} audiences",
-                "Analyzed ROI metrics for various marketing channels in the {industry_sector} space",
-                "Compared marketing technology stacks of leading companies in {industry_sector}"
+                "Researched advanced segmentation strategies for target audiences",
+                "Analyzed ROI metrics for various marketing channels in their business context",
+                "Compared marketing technology stacks of leading companies in their field"
             ],
             "executive": [
-                "Reviewed comprehensive market research reports for the {industry_sector} industry",
+                "Reviewed comprehensive market research reports relevant to their business",
                 "Analyzed marketing performance benchmarks across the competitive landscape",
                 "Researched emerging marketing technologies with potential strategic impact",
                 "Examined case studies of successful marketing transformations in similar organizations"
@@ -454,27 +459,27 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         },
         "sales": {
             "junior": [
-                "Researched prospecting techniques for {industry_sector} buyers {time_ref}, {duration} on outreach strategies",
+                "Researched prospecting techniques for target buyers {time_ref}, {duration} on outreach strategies",
                 "Studied product comparison guides {frequency} {time_ref}, analyzing competitive positioning",
                 "Explored CRM pipeline management features {time_ref}, testing different workflow configurations",
-                "Analyzed successful sales email templates {time_ref}, {duration} on {industry_sector} messaging"
+                "Analyzed successful sales email templates {time_ref}, {duration} on effective messaging"
             ],
             "mid": [
                 "Compared sales enablement platforms {time_ref}, evaluating content management and analytics capabilities",
-                "Researched negotiation strategies for {industry_sector} deals {frequency} {time_ref}, studying case examples",
-                "Analyzed win/loss patterns in {industry_sector} sales {time_ref}, {duration} on performance metrics",
-                "Studied account-based selling approaches {time_ref}, focusing on {industry_sector} target accounts"
+                "Researched negotiation strategies for complex deals {frequency} {time_ref}, studying case examples",
+                "Analyzed win/loss patterns in sales cycles {time_ref}, {duration} on performance metrics",
+                "Studied account-based selling approaches {time_ref}, focusing on high-value target accounts"
             ],
             "senior": [
-                "Evaluated enterprise sales methodologies {time_ref}, {duration} on {industry_sector} applications",
+                "Evaluated enterprise sales methodologies {time_ref}, {duration} on practical applications",
                 "Researched strategic account planning frameworks {frequency} {time_ref}, analyzing complex sales cycles",
                 "Analyzed sales performance data across regions {time_ref}, benchmarking against industry standards",
                 "Compared sales technology stacks {time_ref}, evaluating analytics and forecasting capabilities"
             ],
             "executive": [
-                "Reviewed {industry_sector} revenue forecasts {frequency} {time_ref}, analyzing growth projections",
+                "Reviewed revenue forecasts and growth projections {frequency} {time_ref}",
                 "Analyzed competitive positioning strategies {time_ref}, {duration} on market differentiation",
-                "Researched sales organizational structures {time_ref}, studying market leaders in {industry_sector}",
+                "Researched sales organizational structures {time_ref}, studying market leaders",
                 "Examined sales transformation case studies {frequency} {time_ref}, evaluating implementation strategies"
             ]
         },
@@ -518,7 +523,39 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
     }
     
     # Try to extract more specific topics from user prompt
-    if "cloud" in user_prompt or "aws" in user_prompt or "azure" in user_prompt:
+    if "crm" in user_prompt.lower():
+        # Add specific CRM-related patterns
+        if "marketing" in title.lower():
+            patterns["marketing"] = {
+                "junior": [
+                    "Visited CRM comparison websites like Capterra and G2 Crowd {frequency} {time_ref}",
+                    "Researched marketing automation integrations with CRM platforms {time_ref}",
+                    "Explored email marketing capabilities of various CRM solutions {time_ref}",
+                    "Analyzed CRM analytics features for marketing campaign tracking {time_ref}"
+                ],
+                "mid": [
+                    "Compared CRM platforms with marketing automation features {time_ref}",
+                    "Researched customer journey tracking capabilities in CRM systems {time_ref}",
+                    "Analyzed lead scoring methodologies across different CRM platforms {time_ref}",
+                    "Evaluated CRM reporting tools for marketing performance metrics {time_ref}"
+                ],
+                "senior": [
+                    "Evaluated enterprise CRM solutions with advanced marketing capabilities {time_ref}",
+                    "Researched CRM implementation strategies for marketing departments {time_ref}",
+                    "Analyzed ROI metrics for CRM-driven marketing campaigns {time_ref}",
+                    "Compared CRM-marketing integration approaches {time_ref}"
+                ],
+                "executive": [
+                    "Reviewed comprehensive CRM platform evaluations {time_ref}",
+                    "Analyzed marketing performance improvements from CRM implementations {time_ref}",
+                    "Researched CRM adoption strategies for marketing teams {time_ref}",
+                    "Examined case studies of successful CRM transformations {time_ref}"
+                ]
+            }
+        replacements["marketing_channel"] = "CRM-integrated"
+        replacements["marketing_feature"] = "CRM integration"
+        replacements["tech_tool"] = "CRM platforms"
+    elif "cloud" in user_prompt or "aws" in user_prompt or "azure" in user_prompt:
         replacements["tech_topic"] = "cloud infrastructure"
         replacements["tech_tool"] = "AWS" if "aws" in user_prompt else "Azure" if "azure" in user_prompt else "cloud platforms"
     elif "ai" in user_prompt or "machine learning" in user_prompt or "ml" in user_prompt:
@@ -532,15 +569,36 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         replacements["tech_topic"] = "API development"
         replacements["tech_framework"] = "Node.js" if "node" in user_prompt else "Django" if "python" in user_prompt else "backend frameworks"
     
-    # Extract industry sector from user prompt
-    if "healthcare" in user_prompt or "medical" in user_prompt:
-        replacements["industry_sector"] = "healthcare"
-    elif "finance" in user_prompt or "banking" in user_prompt:
-        replacements["industry_sector"] = "financial services"
-    elif "retail" in user_prompt or "ecommerce" in user_prompt:
-        replacements["industry_sector"] = "retail"
-    elif "manufacturing" in user_prompt:
-        replacements["industry_sector"] = "manufacturing"
+    # Extract industry sector from user prompt - ONLY if explicitly mentioned
+    industry_keywords = {
+        "healthcare": ["healthcare", "medical", "hospital", "clinic", "patient", "doctor", "physician", "health"],
+        "financial services": ["finance", "banking", "investment banking", "financial services", "bank", "credit union"],
+        "retail": ["retail", "ecommerce", "e-commerce", "store", "shop", "consumer goods"],
+        "manufacturing": ["manufacturing", "factory", "production", "industrial"],
+        "technology": ["tech company", "technology company", "software company", "saas company"],
+        "real estate": ["real estate", "property management", "realty"],
+        "education": ["education", "school", "university", "college", "academic"],
+        "hospitality": ["hospitality", "hotel", "restaurant", "tourism"]
+    }
+    
+    # Only set industry_sector if explicitly mentioned in the prompt
+    industry_found = False
+    for industry, keywords in industry_keywords.items():
+        if any(keyword in user_prompt for keyword in keywords):
+            replacements["industry_sector"] = industry
+            industry_found = True
+            break
+    
+    # If no specific industry is mentioned, use a generic term or leave it out
+    if not industry_found:
+        # Check if we're looking for a specific product/service
+        if "crm" in user_prompt.lower():
+            replacements["industry_sector"] = "their industry"  # Generic reference
+        elif "marketing automation" in user_prompt.lower():
+            replacements["industry_sector"] = "their industry"  # Generic reference
+        else:
+            # Remove industry-specific references completely by using generic terms
+            replacements["industry_sector"] = "their industry"
     
     return {
         "industry": industry,
