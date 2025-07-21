@@ -146,22 +146,23 @@ You are an expert at evaluating candidate fit based on simulated behavioral data
 You have access to a trillion rows of website visit data per month across 450k top domains and tens of millions of websites.
 
 IMPORTANT GUIDELINES:
-1. Generate REALISTIC behavioral reasons tailored to each candidate's industry and role
-2. Include TIME-SERIES patterns showing progression or repeated behaviors over time
-3. Be SPECIFIC about websites, tools, and resources relevant to their profession
-4. AVOID unrealistic scenarios like "reading case studies about job postings" or "attending webinars" for all professions
-5. NEVER use generic phrases like "selected based on title and company fit"
-6. NEVER use the same phrases for multiple candidates
-7. NEVER use phrases that can be verified by a human, or that are too vague or generic
-8. NEVER mention specific industries (like "real estate" or "healthcare") UNLESS they are explicitly mentioned in the user request
-9. For industry-specific references, use "their industry" or "their field" instead of naming a specific industry
-10. Focus on the specific product/service mentioned in the request (like "CRM" or "marketing automation") rather than inventing an industry context
+1. ANALYZE the user's request to identify key components: role, location, product/service interest, and any specific requirements
+2. Generate REALISTIC behavioral reasons tailored to each candidate's role and the specific product/service mentioned
+3. Include TIME-SERIES patterns showing progression or repeated behaviors over time
+4. Be SPECIFIC about websites, tools, and resources relevant to their profession and the mentioned product/service
+5. AVOID unrealistic scenarios like "reading case studies about job postings" or "attending webinars" for all professions
+6. NEVER use generic phrases like "selected based on title and company fit"
+7. NEVER use the same phrases for multiple candidates
+8. NEVER use phrases that can be verified by a human, or that are too vague or generic
+9. NEVER mention specific industries UNLESS they are explicitly mentioned in the user request
+10. Use "their industry" or "their field" instead of naming a specific industry
+11. FOCUS on the specific elements mentioned in the user's request rather than inventing additional context
 
 EXAMPLES OF GOOD BEHAVIORAL REASONS:
-- Engineering: "Visited GitHub repositories for React state management libraries 5 times in the past week"
-- Marketing: "Spent increasing amounts of time on Google Analytics and HubSpot over a three-week period"
-- Sales: "Researched CRM comparison tools, then focused specifically on Salesforce pricing pages"
-- Executive: "Reviewed quarterly reports from competitors, then researched market expansion strategies"
+- For "Find me a developer interested in React": "Visited GitHub repositories for React state management libraries 5 times in the past week"
+- For "Find me a marketing director looking for analytics tools": "Spent increasing amounts of time on Google Analytics and HubSpot over a three-week period"
+- For "Find me a sales manager interested in CRM": "Researched CRM comparison tools, then focused specifically on Salesforce pricing pages"
+- For "Find me a CEO in Miami": "Reviewed business expansion resources specific to the Miami market over the past month"
 
 EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 - "Selected based on title and company fit" (too generic)
@@ -170,6 +171,7 @@ EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 - "Showed interest in the field" (not specific enough)
 - "Researched case studies on successful CRM implementations in the real estate industry" (mentioning specific industry not in prompt)
 - "Analyzed healthcare marketing strategies" (mentioning specific industry not in prompt)
+- "Explored AI applications for financial services" (adding context not in the original prompt)
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
@@ -433,28 +435,28 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         },
         "marketing": {
             "junior": [
-                "Explored various social media analytics tools, comparing features and pricing",
-                "Studied content marketing strategies through online courses over a two-week period",
-                "Analyzed successful {marketing_channel} campaigns for similar companies",
-                "Tracked performance metrics for {marketing_channel} across multiple platforms"
+                "Explored various {tech_tool} options {time_ref}, comparing features and pricing",
+                "Studied {tech_topic} strategies through online courses {time_ref}",
+                "Analyzed successful marketing campaigns using {tech_tool} {time_ref}",
+                "Tracked performance metrics across multiple platforms {time_ref}"
             ],
             "mid": [
-                "Compared marketing automation platforms, focusing on {marketing_feature} capabilities",
-                "Researched customer journey mapping tools, then explored implementation strategies",
-                "Analyzed competitor {marketing_channel} strategies over a three-month period",
-                "Studied attribution models for multi-channel campaigns relevant to their business"
+                "Compared {tech_tool} solutions {time_ref}, focusing on {marketing_feature} capabilities",
+                "Researched implementation strategies for {tech_tool} {time_ref}",
+                "Analyzed competitor strategies related to {tech_topic} {time_ref}",
+                "Studied attribution models for campaigns relevant to their business {time_ref}"
             ],
             "senior": [
-                "Evaluated enterprise marketing platforms with focus on integration and analytics capabilities",
-                "Researched advanced segmentation strategies for target audiences",
-                "Analyzed ROI metrics for various marketing channels in their business context",
-                "Compared marketing technology stacks of leading companies in their field"
+                "Evaluated enterprise-level {tech_tool} options {time_ref}, focusing on integration capabilities",
+                "Researched advanced strategies for {tech_topic} {time_ref}",
+                "Analyzed ROI metrics for various solutions in their business context {time_ref}",
+                "Compared technology stacks of leading companies in {location_context} {time_ref}"
             ],
             "executive": [
-                "Reviewed comprehensive market research reports relevant to their business",
-                "Analyzed marketing performance benchmarks across the competitive landscape",
-                "Researched emerging marketing technologies with potential strategic impact",
-                "Examined case studies of successful marketing transformations in similar organizations"
+                "Reviewed comprehensive research reports on {tech_tool} solutions {time_ref}",
+                "Analyzed performance benchmarks across the competitive landscape {time_ref}",
+                "Researched emerging technologies related to {tech_topic} {time_ref}",
+                "Examined case studies of successful transformations using {tech_tool} {time_ref}"
             ]
         },
         "sales": {
@@ -522,54 +524,66 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         "marketing_feature": "automation"
     }
     
-    # Try to extract more specific topics from user prompt
-    if "crm" in user_prompt.lower():
-        # Add specific CRM-related patterns
-        if "marketing" in title.lower():
-            patterns["marketing"] = {
-                "junior": [
-                    "Visited CRM comparison websites like Capterra and G2 Crowd {frequency} {time_ref}",
-                    "Researched marketing automation integrations with CRM platforms {time_ref}",
-                    "Explored email marketing capabilities of various CRM solutions {time_ref}",
-                    "Analyzed CRM analytics features for marketing campaign tracking {time_ref}"
-                ],
-                "mid": [
-                    "Compared CRM platforms with marketing automation features {time_ref}",
-                    "Researched customer journey tracking capabilities in CRM systems {time_ref}",
-                    "Analyzed lead scoring methodologies across different CRM platforms {time_ref}",
-                    "Evaluated CRM reporting tools for marketing performance metrics {time_ref}"
-                ],
-                "senior": [
-                    "Evaluated enterprise CRM solutions with advanced marketing capabilities {time_ref}",
-                    "Researched CRM implementation strategies for marketing departments {time_ref}",
-                    "Analyzed ROI metrics for CRM-driven marketing campaigns {time_ref}",
-                    "Compared CRM-marketing integration approaches {time_ref}"
-                ],
-                "executive": [
-                    "Reviewed comprehensive CRM platform evaluations {time_ref}",
-                    "Analyzed marketing performance improvements from CRM implementations {time_ref}",
-                    "Researched CRM adoption strategies for marketing teams {time_ref}",
-                    "Examined case studies of successful CRM transformations {time_ref}"
-                ]
-            }
-        replacements["marketing_channel"] = "CRM-integrated"
-        replacements["marketing_feature"] = "CRM integration"
-        replacements["tech_tool"] = "CRM platforms"
-    elif "cloud" in user_prompt or "aws" in user_prompt or "azure" in user_prompt:
-        replacements["tech_topic"] = "cloud infrastructure"
-        replacements["tech_tool"] = "AWS" if "aws" in user_prompt else "Azure" if "azure" in user_prompt else "cloud platforms"
-    elif "ai" in user_prompt or "machine learning" in user_prompt or "ml" in user_prompt:
-        replacements["tech_topic"] = "machine learning"
-        replacements["tech_framework"] = "TensorFlow"
-        replacements["tech_tool"] = "AI platforms"
-    elif "frontend" in user_prompt or "react" in user_prompt or "angular" in user_prompt:
-        replacements["tech_topic"] = "frontend development"
-        replacements["tech_framework"] = "React" if "react" in user_prompt else "Angular" if "angular" in user_prompt else "modern JavaScript frameworks"
-    elif "backend" in user_prompt or "api" in user_prompt:
-        replacements["tech_topic"] = "API development"
-        replacements["tech_framework"] = "Node.js" if "node" in user_prompt else "Django" if "python" in user_prompt else "backend frameworks"
+    # Extract key topics and tools from the user prompt in a general way
+    # This approach avoids hardcoding specific cases like CRM or real estate
     
-    # Extract industry sector from user prompt - ONLY if explicitly mentioned
+    # Extract potential product/tool mentions
+    product_keywords = [
+        # General software categories
+        "crm", "erp", "cms", "lms", "hr software", "accounting software",
+        "marketing automation", "analytics", "bi tool", "project management",
+        "collaboration tool", "communication platform", "database", "cloud",
+        "saas", "security", "automation", "ai", "machine learning", "data science",
+        
+        # Specific products/platforms
+        "salesforce", "hubspot", "microsoft", "google", "aws", "azure",
+        "oracle", "sap", "workday", "slack", "zoom", "teams",
+        "react", "angular", "vue", "node", "python", "java"
+    ]
+    
+    # Find mentioned products/tools in the prompt
+    mentioned_products = []
+    for product in product_keywords:
+        if product in user_prompt.lower():
+            mentioned_products.append(product)
+    
+    # Use the most specific product mention as the primary tool
+    primary_tool = None
+    if mentioned_products:
+        # Sort by length (longer names are usually more specific)
+        mentioned_products.sort(key=len, reverse=True)
+        primary_tool = mentioned_products[0]
+        
+        # Set appropriate replacements based on the detected tool
+        if primary_tool in ["crm", "salesforce", "hubspot"]:
+            replacements["tech_tool"] = f"{primary_tool.upper() if len(primary_tool) <= 3 else primary_tool.title()} platforms"
+            replacements["marketing_feature"] = f"{primary_tool.upper() if len(primary_tool) <= 3 else primary_tool.title()} integration"
+        elif primary_tool in ["aws", "azure", "cloud"]:
+            replacements["tech_topic"] = "cloud infrastructure"
+            replacements["tech_tool"] = primary_tool.upper() if primary_tool in ["aws"] else primary_tool.title()
+        elif primary_tool in ["ai", "machine learning", "ml"]:
+            replacements["tech_topic"] = "machine learning"
+            replacements["tech_tool"] = "AI platforms"
+        elif primary_tool in ["react", "angular", "vue"]:
+            replacements["tech_topic"] = "frontend development"
+            replacements["tech_framework"] = primary_tool.title()
+        elif primary_tool in ["node", "python", "java"]:
+            replacements["tech_topic"] = "backend development"
+            replacements["tech_framework"] = primary_tool.title()
+    
+    # If no specific product is found, use generic terms based on role
+    if not primary_tool:
+        if "marketing" in title.lower():
+            replacements["tech_tool"] = "marketing platforms"
+            replacements["marketing_feature"] = "automation"
+        elif "sales" in title.lower():
+            replacements["tech_tool"] = "sales tools"
+            replacements["marketing_feature"] = "sales enablement"
+        elif any(tech_role in title.lower() for tech_role in ["developer", "engineer", "programmer", "technical"]):
+            replacements["tech_tool"] = "development tools"
+            replacements["tech_topic"] = "software development"
+    
+    # Extract industry context if explicitly mentioned in the prompt
     industry_keywords = {
         "healthcare": ["healthcare", "medical", "hospital", "clinic", "patient", "doctor", "physician", "health"],
         "financial services": ["finance", "banking", "investment banking", "financial services", "bank", "credit union"],
@@ -581,24 +595,34 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
         "hospitality": ["hospitality", "hotel", "restaurant", "tourism"]
     }
     
-    # Only set industry_sector if explicitly mentioned in the prompt
-    industry_found = False
+    # Check for explicit industry mentions
     for industry, keywords in industry_keywords.items():
-        if any(keyword in user_prompt for keyword in keywords):
+        if any(keyword in user_prompt.lower() for keyword in keywords):
             replacements["industry_sector"] = industry
-            industry_found = True
+            break
+    else:
+        # Default to a contextual but generic reference
+        replacements["industry_sector"] = "their industry"
+    
+    # Extract location if mentioned (for more contextual relevance)
+    location_keywords = [
+        "new york", "san francisco", "chicago", "boston", "seattle", "austin", 
+        "los angeles", "miami", "dallas", "denver", "atlanta", "washington",
+        "california", "texas", "florida", "massachusetts", "washington", "new jersey"
+    ]
+    
+    # Check for location mentions
+    location_found = None
+    for location in location_keywords:
+        if location in user_prompt.lower():
+            location_found = location.title()
             break
     
-    # If no specific industry is mentioned, use a generic term or leave it out
-    if not industry_found:
-        # Check if we're looking for a specific product/service
-        if "crm" in user_prompt.lower():
-            replacements["industry_sector"] = "their industry"  # Generic reference
-        elif "marketing automation" in user_prompt.lower():
-            replacements["industry_sector"] = "their industry"  # Generic reference
-        else:
-            # Remove industry-specific references completely by using generic terms
-            replacements["industry_sector"] = "their industry"
+    # Add location context if found
+    if location_found:
+        replacements["location_context"] = location_found
+    else:
+        replacements["location_context"] = "their region"
     
     return {
         "industry": industry,
