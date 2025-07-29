@@ -14,9 +14,10 @@ try:
             content = f.read()
         decoder = json.JSONDecoder()
         _secrets, _ = decoder.raw_decode(content)
-        INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key")
-        SCRAPING_DOG_API_KEY = SCRAPING_DOG_API_KEY or _secrets.get("scraping_dog_api_key")
-        OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key")
+        # Handle both uppercase and lowercase key names for compatibility
+        INTERNAL_DATABASE_API_KEY = INTERNAL_DATABASE_API_KEY or _secrets.get("internal_database_api_key") or _secrets.get("INTERNAL_DATABASE_API_KEY")
+        SCRAPING_DOG_API_KEY = SCRAPING_DOG_API_KEY or _secrets.get("scraping_dog_api_key") or _secrets.get("SCRAPING_DOG_API_KEY")
+        OPENAI_API_KEY = OPENAI_API_KEY or _secrets.get("openai_key") or _secrets.get("OPENAI_API_KEY")
 except (FileNotFoundError, json.JSONDecodeError):
     INTERNAL_DATABASE_API_KEY = os.getenv("INTERNAL_DATABASE_API_KEY")
     SCRAPING_DOG_API_KEY = os.getenv("SCRAPING_DOG_API_KEY")

@@ -8,7 +8,8 @@ if not os.getenv('OPENAI_API_KEY'):
     try:
         with open("secrets.json", "r") as f:
             secrets = json.load(f)
-            os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
+            # Handle both uppercase and lowercase key names for compatibility
+            os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '') or secrets.get('OPENAI_API_KEY', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 

@@ -1,5 +1,6 @@
 from supabase import create_client, Client
 import os
+import os.path
 import json
 import logging
 
@@ -15,11 +16,34 @@ def load_supabase_creds():
     
     if not url or not key:
         try:
-            with open("secrets.json") as f:
-                secrets = json.load(f)
-                url = url or secrets.get("supabase_url")
-                key = key or secrets.get("supabase_key")
+            # Try multiple possible locations for secrets.json
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            secrets_paths = [
+                "secrets.json",  # Current working directory
+                os.path.join(current_dir, "secrets.json"),  # Same directory as this file
+                os.path.join(current_dir, "..", "secrets.json"),  # Parent directory
+                os.path.join(os.getcwd(), "secrets.json")  # Current working directory (explicit)
+            ]
+            secrets = None
+            
+            for path in secrets_paths:
+                try:
+                    with open(path) as f:
+                        secrets = json.load(f)
+                        logger.info(f"Found secrets.json at: {path}")
+                        break
+                except (FileNotFoundError, json.JSONDecodeError) as e:
+                    logger.debug(f"Failed to load {path}: {e}")
+                    continue
+            
+            if secrets:
+                # Try both uppercase and lowercase key names for compatibility
+                url = url or secrets.get("supabase_url") or secrets.get("SUPABASE_URL")
+                key = key or secrets.get("supabase_key") or secrets.get("SUPABASE_KEY")
                 logger.info(f"Loaded from secrets.json - URL: {url}, Key: {key[:10] if key else 'None'}...")
+            else:
+                raise FileNotFoundError("secrets.json not found in any expected location")
+                
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logger.warning(f"Could not load secrets.json: {e}")
     

@@ -18,11 +18,12 @@ if not os.getenv('OPENAI_API_KEY'):
     try:
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "secrets.json"), "r") as f:
             secrets = json.load(f)
-            os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '')
-            os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '')
-            os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '')
-            os.environ['SUPABASE_URL'] = secrets.get('supabase_url', '')
-            os.environ['SUPABASE_KEY'] = secrets.get('supabase_key', '')
+            # Handle both uppercase and lowercase key names for compatibility
+            os.environ['OPENAI_API_KEY'] = secrets.get('openai_api_key', '') or secrets.get('OPENAI_API_KEY', '')
+            os.environ['INTERNAL_DATABASE_API_KEY'] = secrets.get('internal_database_api_key', '') or secrets.get('INTERNAL_DATABASE_API_KEY', '')
+            os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '') or secrets.get('SCRAPING_DOG_API_KEY', '')
+            os.environ['SUPABASE_URL'] = secrets.get('supabase_url', '') or secrets.get('SUPABASE_URL', '')
+            os.environ['SUPABASE_KEY'] = secrets.get('supabase_key', '') or secrets.get('SUPABASE_KEY', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
@@ -361,18 +362,29 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         # Generate estimation for the search
         try:
             estimation = estimate_people_count(prompt)
+            # Store in both formats for compatibility
             search_data["estimated_count"] = estimation["estimated_count"]
+            search_data["result_estimation"] = {
+                "estimated_count": estimation["estimated_count"],
+                "confidence": "high",
+                "reasoning": estimation.get("reasoning", f"AI estimated {estimation['estimated_count']} people meet the criteria"),
+                "limiting_factors": []
+            }
             print(f"[Estimation] Generated estimate: {estimation['estimated_count']} people for prompt: {prompt}")
+            print(f"[Estimation] search_data now contains: estimated_count={search_data.get('estimated_count')}, result_estimation={search_data.get('result_estimation')}")
         except Exception as e:
             print(f"[Estimation] Failed to generate estimate: {e}")
             search_data["estimated_count"] = None
+            search_data["result_estimation"] = None
         
         if not is_completed:
             try:
                 search_data["status"] = "completed"
                 search_data["filters"] = json.dumps(filters)
                 search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                print(f"[Estimation] About to store search_data with estimated_count: {search_data.get('estimated_count')}")
                 store_search_to_database(search_data)
+                print(f"[Estimation] Successfully stored search data to database")
                 is_completed = True
             except Exception:
                 try:
@@ -535,6 +547,25 @@ async def get_search_result(request_id: str):
                 search_data["status"] = "completed"
                 if not search_data.get("completed_at"):
                     search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+        
+        # Extract estimated_count from result_estimation if it exists
+        print(f"[Estimation] Retrieved search_data from DB: estimated_count={search_data.get('estimated_count')}, result_estimation={search_data.get('result_estimation')}")
+        
+        if "result_estimation" in search_data and search_data["result_estimation"]:
+            if isinstance(search_data["result_estimation"], dict):
+                search_data["estimated_count"] = search_data["result_estimation"].get("estimated_count")
+                print(f"[Estimation] Extracted estimated_count from dict result_estimation: {search_data['estimated_count']}")
+            elif isinstance(search_data["result_estimation"], str):
+                try:
+                    result_est = json.loads(search_data["result_estimation"])
+                    search_data["estimated_count"] = result_est.get("estimated_count")
+                    print(f"[Estimation] Extracted estimated_count from JSON result_estimation: {search_data['estimated_count']}")
+                except json.JSONDecodeError:
+                    print(f"[Estimation] Failed to parse result_estimation JSON: {search_data['result_estimation']}")
+        else:
+            print(f"[Estimation] No result_estimation found or it's null")
+        
+        print(f"[Estimation] Final search_data estimated_count before return: {search_data.get('estimated_count')}")
         
         return search_data
         

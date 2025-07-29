@@ -56,13 +56,20 @@ def store_search_to_database(search_data: Dict[str, Any]) -> Optional[int]:
         elif "id" in search_data:
             del search_data["id"]
         
+        # Debug logging for estimation data
+        print(f"[Database] Storing search_data with estimated_count: {search_data.get('estimated_count')}")
+        print(f"[Database] Storing search_data with result_estimation: {search_data.get('result_estimation')}")
+        
         res = supabase.table("searches").upsert(search_data).execute()
         
         if hasattr(res, 'data') and res.data:
-            return res.data[0].get('id')
+            stored_id = res.data[0].get('id')
+            print(f"[Database] Successfully stored search with ID: {stored_id}")
+            return stored_id
         return None
         
-    except Exception:
+    except Exception as e:
+        print(f"[Database] Error storing search data: {e}")
         return None
 
 def get_search_from_database(request_id: str) -> Optional[Dict[str, Any]]:
@@ -73,10 +80,14 @@ def get_search_from_database(request_id: str) -> Optional[Dict[str, Any]]:
         res = supabase.table("searches").select("*").eq("request_id", request_id).execute()
         
         if hasattr(res, 'data') and res.data:
-            return res.data[0]
+            search_data = res.data[0]
+            print(f"[Database] Retrieved search_data with estimated_count: {search_data.get('estimated_count')}")
+            print(f"[Database] Retrieved search_data with result_estimation: {search_data.get('result_estimation')}")
+            return search_data
         return None
             
-    except Exception:
+    except Exception as e:
+        print(f"[Database] Error retrieving search data: {e}")
         return None
 
 def get_recent_searches_from_database(limit: int = 10) -> List[Dict[str, Any]]:
