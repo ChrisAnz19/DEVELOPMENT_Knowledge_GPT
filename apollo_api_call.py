@@ -20,9 +20,12 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
     payload.update(filters.get("person_filters", {}))
     
     # Add US location filter to limit results to United States
-    if "person_filters" not in payload:
-        payload["person_filters"] = {}
-    payload["person_filters"]["locations"] = ["United States"]
+    if "person_locations" not in payload:
+        payload["person_locations"] = ["United States"]
+    else:
+        # Add United States to existing locations if not already there
+        if "United States" not in payload["person_locations"]:
+            payload["person_locations"].append("United States")
     
     payload["page"] = page
     payload["per_page"] = per_page
@@ -30,6 +33,9 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
     headers = {
         "x-api-key": INTERNAL_DATABASE_API_KEY
     }
+
+    # Debug: Print the payload being sent
+    print(f"[Apollo API] Sending payload: {json.dumps(payload, indent=2)}")
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -42,6 +48,9 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
             data = response.json()
     except Exception as e:
         print(f"⚠️  Apollo API request failed: {e}")
+        if hasattr(e, 'response') and e.response:
+            print(f"[Apollo API] Response status: {e.response.status_code}")
+            print(f"[Apollo API] Response body: {e.response.text}")
         return []
 
     people = data.get("people", [])
