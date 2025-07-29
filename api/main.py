@@ -37,6 +37,7 @@ from database import (
 )
 from behavioral_metrics_ai import enhance_behavioral_data_ai
 from smart_prompt_enhancement import enhance_prompt
+from simple_estimation import estimate_people_count
 
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
@@ -77,7 +78,7 @@ async def is_public_figure(full_name: str) -> bool:
         _public_figure_cache[name_key] = False
         return False
 
-app = FastAPI(title="Knowledge_GPT API", version="1.0.0")
+app = FastAPI(title="Knowledge_GPT API with People Estimation", version="1.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -101,6 +102,7 @@ class SearchResponse(BaseModel):
     error: Optional[str] = None
     created_at: str
     completed_at: Optional[str] = None
+    estimated_count: Optional[int] = None
 
 def extract_profile_photo_url(candidate_data, linkedin_profile=None):
     try:
@@ -355,6 +357,15 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         search_db_id = search_data.get("id")
         if search_db_id:
             store_people_to_database(search_db_id, candidates)
+        
+        # Generate estimation for the search
+        try:
+            estimation = estimate_people_count(prompt)
+            search_data["estimated_count"] = estimation["estimated_count"]
+            print(f"[Estimation] Generated estimate: {estimation['estimated_count']} people for prompt: {prompt}")
+        except Exception as e:
+            print(f"[Estimation] Failed to generate estimate: {e}")
+            search_data["estimated_count"] = None
         
         if not is_completed:
             try:
