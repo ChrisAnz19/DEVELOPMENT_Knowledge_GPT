@@ -38,12 +38,13 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         Dictionary with detection results and witty response if needed
     """
     
-    # Check for full names (First Last pattern)
-    full_name_pattern = r'(?<!^)(?<!\. )\b[A-Z][a-z]+\s+[A-Z][a-z]+\b'
+    # Check for full names (First Last pattern) - be more specific to avoid false positives
+    # Look for capitalized words that are likely names (at least 3 letters each)
+    full_name_pattern = r'(?<!^)(?<!\. )\b[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\b'
     full_names = re.findall(full_name_pattern, prompt)
     
-    # Also check for names at the beginning of sentences
-    start_name_pattern = r'^[A-Z][a-z]+\s+[A-Z][a-z]+\b'
+    # Also check for names at the beginning of sentences (but be more restrictive)
+    start_name_pattern = r'^[A-Z][a-z]{2,}\s+[A-Z][a-z]{2,}\b'
     start_full_names = re.findall(start_name_pattern, prompt)
     
     # Check for single names that could be first names or last names
@@ -125,6 +126,7 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         "Make", "Create", "Build", "Design", "Develop", "Write", "Read", "Open", "Close",
         "Start", "Stop", "Begin", "End", "Help", "Support", "Service", "Team", "Group",
         "Company", "Business", "Organization", "Department", "Division", "Unit", "Office",
+        "What", "Where", "When", "Why", "How", "Who", "Which", "That", "This", "These", "Those",
         
         # Professional terms that might be capitalized
         "Marketing", "Sales", "Finance", "Technology", "Engineering", "Operations", "Legal",
@@ -248,14 +250,15 @@ def extract_user_first_name_from_context(request_context: dict = None) -> Option
         User's first name if available, None otherwise
     """
     
-    # For now, return None - this can be expanded later with actual user data
+    # For now, return a default name - this can be expanded later with actual user data
     # In the future, this could pull from:
     # - JWT tokens
     # - Session data  
     # - User profiles
     # - Request headers
     
-    return None
+    # TODO: Replace with actual user name extraction
+    return "Chris"  # Default for now - should be replaced with actual user data
 
 if __name__ == "__main__":
     # Test the creepy detector
