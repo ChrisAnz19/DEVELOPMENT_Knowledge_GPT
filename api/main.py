@@ -39,6 +39,7 @@ from database import (
 from behavioral_metrics_ai import enhance_behavioral_data_ai
 from smart_prompt_enhancement import enhance_prompt
 from simple_estimation import estimate_people_count
+from creepy_detector import detect_specific_person_search, extract_user_first_name_from_context
 
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
@@ -451,6 +452,29 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
                 status_code=400,
                 detail="Please provide more specific search criteria. What role, industry, or professional background are you looking for?"
             )
+        
+        # Check for creepy searches (specific person by name)
+        print(f"[DEBUG] About to check creepy detection for prompt: '{request.prompt.strip()}'")
+        try:
+            user_first_name = extract_user_first_name_from_context()  # Can be expanded later with actual user data
+            creepy_detection = detect_specific_person_search(request.prompt.strip(), user_first_name)
+            print(f"[DEBUG] Creepy detection result: {creepy_detection}")
+            
+            if creepy_detection["is_creepy"]:
+                # Log the creepy search attempt for monitoring
+                print(f"[Creepy Detector] Blocked search for: {creepy_detection['detected_names']} - Reason: {creepy_detection.get('reasoning', 'Unknown')}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=creepy_detection["response"]
+                )
+            else:
+                print(f"[DEBUG] Search allowed - not creepy")
+        except Exception as e:
+            print(f"[DEBUG] Exception in creepy detection: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue with the search if creepy detection fails
+            pass
         
         # Check for requests that are too broad
         if len(prompt_lower.split()) < 3:
