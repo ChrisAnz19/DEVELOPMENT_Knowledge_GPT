@@ -435,9 +435,28 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         
         for pattern in inappropriate_patterns:
             if pattern in prompt_lower:
+                # Store the failed search in database for history
+                request_id = str(uuid.uuid4())
+                created_at = datetime.now(timezone.utc).isoformat()
+                error_message = f"Search request appears to be looking for well-known public figures. Please search for specific professional roles or industries instead."
+                
+                failed_search_data = {
+                    "request_id": request_id,
+                    "status": "failed",
+                    "prompt": request.prompt.strip(),
+                    "filters": json.dumps({}),
+                    "created_at": created_at,
+                    "completed_at": created_at,
+                    "error": error_message,
+                    "estimated_count": None,
+                    "result_estimation": None
+                }
+                
+                store_search_to_database(failed_search_data)
+                
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Search request appears to be looking for well-known public figures. Please search for specific professional roles or industries instead."
+                    detail=error_message
                 )
         
         # Check for overly vague or nonsensical requests
@@ -448,9 +467,28 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         ]
         
         if any(pattern in prompt_lower for pattern in vague_patterns):
+            # Store the failed search in database for history
+            request_id = str(uuid.uuid4())
+            created_at = datetime.now(timezone.utc).isoformat()
+            error_message = "Please provide more specific search criteria. What role, industry, or professional background are you looking for?"
+            
+            failed_search_data = {
+                "request_id": request_id,
+                "status": "failed",
+                "prompt": request.prompt.strip(),
+                "filters": json.dumps({}),
+                "created_at": created_at,
+                "completed_at": created_at,
+                "error": error_message,
+                "estimated_count": None,
+                "result_estimation": None
+            }
+            
+            store_search_to_database(failed_search_data)
+            
             raise HTTPException(
                 status_code=400,
-                detail="Please provide more specific search criteria. What role, industry, or professional background are you looking for?"
+                detail=error_message
             )
         
         # Check for creepy searches (specific person by name)
@@ -460,6 +498,25 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         if creepy_detection["is_creepy"]:
             # Log the creepy search attempt for monitoring
             print(f"[Creepy Detector] Blocked search for: {creepy_detection['detected_names']} - Reason: {creepy_detection.get('reasoning', 'Unknown')}")
+            
+            # Store the failed search in database for history
+            request_id = str(uuid.uuid4())
+            created_at = datetime.now(timezone.utc).isoformat()
+            
+            failed_search_data = {
+                "request_id": request_id,
+                "status": "failed",
+                "prompt": request.prompt.strip(),
+                "filters": json.dumps({}),
+                "created_at": created_at,
+                "completed_at": created_at,
+                "error": creepy_detection["response"],
+                "estimated_count": None,
+                "result_estimation": None
+            }
+            
+            store_search_to_database(failed_search_data)
+            
             raise HTTPException(
                 status_code=400,
                 detail=creepy_detection["response"]
@@ -467,9 +524,28 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         
         # Check for requests that are too broad
         if len(prompt_lower.split()) < 3:
+            # Store the failed search in database for history
+            request_id = str(uuid.uuid4())
+            created_at = datetime.now(timezone.utc).isoformat()
+            error_message = "Please provide more detailed search criteria. Include role, industry, or specific requirements."
+            
+            failed_search_data = {
+                "request_id": request_id,
+                "status": "failed",
+                "prompt": request.prompt.strip(),
+                "filters": json.dumps({}),
+                "created_at": created_at,
+                "completed_at": created_at,
+                "error": error_message,
+                "estimated_count": None,
+                "result_estimation": None
+            }
+            
+            store_search_to_database(failed_search_data)
+            
             raise HTTPException(
                 status_code=400,
-                detail="Please provide more detailed search criteria. Include role, industry, or specific requirements."
+                detail=error_message
             )
         
         if request.max_candidates and (request.max_candidates < 1 or request.max_candidates > 10):
@@ -572,9 +648,23 @@ async def get_search_result(request_id: str):
                 except json.JSONDecodeError:
                     pass
         
-        # Ensure estimated_count is present for backward compatibility
+        # Ensure all required fields are present for backward compatibility
         if "estimated_count" not in search_data:
             search_data["estimated_count"] = None
+        if "error" not in search_data:
+            search_data["error"] = None
+        if "result_estimation" not in search_data:
+            search_data["result_estimation"] = None
+        
+        # Ensure status is valid
+        if "status" not in search_data or search_data["status"] not in ["processing", "completed", "failed"]:
+            # Determine status based on other fields
+            if search_data.get("error"):
+                search_data["status"] = "failed"
+            elif search_data.get("completed_at"):
+                search_data["status"] = "completed"
+            else:
+                search_data["status"] = "processing"
         
         return search_data
         

@@ -96,6 +96,20 @@ def get_recent_searches_from_database(limit: int = 10) -> List[Dict[str, Any]]:
                 # Add result_estimation if missing
                 if "result_estimation" not in search or search["result_estimation"] is None:
                     search["result_estimation"] = None
+                
+                # Add error field if missing
+                if "error" not in search:
+                    search["error"] = None
+                
+                # Ensure status is valid
+                if "status" not in search or search["status"] not in ["processing", "completed", "failed"]:
+                    # Determine status based on other fields
+                    if search.get("error"):
+                        search["status"] = "failed"
+                    elif search.get("completed_at"):
+                        search["status"] = "completed"
+                    else:
+                        search["status"] = "processing"
         
         return searches
     except Exception:
