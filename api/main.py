@@ -562,23 +562,19 @@ async def get_search_result(request_id: str):
                     search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
         
         # Extract estimated_count from result_estimation if it exists
-        print(f"[Estimation] Retrieved search_data from DB: estimated_count={search_data.get('estimated_count')}, result_estimation={search_data.get('result_estimation')}")
-        
         if "result_estimation" in search_data and search_data["result_estimation"]:
             if isinstance(search_data["result_estimation"], dict):
                 search_data["estimated_count"] = search_data["result_estimation"].get("estimated_count")
-                print(f"[Estimation] Extracted estimated_count from dict result_estimation: {search_data['estimated_count']}")
             elif isinstance(search_data["result_estimation"], str):
                 try:
                     result_est = json.loads(search_data["result_estimation"])
                     search_data["estimated_count"] = result_est.get("estimated_count")
-                    print(f"[Estimation] Extracted estimated_count from JSON result_estimation: {search_data['estimated_count']}")
                 except json.JSONDecodeError:
-                    print(f"[Estimation] Failed to parse result_estimation JSON: {search_data['result_estimation']}")
-        else:
-            print(f"[Estimation] No result_estimation found or it's null")
+                    pass
         
-        print(f"[Estimation] Final search_data estimated_count before return: {search_data.get('estimated_count')}")
+        # Ensure estimated_count is present for backward compatibility
+        if "estimated_count" not in search_data:
+            search_data["estimated_count"] = None
         
         return search_data
         
