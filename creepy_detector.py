@@ -118,8 +118,8 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         "Augmented Reality", "Cyber Security", "Block Chain", "Neural Network",
         
         # Common job-related words that might be capitalized
-        "Manager", "Director", "Engineer", "Developer", "Analyst", "Specialist", "Coordinator",
-        "Assistant", "Executive", "Officer", "Representative", "Consultant", "Administrator",
+        "Manager", "Managers", "Director", "Directors", "Engineer", "Engineers", "Developer", "Developers", "Analyst", "Analysts", "Specialist", "Specialists", "Coordinator", "Coordinators",
+        "Assistant", "Assistants", "Executive", "Executives", "Officer", "Officers", "Representative", "Representatives", "Consultant", "Consultants", "Administrator", "Administrators", "Founder", "Founders", "Co-founder", "Co-founders", "CoFounder", "CoFounders", "CEO", "CEOs", "CTO", "CTOs", "CFO", "CFOs", "COO", "COOs", "President", "Presidents", "Owner", "Owners", "Managing Director", "Managing Directors",
         
         # Common words that might be mistaken for names
         "Find", "Get", "Show", "Looking", "Search", "Tell", "Give", "Bring", "Send", "Take",
