@@ -381,7 +381,6 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
         
         # Check for unrealistic behavioral patterns
         unrealistic_patterns = [
-            "webinar", "attended", "viewed a webinar", "webinar about", "engaged with webinars",
             "searched for", "search for", "googled", "google search",
             "implementing crm in", "implementing analytics in", "solutions in new york",
             "solutions in california", "solutions in texas", "solutions in florida"
