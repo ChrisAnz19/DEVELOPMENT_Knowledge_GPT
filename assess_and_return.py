@@ -796,6 +796,10 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
         product_interests.append("cybersecurity")
     if "firewall" in prompt_lower or "antivirus" in prompt_lower or "malware" in prompt_lower:
         product_interests.append("security software")
+    if "commercial oven" in prompt_lower or "kitchen equipment" in prompt_lower or "restaurant equipment" in prompt_lower:
+        product_interests.append("commercial ovens")
+    if "food service" in prompt_lower or "culinary equipment" in prompt_lower:
+        product_interests.append("kitchen equipment")
     
     # Extract location from prompt (but keep separate from product research)
     location_mentioned = False
@@ -814,7 +818,9 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
             "sales tools": ["Outreach", "SalesLoft", "Gong", "Chorus", "ZoomInfo"],
             "endpoint protection": ["CrowdStrike", "SentinelOne", "Microsoft Defender", "Symantec", "McAfee"],
             "cybersecurity": ["Palo Alto Networks", "Fortinet", "Check Point", "Cisco Security", "Splunk"],
-            "security software": ["Norton", "Kaspersky", "Bitdefender", "Trend Micro", "ESET"]
+            "security software": ["Norton", "Kaspersky", "Bitdefender", "Trend Micro", "ESET"],
+            "commercial ovens": ["Rational", "Convotherm", "Blodgett", "Vulcan", "Garland"],
+            "kitchen equipment": ["Hobart", "Rational", "Manitowoc", "True Manufacturing", "Hoshizaki"]
         }
         
         vendors = vendor_options.get(product, ["leading platforms", "top solutions", "major vendors"])
@@ -840,7 +846,20 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                     f"Reviewed {product} scalability and performance benchmarks for {vendor1}",
                     f"Compared enterprise {product} solutions including {vendor1} integration capabilities"
                 ])
-        elif "ceo" in title_lower or "executive" in title_lower:
+        elif "chef" in title_lower or "culinary" in title_lower:
+            if product in ["commercial ovens", "kitchen equipment", "restaurant equipment"]:
+                reasons.extend([
+                    f"Evaluated {vendor1} and {vendor2} commercial oven capacity and energy efficiency ratings",
+                    f"Analyzed {product} temperature control features comparing {vendor1} cooking performance",
+                    f"Researched {product} maintenance requirements and warranty coverage for {vendor1}"
+                ])
+            else:
+                reasons.extend([
+                    f"Researched {product} solutions comparing {vendor1} and {vendor2} for kitchen operations",
+                    f"Analyzed {product} integration with existing kitchen workflow and equipment",
+                    f"Reviewed {product} cost-effectiveness and operational efficiency for {vendor1}"
+                ])
+        elif ("ceo" in title_lower or "executive" in title_lower) and "chef" not in title_lower:
             reasons.extend([
                 f"Analyzed {product} market research reports comparing {vendor1} vs {vendor2}",
                 f"Reviewed {product} case studies focusing on business impact and ROI metrics",
@@ -894,6 +913,12 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                     "Analyzed cloud migration strategies and enterprise architecture frameworks",
                     "Researched emerging technology trends and digital transformation initiatives"
                 ]
+        elif "chef" in title_lower or "culinary" in title_lower:
+            role_reasons = [
+                "Analyzed commercial kitchen efficiency and equipment utilization metrics",
+                "Researched food cost optimization and inventory management solutions",
+                "Compared kitchen workflow automation and equipment integration options"
+            ]
         elif "ceo" in title_lower:
             role_reasons = [
                 "Reviewed industry benchmarking reports and competitive positioning analysis",
