@@ -959,7 +959,7 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                         f"Followed legal expert commentary on democracy and executive authority"
                     ],
                     [
-                        f"Tracked breaking news developments through {vendor2} mobile app",
+                        f"Visited {vendor2} website multiple times for breaking news updates",
                         f"Read investigative reporting on election processes and voting rights",
                         f"Subscribed to political newsletters covering constitutional law debates"
                     ],
