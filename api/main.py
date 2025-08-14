@@ -477,8 +477,31 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
         if not request.prompt or not request.prompt.strip():
             raise HTTPException(status_code=400, detail="Prompt cannot be empty")
         
+        # Preprocess prompt to convert generic terms to "executives" before validation
+        def preprocess_prompt_for_validation(prompt_text: str) -> str:
+            """Convert generic people terms to 'executives' for better search results."""
+            generic_terms = [
+                "people", "persons", "person", "anyone", "somebody", "someone",
+                "individuals", "individual", "professionals", "professional",
+                "contacts", "contact", "leads", "lead"
+            ]
+            
+            processed_prompt = prompt_text
+            
+            # Replace generic terms with "executives"
+            for term in generic_terms:
+                # Use word boundaries to avoid partial matches
+                pattern = r'\b' + re.escape(term) + r'\b'
+                if re.search(pattern, processed_prompt, re.IGNORECASE):
+                    processed_prompt = re.sub(pattern, 'executives', processed_prompt, flags=re.IGNORECASE)
+            
+            return processed_prompt
+        
+        # Apply preprocessing before validation
+        preprocessed_prompt = preprocess_prompt_for_validation(request.prompt.strip())
+        
         # Validate prompt for ridiculous or inappropriate content
-        prompt_lower = request.prompt.lower().strip()
+        prompt_lower = preprocessed_prompt.lower().strip()
         
         # Check for obviously inappropriate requests - only the most obvious cases
         inappropriate_patterns = [
