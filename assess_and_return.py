@@ -915,7 +915,7 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                     [
                         f"Followed breaking news updates on {topic} from {vendor1}, {vendor2}, and political newsletters",
                         f"Researched {topic} through social media posts from verified political experts and {vendor1} journalists",
-                        f"Watched live coverage and analysis of {topic} on {vendor2} and YouTube political channels"
+                        f"Watched live coverage and analysis of {topic} on {vendor2} and C-SPAN political programming"
                     ]
                 ]
                 pattern_set = journalist_patterns[candidate_index % len(journalist_patterns)]
@@ -959,8 +959,8 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                         f"Analyzed historical precedents related to {topic} using {vendor2} archives and political science research"
                     ],
                     [
-                        f"Followed breaking news on {recent_context} through {vendor1}, {vendor2}, and push notifications",
-                        f"Watched documentary coverage of {topic} on {vendor1}, PBS, and Netflix political documentaries",
+                        f"Followed breaking news on {recent_context} through {vendor1}, {vendor2}, and political news apps",
+                        f"Read in-depth investigative reports on {topic} from {vendor1}, PBS, and Associated Press coverage",
                         f"Read opinion pieces about {recent_context} from {vendor1} columnists and {vendor2} editorial boards"
                     ],
                     [
@@ -969,9 +969,9 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                         f"Subscribed to political newsletters covering {recent_context} from {vendor1} and independent analysts"
                     ],
                     [
-                        f"Tracked real-time updates on {recent_context} through {vendor1} breaking news alerts and {vendor2} live blogs",
+                        f"Tracked real-time updates on {recent_context} through {vendor1} live blogs and {vendor2} news feeds",
                         f"Compared international coverage of {topic} from {vendor1}, {vendor2}, and BBC World Service",
-                        f"Watched YouTube analysis videos about {recent_context} from political commentators and {vendor1} digital content"
+                        f"Read analysis articles about {recent_context} from political commentators and {vendor1} opinion sections"
                     ],
                     [
                         f"Read legal expert analysis of {recent_context} from {vendor1} legal correspondents and constitutional law blogs",
