@@ -825,7 +825,7 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
             "security software": ["Norton", "Kaspersky", "Bitdefender", "Trend Micro", "ESET"],
             "commercial ovens": ["Rational", "Convotherm", "Blodgett", "Vulcan", "Garland"],
             "kitchen equipment": ["Hobart", "Rational", "Manitowoc", "True Manufacturing", "Hoshizaki"],
-            "news_media": ["CNN", "Fox News", "MSNBC", "Reuters", "Associated Press", "BBC", "NPR", "Wall Street Journal"]
+            "news_media": ["CNN", "Fox News", "MSNBC", "Reuters", "Associated Press", "BBC", "NPR", "Wall Street Journal", "New York Times", "Washington Post", "Politico", "The Guardian", "PBS NewsHour", "ABC News", "CBS News", "NBC News"]
         }
         
         vendors = vendor_options.get(product, ["leading platforms", "top solutions", "major vendors"])
@@ -833,31 +833,96 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
         vendor2 = vendors[(candidate_index + 1) % len(vendors)]
         
         if product == "news_media":
-            # Special handling for news/political content
+            # Extract specific political topics from the prompt for more targeted reasons
+            specific_topics = []
+            if "trump" in prompt_lower:
+                if "dictator" in prompt_lower or "authoritarian" in prompt_lower:
+                    specific_topics.append("Trump's authoritarian tendencies and democratic norms")
+                elif "election" in prompt_lower:
+                    specific_topics.append("Trump's election fraud claims and voting integrity")
+                else:
+                    specific_topics.append("Trump's political influence and legal challenges")
+            elif "biden" in prompt_lower:
+                specific_topics.append("Biden administration policies and effectiveness")
+            elif "election" in prompt_lower:
+                specific_topics.append("election integrity and voting rights legislation")
+            elif "democracy" in prompt_lower:
+                specific_topics.append("threats to democratic institutions and governance")
+            elif "government" in prompt_lower or "congress" in prompt_lower:
+                specific_topics.append("congressional oversight and government accountability")
+            
+            # Use the first specific topic, or fall back to "current political developments"
+            topic = specific_topics[0] if specific_topics else "current political developments"
+            
+            # Special handling for news/political content with specific topics
             if "journalist" in title_lower or "reporter" in title_lower:
-                reasons.extend([
-                    f"Cross-referenced political coverage between {vendor1} and {vendor2} for source verification",
-                    f"Analyzed editorial bias patterns comparing {vendor1} reporting with independent fact-checkers",
-                    f"Researched {vendor1} and {vendor2} track records on political accuracy and journalistic integrity"
-                ])
+                journalist_patterns = [
+                    [
+                        f"Investigated {topic} through interviews with constitutional scholars and {vendor1} archives",
+                        f"Cross-referenced historical precedents for {topic} using {vendor1}, {vendor2}, and academic databases",
+                        f"Analyzed expert legal opinions on {topic} from {vendor1} reporting and independent legal analysts"
+                    ],
+                    [
+                        f"Conducted source verification on {topic} stories using {vendor1}, {vendor2}, and government records",
+                        f"Researched {topic} through Freedom of Information Act requests and {vendor1} investigative files",
+                        f"Interviewed political scientists about {topic} for {vendor2} and independent fact-checking organizations"
+                    ]
+                ]
+                pattern_set = journalist_patterns[candidate_index % len(journalist_patterns)]
+                reasons.extend(pattern_set)
             elif "editor" in title_lower or "producer" in title_lower:
-                reasons.extend([
-                    f"Evaluated {vendor1} and {vendor2} editorial standards for political coverage accuracy",
-                    f"Compared fact-checking methodologies between {vendor1} and competing news organizations", 
-                    f"Analyzed {vendor1} source verification processes for controversial political topics"
-                ])
+                editor_patterns = [
+                    [
+                        f"Evaluated newsroom coverage standards for reporting on {topic} across {vendor1} and {vendor2}",
+                        f"Compared editorial approaches to {topic} between {vendor1} and international news organizations", 
+                        f"Analyzed fact-checking protocols for {topic} stories at {vendor1} and competing news outlets"
+                    ],
+                    [
+                        f"Reviewed editorial guidelines for {topic} coverage at {vendor1} and {vendor2} newsrooms",
+                        f"Assessed journalistic ethics around {topic} reporting using {vendor1} standards and industry best practices",
+                        f"Compared {topic} story development processes between {vendor1} and {vendor2} editorial teams"
+                    ]
+                ]
+                pattern_set = editor_patterns[candidate_index % len(editor_patterns)]
+                reasons.extend(pattern_set)
             elif "analyst" in title_lower or "commentator" in title_lower:
-                reasons.extend([
-                    f"Researched diverse political perspectives comparing {vendor1} and {vendor2} analysis",
-                    f"Analyzed bias detection patterns across {vendor1} and competing political commentary",
-                    f"Compared {vendor1} and {vendor2} approaches to controversial political topic coverage"
-                ])
+                analyst_patterns = [
+                    [
+                        f"Researched academic studies on {topic} from {vendor1}, {vendor2}, and university research centers",
+                        f"Analyzed historical patterns related to {topic} using {vendor1} archives and scholarly publications",
+                        f"Compared expert commentary on {topic} from {vendor1}, {vendor2}, and think tank research"
+                    ],
+                    [
+                        f"Compiled data analysis on {topic} from {vendor1} polling, {vendor2} surveys, and academic research",
+                        f"Studied comparative political systems related to {topic} using {vendor1} and international policy institutes",
+                        f"Analyzed {topic} through {vendor2} investigative series and peer-reviewed political science journals"
+                    ]
+                ]
+                pattern_set = analyst_patterns[candidate_index % len(analyst_patterns)]
+                reasons.extend(pattern_set)
             else:
-                reasons.extend([
-                    f"Fact-checked political claims by comparing {vendor1} and {vendor2} reporting",
-                    f"Analyzed media bias patterns between {vendor1} and {vendor2} political coverage",
-                    f"Researched diverse perspectives on current events from {vendor1} and alternative sources"
-                ])
+                # Create more diverse behavioral patterns for different candidates
+                base_patterns = [
+                    [
+                        f"Researched expert analysis on {topic} from {vendor1}, {vendor2}, and academic institutions",
+                        f"Compared constitutional law perspectives on {topic} from legal scholars and {vendor1} reporting",
+                        f"Analyzed historical precedents related to {topic} using {vendor2} archives and political science research"
+                    ],
+                    [
+                        f"Fact-checked specific claims about {topic} using {vendor1}, {vendor2}, and independent verification sites",
+                        f"Studied polling data and public opinion trends on {topic} from {vendor1} and research organizations",
+                        f"Reviewed expert commentary on {topic} from {vendor2} analysis and international news sources"
+                    ],
+                    [
+                        f"Analyzed diverse perspectives on {topic} from {vendor1} opinion pieces, {vendor2} editorials, and think tank reports",
+                        f"Researched {topic} through {vendor1} investigative reporting and {vendor2} documentary coverage",
+                        f"Compared international coverage of {topic} from {vendor1}, {vendor2}, and foreign news organizations"
+                    ]
+                ]
+                
+                # Select pattern based on candidate index to ensure diversity
+                pattern_set = base_patterns[candidate_index % len(base_patterns)]
+                reasons.extend(pattern_set)
         elif "cmo" in title_lower or "marketing" in title_lower:
             reasons.extend([
                 f"Compared {product} pricing between {vendor1} and {vendor2} over the past two weeks",
