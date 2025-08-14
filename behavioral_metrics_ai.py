@@ -213,6 +213,15 @@ def analyze_search_context(user_prompt: str) -> dict:
         "education": [
             "school", "university", "college", "education", "course", "degree", "learning",
             "training", "teacher", "professor", "student", "academic", "curriculum"
+        ],
+        "news_media": [
+            "news", "media", "journalism", "journalist", "reporter", "cnn", "fox news", "msnbc", 
+            "bbc", "reuters", "associated press", "ap news", "npr", "pbs", "newspaper", "magazine",
+            "political", "politics", "election", "campaign", "government", "policy", "congress",
+            "senate", "house", "president", "trump", "biden", "democrat", "republican", "liberal",
+            "conservative", "dictator", "democracy", "authoritarian", "fascism", "socialism",
+            "breaking news", "current events", "headlines", "editorial", "opinion", "analysis",
+            "investigative", "documentary", "broadcast", "television", "tv news", "radio news"
         ]
     }
     
@@ -239,7 +248,8 @@ def analyze_search_context(user_prompt: str) -> dict:
         "financial_decision": ["returns", "risk_assessment", "due_diligence", "track_record", "market_conditions"],
         "business_solution": ["roi", "integration", "scalability", "support", "pricing"],
         "healthcare": ["expertise", "experience", "availability", "location", "insurance coverage"],
-        "education": ["quality", "reputation", "curriculum", "cost", "location", "career outcomes"]
+        "education": ["quality", "reputation", "curriculum", "cost", "location", "career outcomes"],
+        "news_media": ["credibility", "bias_awareness", "source_diversity", "fact_checking", "perspective_balance"]
     }
     
     decision_factors = decision_factors_map.get(context_type, ["value", "quality", "fit", "reliability"])
@@ -250,7 +260,8 @@ def analyze_search_context(user_prompt: str) -> dict:
         "decision_factors": decision_factors,
         "is_personal": context_type in ["personal_purchase", "career_opportunity"],
         "is_business": context_type in ["business_solution", "general_business"],
-        "is_specialized": context_type in ["legal_services", "real_estate", "healthcare", "education", "financial_decision"]
+        "is_specialized": context_type in ["legal_services", "real_estate", "healthcare", "education", "financial_decision"],
+        "is_news_media": context_type == "news_media"
     }
 
 def simulate_personal_research_patterns() -> Dict[str, Any]:
@@ -912,6 +923,28 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
                 "They research thoroughly before adopting new treatment methodologies."
             ]
         },
+        "news_media": {
+            "journalist": [
+                "They cross-reference multiple sources before forming opinions on complex topics.",
+                "They prioritize factual accuracy and source credibility in their information consumption.",
+                "They seek diverse perspectives and analyze bias patterns across different media outlets."
+            ],
+            "reporter": [
+                "They verify information through multiple independent sources before accepting claims.",
+                "They analyze the credibility and track record of news sources and commentators.",
+                "They research background context thoroughly to understand broader implications."
+            ],
+            "editor": [
+                "They evaluate source reliability and editorial standards when consuming news content.",
+                "They analyze framing and bias across different news outlets and political perspectives.",
+                "They prioritize comprehensive coverage over sensational headlines in their media choices."
+            ],
+            "default": [
+                "They consume news from multiple sources to get balanced perspectives on current events.",
+                "They fact-check information through reputable sources before forming strong opinions.",
+                "They seek out diverse viewpoints and analyze the credibility of different news outlets."
+            ]
+        },
         "default": {
             "engineer": [
                 "They prioritize technical specifications and integration capabilities over marketing claims.",
@@ -1074,6 +1107,30 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
                 "Displaying casual interest in investment alternatives"
             ]
         }
+    elif context_analysis["is_news_media"]:
+        role_explanations = {
+            "high": [
+                "Actively comparing news sources and fact-checking political claims across multiple outlets",
+                "Engaged in detailed analysis of media coverage and political commentary", 
+                "Researching diverse perspectives on current political and social issues",
+                "Comparing editorial positions and analyzing media bias patterns",
+                "Actively seeking credible sources for complex political topics"
+            ],
+            "medium": [
+                "Moderately interested in following current events and political developments",
+                "Researching news stories from multiple sources with balanced approach",
+                "Evaluating different media perspectives on political issues",
+                "Gathering information from various news outlets and commentators",
+                "Considering multiple viewpoints on controversial political topics"
+            ],
+            "low": [
+                "Casually browsing news headlines and political content",
+                "Limited engagement with in-depth political analysis", 
+                "Showing minimal commitment to comprehensive news consumption",
+                "Browsing political content without deep fact-checking",
+                "Displaying casual interest in current events and politics"
+            ]
+        }
     else:
         role_explanations = {
             "high": [
@@ -1197,6 +1254,27 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
                 "Takes calculated investment risks for portfolio diversification",
                 "Focuses more on upside potential than downside protection",
                 "Comfortable with innovative investment strategies"
+            ]
+        }
+    elif context_analysis["is_news_media"]:
+        risk_explanations = {
+            "high": [
+                "Thoroughly fact-checks information through multiple independent sources",
+                "Carefully evaluates source credibility and potential bias before accepting claims",
+                "Conducts detailed analysis of media accuracy and editorial standards",
+                "Prioritizes verified information over sensational or unconfirmed reports"
+            ],
+            "medium": [
+                "Balances breaking news consumption with fact-checking requirements",
+                "Considers source reputation while staying current with developments",
+                "Evaluates news credibility alongside timeliness of information",
+                "Weighs diverse perspectives against personal time constraints"
+            ],
+            "low": [
+                "Focuses primarily on staying informed about current events",
+                "Prioritizes news accessibility and convenience over deep verification",
+                "Values immediate updates over comprehensive fact-checking",
+                "Makes news consumption decisions based on source familiarity"
             ]
         }
     else:
@@ -1325,6 +1403,22 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
             },
             "low": {
                 "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic analysis", "Exhibits minimal personal commitment with basic evaluation", "Displays casual personal interest with limited research"]
+            }
+        }
+    elif context_analysis["is_news_media"]:
+        alignment_explanations = {
+            "high": {
+                "journalist": ["Shows strong personal investment with after-hours news analysis", "Demonstrates high personal commitment through weekend political research", "Exhibits personal priority with repeated fact-checking activities"],
+                "reporter": ["Displays personal journalistic investment with detailed source verification", "Shows high personal commitment through extended investigative research", "Demonstrates personal priority through comprehensive fact-checking"],
+                "editor": ["Exhibits personal editorial investment with thorough bias analysis", "Shows high personal commitment through detailed source evaluation", "Demonstrates strong personal interest with focused media literacy"],
+                "analyst": ["Displays personal analytical investment with detailed political research", "Shows high personal commitment through comprehensive media analysis", "Exhibits strong personal interest with focused perspective evaluation"],
+                "default": ["Shows high personal investment through intensive news consumption", "Demonstrates strong personal interest with detailed fact-checking", "Exhibits strong personal commitment through diverse source analysis"]
+            },
+            "medium": {
+                "default": ["Shows moderate personal interest with regular news consumption", "Demonstrates some personal investment through consistent fact-checking", "Exhibits casual personal interest with periodic source verification", "Displays moderate personal commitment through ongoing news analysis"]
+            },
+            "low": {
+                "default": ["Shows limited personal investment with minimal fact-checking", "Demonstrates low personal interest through sporadic news consumption", "Exhibits minimal personal commitment with basic source evaluation", "Displays casual personal interest with limited political analysis"]
             }
         }
     else:

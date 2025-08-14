@@ -802,6 +802,8 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
         product_interests.append("commercial ovens")
     if "food service" in prompt_lower or "culinary equipment" in prompt_lower:
         product_interests.append("kitchen equipment")
+    if any(news_term in prompt_lower for news_term in ["news", "political", "politics", "trump", "biden", "election", "government", "media", "journalism", "cnn", "fox news", "msnbc"]):
+        product_interests.append("news_media")
     
     # Extract location from prompt (but keep separate from product research)
     location_mentioned = False
@@ -822,14 +824,41 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
             "cybersecurity": ["Palo Alto Networks", "Fortinet", "Check Point", "Cisco Security", "Splunk"],
             "security software": ["Norton", "Kaspersky", "Bitdefender", "Trend Micro", "ESET"],
             "commercial ovens": ["Rational", "Convotherm", "Blodgett", "Vulcan", "Garland"],
-            "kitchen equipment": ["Hobart", "Rational", "Manitowoc", "True Manufacturing", "Hoshizaki"]
+            "kitchen equipment": ["Hobart", "Rational", "Manitowoc", "True Manufacturing", "Hoshizaki"],
+            "news_media": ["CNN", "Fox News", "MSNBC", "Reuters", "Associated Press", "BBC", "NPR", "Wall Street Journal"]
         }
         
         vendors = vendor_options.get(product, ["leading platforms", "top solutions", "major vendors"])
         vendor1 = vendors[candidate_index % len(vendors)]
         vendor2 = vendors[(candidate_index + 1) % len(vendors)]
         
-        if "cmo" in title_lower or "marketing" in title_lower:
+        if product == "news_media":
+            # Special handling for news/political content
+            if "journalist" in title_lower or "reporter" in title_lower:
+                reasons.extend([
+                    f"Cross-referenced political coverage between {vendor1} and {vendor2} for source verification",
+                    f"Analyzed editorial bias patterns comparing {vendor1} reporting with independent fact-checkers",
+                    f"Researched {vendor1} and {vendor2} track records on political accuracy and journalistic integrity"
+                ])
+            elif "editor" in title_lower or "producer" in title_lower:
+                reasons.extend([
+                    f"Evaluated {vendor1} and {vendor2} editorial standards for political coverage accuracy",
+                    f"Compared fact-checking methodologies between {vendor1} and competing news organizations", 
+                    f"Analyzed {vendor1} source verification processes for controversial political topics"
+                ])
+            elif "analyst" in title_lower or "commentator" in title_lower:
+                reasons.extend([
+                    f"Researched diverse political perspectives comparing {vendor1} and {vendor2} analysis",
+                    f"Analyzed bias detection patterns across {vendor1} and competing political commentary",
+                    f"Compared {vendor1} and {vendor2} approaches to controversial political topic coverage"
+                ])
+            else:
+                reasons.extend([
+                    f"Fact-checked political claims by comparing {vendor1} and {vendor2} reporting",
+                    f"Analyzed media bias patterns between {vendor1} and {vendor2} political coverage",
+                    f"Researched diverse perspectives on current events from {vendor1} and alternative sources"
+                ])
+        elif "cmo" in title_lower or "marketing" in title_lower:
             reasons.extend([
                 f"Compared {product} pricing between {vendor1} and {vendor2} over the past two weeks",
                 f"Downloaded {product} implementation guides and ROI calculators from {vendor1} and competitor websites",
