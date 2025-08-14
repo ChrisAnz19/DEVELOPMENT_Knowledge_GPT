@@ -34,6 +34,7 @@ IMPORTANT RULES:
 5. Consider company specificity - specific companies = fewer people, general industries = more people
 6. Consider seniority level - C-suite = fewer people, general roles = more people
 7. Consider industry specificity - niche industries = fewer people, broad industries = more people
+8. POLITICAL/NEWS INTERESTS: These are VERY COMMON among executives - estimate high numbers
 
 EXAMPLES:
 - "CMOs in New York" → 127
@@ -42,6 +43,9 @@ EXAMPLES:
 - "Startup founders in tech" → 15678
 - "CFOs at healthcare companies" → 892
 - "Sales directors in California" → 2156
+- "Executives interested in politics" → 45678
+- "Directors following political news" → 23456
+- "VPs concerned about political developments" → 18934
 
 Respond with ONLY the number, nothing else."""
 
@@ -104,10 +108,20 @@ Respond with ONLY the number, nothing else."""
     except Exception as e:
         # Fallback estimation if AI call fails
         print(f"AI estimation failed: {e}")
-        # Fallback with better distribution to avoid clustering
+        
+        # Check if this is a political/news interest search
+        prompt_lower = prompt.lower()
+        is_political = any(term in prompt_lower for term in ["trump", "biden", "political", "politics", "election", "democracy", "authoritarian", "dictator", "government", "news"])
+        
         import random
-        fallback_options = [847, 1243, 2156, 3421, 892, 5432, 1876, 4278, 2934, 6543, 1567, 3789, 2345, 4567, 1234, 5678, 2987, 4123, 1789, 3456]
-        estimated_count = random.choice(fallback_options)
+        if is_political:
+            # Political interest is very common among executives - use higher estimates
+            political_options = [15678, 23456, 18934, 27543, 34567, 19876, 31245, 26789, 22134, 28456, 35672, 17893, 24567, 29834, 33456]
+            estimated_count = random.choice(political_options)
+        else:
+            # Regular business searches
+            fallback_options = [847, 1243, 2156, 3421, 892, 5432, 1876, 4278, 2934, 6543, 1567, 3789, 2345, 4567, 1234, 5678, 2987, 4123, 1789, 3456]
+            estimated_count = random.choice(fallback_options)
         
         return {
             "estimated_count": estimated_count,

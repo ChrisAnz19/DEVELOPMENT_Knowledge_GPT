@@ -955,26 +955,26 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 base_patterns = [
                     [
                         f"Read daily political coverage from {vendor1}",
-                        f"Listened to NPR's analysis of presidential power and constitutional limits",
+                        f"Listened to NPR's analysis of {recent_context}",
                         f"Followed legal expert commentary on democracy and executive authority"
                     ],
                     [
-                        f"Visited {vendor2} website multiple times for breaking news updates",
+                        f"Visited {vendor2} website multiple times for breaking news on {recent_context}",
                         f"Read investigative reporting on election processes and voting rights",
                         f"Subscribed to political newsletters covering constitutional law debates"
                     ],
                     [
-                        f"Monitored social media posts from constitutional scholars and political analysts",
+                        f"Monitored social media posts about {recent_context} from constitutional scholars",
                         f"Read opinion pieces about democratic institutions from {vendor1} editorial board",
                         f"Followed congressional hearing coverage on government oversight"
                     ],
                     [
-                        f"Read {vendor2} analysis of recent court decisions on presidential immunity",
+                        f"Read {vendor2} analysis of {recent_context} and court decisions",
                         f"Tracked polling data on public trust in democratic institutions",
                         f"Followed international news coverage of American political developments"
                     ],
                     [
-                        f"Read legal analysis from constitutional law experts and {vendor1} correspondents",
+                        f"Read legal analysis of {recent_context} from {vendor1} correspondents",
                         f"Followed live coverage of congressional hearings on C-SPAN",
                         f"Researched historical comparisons to current political situations"
                     ]
