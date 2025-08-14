@@ -949,7 +949,125 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 reasons[1] = reasons[1].replace("Compared", f"Compared {intensity_modifiers[candidate_index % len(intensity_modifiers)]}")
                 reasons[1] = reasons[1].replace("Downloaded", f"Downloaded and {intensity_modifiers[candidate_index % len(intensity_modifiers)]} reviewed")
     
+    # AI Fallback: If we don't have enough contextually relevant reasons, use AI to generate them
+    if len(reasons) < 3 or any("professional development resources" in reason or "workflow optimization" in reason for reason in reasons):
+        ai_reasons = _generate_ai_contextual_reasons(title, user_prompt, candidate_index, existing_reasons=reasons)
+        if ai_reasons:
+            # Replace generic reasons with AI-generated contextual ones
+            reasons = ai_reasons
+    
     return reasons[:4]  # Return max 4 reasons
+
+def _generate_ai_contextual_reasons(title: str, user_prompt: str, candidate_index: int, existing_reasons: list = None) -> list:
+    """
+    Use AI to generate contextually appropriate behavioral reasons when hardcoded patterns don't match.
+    This provides a fallback for edge cases and specialized use cases.
+    """
+    try:
+        # Import OpenAI here to avoid dependency issues
+        import os
+        import json
+        from openai import OpenAI
+        
+        # Load API key
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            try:
+                with open("secrets.json", "r") as f:
+                    secrets = json.load(f)
+                    openai_api_key = secrets.get('openai_api_key', '')
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+        
+        if not openai_api_key:
+            return None
+        
+        client = OpenAI(api_key=openai_api_key)
+        
+        # Create a context-aware prompt
+        system_prompt = f"""You are an expert at generating realistic behavioral reasons for why a professional would be a good match for a specific search.
+
+CONTEXT:
+- Role: {title}
+- Search: "{user_prompt}"
+- Candidate position: #{candidate_index + 1}
+
+CRITICAL REQUIREMENTS:
+1. Generate exactly 3 behavioral reasons
+2. Each reason must be 15-25 words
+3. Focus on specific research activities, not job descriptions
+4. Use "they" pronouns only
+5. Include specific vendor names, tools, or technologies when relevant
+6. Make reasons progressively more detailed for higher-ranked candidates
+7. Avoid generic phrases like "professional development" or "workflow optimization"
+
+EXAMPLES OF GOOD REASONS:
+- "Evaluated CrowdStrike and SentinelOne threat detection capabilities across multiple enterprise environments"
+- "Analyzed healthcare compliance requirements for HIPAA-compliant patient data management systems"
+- "Compared Salesforce and HubSpot integration capabilities with existing marketing automation workflows"
+
+EXAMPLES OF BAD REASONS (AVOID):
+- "Researched industry best practices and professional development resources"
+- "Analyzed workflow optimization and productivity improvement strategies"
+- "Compared technology solutions relevant to their professional responsibilities"
+
+Return ONLY a JSON array of 3 strings, nothing else."""
+
+        user_prompt_for_ai = f"Generate 3 specific behavioral reasons for why this {title} would be interested in: {user_prompt}"
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt_for_ai}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        # Parse the JSON response
+        result_text = response.choices[0].message.content.strip()
+        
+        # Clean up the response to extract JSON
+        if result_text.startswith('```json'):
+            result_text = result_text.replace('```json', '').replace('```', '').strip()
+        
+        reasons = json.loads(result_text)
+        
+        # Validate the response
+        if isinstance(reasons, list) and len(reasons) >= 3:
+            # Add time variations like the hardcoded reasons
+            time_variations = [
+                "over the past week",
+                "during multiple sessions last month", 
+                "repeatedly over the past two weeks",
+                "in several focused research sessions",
+                "across multiple research sessions",
+                "over the past month"
+            ]
+            
+            if candidate_index >= 0 and len(reasons) > 0:
+                reasons[0] = reasons[0] + f" {time_variations[candidate_index % len(time_variations)]}"
+            
+            # Add intensity for top candidates
+            if candidate_index < 2 and len(reasons) > 1:
+                intensity_modifiers = ["extensively", "thoroughly", "in-depth", "comprehensively"]
+                modifier = intensity_modifiers[candidate_index % len(intensity_modifiers)]
+                
+                # Add intensity to the second reason
+                if not any(mod in reasons[1] for mod in intensity_modifiers):
+                    for verb in ["Researched", "Analyzed", "Compared", "Evaluated", "Reviewed"]:
+                        if verb in reasons[1]:
+                            reasons[1] = reasons[1].replace(verb, f"{verb} {modifier}")
+                            break
+            
+            return reasons[:4]  # Return max 4 reasons
+        
+        return None
+        
+    except Exception as e:
+        print(f"[AI Fallback] Failed to generate contextual reasons: {e}")
+        return None
 
 if __name__ == "__main__":
     # Load sample people JSON from file or input
