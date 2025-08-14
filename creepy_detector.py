@@ -127,6 +127,8 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         "Start", "Stop", "Begin", "End", "Help", "Support", "Service", "Team", "Group",
         "Company", "Business", "Organization", "Department", "Division", "Unit", "Office",
         "What", "Where", "When", "Why", "How", "Who", "Which", "That", "This", "These", "Those",
+        "Someone", "Anyone", "Everyone", "Nobody", "Somebody", "Anybody", "Everybody",
+        "People", "Person", "Individuals", "Folks", "Candidates", "Professionals",
         
         # Professional terms that might be capitalized
         "Marketing", "Sales", "Finance", "Technology", "Engineering", "Operations", "Legal",
