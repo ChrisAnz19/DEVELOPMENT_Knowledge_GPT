@@ -176,8 +176,8 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         filters = parse_prompt_to_internal_database_filters(enhanced_prompt)
         
         try:
-            # Use a higher per_page to get more initial candidates before filtering
-            search_per_page = max(10, max_candidates * 3)  # Get 3x more than needed to account for exclusions
+            # Get a few extra candidates to account for exclusions, but not too many
+            search_per_page = max_candidates + 2  # Get 2 extra to account for exclusions
             people = await asyncio.wait_for(
                 search_people_via_internal_database(filters, page=1, per_page=search_per_page),
                 timeout=60

@@ -181,12 +181,12 @@ EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
-Then select the top candidates with the highest probabilities (return 2-3 candidates, prioritizing quality over quantity).
+Then select the top candidates with the highest probabilities (return exactly 2 candidates, prioritizing quality over quantity).
 
 For each selected candidate, provide 3-4 specific, plausible, and realistic behavioral reasons why they were selected,
 based on their simulated online activity patterns over time.
 
-Return ONLY valid JSON array with 2-3 objects, each containing:
+Return ONLY valid JSON array with exactly 2 objects, each containing:
 name, title, company, email, accuracy (number), reasons (array of strings).
 No extra text, no explanation, no comments.
 """
@@ -288,9 +288,9 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
     Returns:
         The validated result or None if validation fails
     """
-    # Check if we have 2-3 results (more flexible)
-    if len(result) < 2 or len(result) > 3:
-        print(f"[Assessment] Expected 2-3 results, got {len(result)}")
+    # Check if we have exactly 2 results
+    if len(result) != 2:
+        print(f"[Assessment] Expected exactly 2 results, got {len(result)}")
         return None
     
     # Check required fields
@@ -676,7 +676,7 @@ def _apply_pattern_replacements(patterns: list, replacements: dict) -> list:
 
 def _fallback_assessment(people: list, user_prompt: str = "", industry_context: str = None) -> list:
     """
-    Enhanced fallback assessment when OpenAI fails - returns top 3 people with realistic behavioral reasoning
+    Enhanced fallback assessment when OpenAI fails - returns top 2 people with realistic behavioral reasoning
     
     Args:
         people: List of candidate data
@@ -689,8 +689,8 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
     if len(people) == 0:
         return []
     
-    # Take first 3 people and create behavioral assessment (increased from 2)
-    top_candidates = people[:min(3, len(people))]
+    # Take first 2 people and create behavioral assessment
+    top_candidates = people[:min(2, len(people))]
     print(f"[DEBUG] select_top_candidates: input={len(people)}, taking={len(top_candidates)}")
     result = []
     

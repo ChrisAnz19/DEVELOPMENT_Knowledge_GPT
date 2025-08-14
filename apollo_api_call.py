@@ -4,7 +4,7 @@ import asyncio
 import httpx
 from prompt_formatting import INTERNAL_DATABASE_API_KEY
 
-async def search_people_via_internal_database(filters: dict, page: int = 1, per_page: int = 10) -> list:
+async def search_people_via_internal_database(filters: dict, page: int = 1, per_page: int = 5) -> list:
     """
     Search our internal database for people matching the filters, then enrich each person and only return those with a LinkedIn URL.
     Handles enrichment errors gracefully and logs skipped people.
