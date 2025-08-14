@@ -790,6 +790,12 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
         product_interests.append("analytics")
     if "sales tool" in prompt_lower or "sales platform" in prompt_lower:
         product_interests.append("sales tools")
+    if "endpoint protection" in prompt_lower or "endpoint security" in prompt_lower:
+        product_interests.append("endpoint protection")
+    if "cybersecurity" in prompt_lower or "cyber security" in prompt_lower or "security solution" in prompt_lower:
+        product_interests.append("cybersecurity")
+    if "firewall" in prompt_lower or "antivirus" in prompt_lower or "malware" in prompt_lower:
+        product_interests.append("security software")
     
     # Extract location from prompt (but keep separate from product research)
     location_mentioned = False
@@ -805,7 +811,10 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
             "CRM": ["Salesforce", "HubSpot", "Pipedrive", "Zoho CRM", "Microsoft Dynamics"],
             "marketing automation": ["HubSpot", "Marketo", "Pardot", "Mailchimp", "ActiveCampaign"],
             "analytics": ["Google Analytics", "Adobe Analytics", "Mixpanel", "Amplitude", "Tableau"],
-            "sales tools": ["Outreach", "SalesLoft", "Gong", "Chorus", "ZoomInfo"]
+            "sales tools": ["Outreach", "SalesLoft", "Gong", "Chorus", "ZoomInfo"],
+            "endpoint protection": ["CrowdStrike", "SentinelOne", "Microsoft Defender", "Symantec", "McAfee"],
+            "cybersecurity": ["Palo Alto Networks", "Fortinet", "Check Point", "Cisco Security", "Splunk"],
+            "security software": ["Norton", "Kaspersky", "Bitdefender", "Trend Micro", "ESET"]
         }
         
         vendors = vendor_options.get(product, ["leading platforms", "top solutions", "major vendors"])
@@ -818,6 +827,19 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 f"Downloaded {product} implementation guides and ROI calculators from {vendor1} and competitor websites",
                 f"Researched {product} integration capabilities with existing marketing technology stack"
             ])
+        elif "cto" in title_lower or "chief technology" in title_lower:
+            if product in ["endpoint protection", "cybersecurity", "security software"]:
+                reasons.extend([
+                    f"Evaluated {vendor1} and {vendor2} threat detection capabilities and response times",
+                    f"Analyzed {product} architecture requirements comparing {vendor1} deployment models",
+                    f"Researched {product} compliance features for {vendor1} and regulatory requirements"
+                ])
+            else:
+                reasons.extend([
+                    f"Analyzed {product} technical architecture comparing {vendor1} vs {vendor2}",
+                    f"Reviewed {product} scalability and performance benchmarks for {vendor1}",
+                    f"Compared enterprise {product} solutions including {vendor1} integration capabilities"
+                ])
         elif "ceo" in title_lower or "executive" in title_lower:
             reasons.extend([
                 f"Analyzed {product} market research reports comparing {vendor1} vs {vendor2}",
@@ -858,6 +880,20 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 "Researched customer acquisition cost optimization strategies",
                 "Compared marketing technology stack configurations and integrations"
             ]
+        elif "cto" in title_lower or "chief technology" in title_lower:
+            # Check if this is a security-related search
+            if any(sec_term in prompt_lower for sec_term in ["security", "endpoint", "cyber", "firewall", "antivirus", "malware", "threat"]):
+                role_reasons = [
+                    "Analyzed cybersecurity threat landscape and vulnerability assessment reports",
+                    "Researched enterprise security architecture and zero-trust implementation strategies",
+                    "Compared security incident response capabilities and threat intelligence platforms"
+                ]
+            else:
+                role_reasons = [
+                    "Reviewed technology infrastructure scalability and performance optimization",
+                    "Analyzed cloud migration strategies and enterprise architecture frameworks",
+                    "Researched emerging technology trends and digital transformation initiatives"
+                ]
         elif "ceo" in title_lower:
             role_reasons = [
                 "Reviewed industry benchmarking reports and competitive positioning analysis",
