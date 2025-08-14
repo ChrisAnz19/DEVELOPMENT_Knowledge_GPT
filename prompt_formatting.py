@@ -235,4 +235,26 @@ def generate_fallback_filters(prompt: str) -> dict:
             "reasoning": "Fallback filters for CTO search at technology companies"
         }
     
-    return None
+    # News/Media/Political interest patterns
+    if any(term in prompt_lower for term in ["news", "political", "politics", "trump", "biden", "election", "media", "journalism", "cnn", "fox news", "dictator", "authoritarian", "democracy"]):
+        return {
+            "organization_filters": {
+                "q_organization_keyword_tags": ["media", "news", "publishing", "journalism", "broadcasting"]
+            },
+            "person_filters": {
+                "person_titles": ["Journalist", "Reporter", "Editor", "Producer", "Anchor", "Correspondent", "Writer", "Analyst", "Commentator"],
+                "person_seniorities": ["senior", "manager", "director", "vp", "c_suite"],
+                "include_similar_titles": True
+            },
+            "reasoning": "Fallback filters for news/political interest search - targeting media professionals and executives"
+        }
+    
+    # General interest fallback - search executives and decision makers across all industries
+    return {
+        "organization_filters": {},
+        "person_filters": {
+            "person_seniorities": ["director", "vp", "c_suite"],
+            "include_similar_titles": True
+        },
+        "reasoning": "General fallback filters - targeting executives and decision makers who are likely to have diverse interests"
+    }
