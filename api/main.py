@@ -137,16 +137,41 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         if not search_data or search_data.get("status") == "completed":
             return
         
+        # Preprocess prompt to convert generic terms to "executives"
+        def preprocess_prompt(prompt_text: str) -> str:
+            """Convert generic people terms to 'executives' for better search results."""
+            # Define generic terms that should be converted to "executives"
+            generic_terms = [
+                "people", "persons", "person", "anyone", "somebody", "someone",
+                "individuals", "individual", "professionals", "professional",
+                "contacts", "contact", "leads", "lead"
+            ]
+            
+            processed_prompt = prompt_text
+            
+            # Replace generic terms with "executives"
+            for term in generic_terms:
+                # Use word boundaries to avoid partial matches
+                pattern = r'\b' + re.escape(term) + r'\b'
+                if re.search(pattern, processed_prompt, re.IGNORECASE):
+                    processed_prompt = re.sub(pattern, 'executives', processed_prompt, flags=re.IGNORECASE)
+                    print(f"[Prompt Processing] Converted '{term}' to 'executives' in search query")
+            
+            return processed_prompt
+        
+        # Apply prompt preprocessing
+        preprocessed_prompt = preprocess_prompt(prompt)
+        
         # Apply smart prompt enhancement with error handling fallback
         try:
-            enhanced_prompt, analysis = enhance_prompt(prompt)
+            enhanced_prompt, analysis = enhance_prompt(preprocessed_prompt)
             # Log the enhancement for transparency (could be stored in database later)
             if analysis.reasoning:
                 print(f"Smart prompt enhancement applied: {', '.join(analysis.reasoning)}")
         except Exception as e:
-            # Fall back to original prompt on any failure
-            enhanced_prompt = prompt
-            print(f"Smart prompt enhancement failed, using original prompt: {str(e)}")
+            # Fall back to preprocessed prompt on any failure
+            enhanced_prompt = preprocessed_prompt
+            print(f"Smart prompt enhancement failed, using preprocessed prompt: {str(e)}")
         
         filters = parse_prompt_to_internal_database_filters(enhanced_prompt)
         
@@ -335,7 +360,9 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             for i, candidate in enumerate(candidates):
                 if isinstance(candidate, dict):
                     try:
-                        candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt, candidate_index=i)
+                        # Mark first 3 candidates as top leads
+                        is_top_candidate = i < 3
+                        candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt, candidate_index=i, is_top_candidate=is_top_candidate)
                         candidate["behavioral_data"] = candidate_behavioral_data
                     except Exception:
                         from behavioral_metrics_ai import generate_diverse_fallback_insight, add_score_variation

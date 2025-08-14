@@ -24,7 +24,7 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    logger.warning("OpenAI package not available. AI-based metrics will be disabled.")
+    logger.warning("AI package not available. AI-based metrics will be disabled.")
 
 # Initialize OpenAI client
 try:
@@ -431,8 +431,8 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
             
             RELEVANCE-BASED SCORING RULES:
             - HIGH relevance (0.8+): 70-95 CMI - Active evaluation, comparing options, ready to decide
-            - MEDIUM relevance (0.5-0.8): 40-70 CMI - Interested but not urgent, moderate research
-            - LOW relevance (0.3-0.5): 15-40 CMI - Casual browsing, low commitment, minimal urgency
+            - MEDIUM relevance (0.5-0.8): 40-70 CMI - Interested with moderate research activity
+            - LOW relevance (0.3-0.5): 15-40 CMI - Casual browsing, low commitment, minimal engagement
             
             Return JSON with "score" and "explanation". 
             For explanation: Use "they" pronouns. Keep to 8-12 words reflecting their TRUE engagement level.
@@ -464,7 +464,7 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
             """
         else:  # ias
             system_prompt = f"""
-            Generate an Identity Alignment Signal (IAS) score (0-100) for {context_description}
+            Generate an Identity Alignment Signal (IAS) score (0-100) measuring personal investment level for {context_description}
             
             CONTEXT INFORMATION:
             - Context type: {context_type}
@@ -479,13 +479,13 @@ def generate_score_ai(score_type: str, role: str, user_prompt: str = "") -> Dict
             5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
             
             Score guidelines:
-            - 80-100: Perfect fit for their role, directly impacts their success metrics
-            - 60-79: Good alignment with their responsibilities and objectives
-            - 40-59: Moderate fit, some relevance to their role
-            - 20-39: Peripheral to their core responsibilities
+            - 80-100: Highly personally invested, shows after-hours research and priority
+            - 60-79: Moderately invested, consistent engagement over time
+            - 40-59: Some personal interest, occasional research activity
+            - 20-39: Limited personal investment, minimal engagement
             
             Return JSON with "score" and "explanation".
-            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing the professional fit.
+            For explanation: Use "they" or "them" pronouns. Keep to 8-12 words describing their personal investment level.
             """
         
         # Call the OpenAI API with minimal tokens
@@ -517,7 +517,8 @@ def enhance_behavioral_data_ai(
     behavioral_data: Dict[str, Any],
     candidates: List[Dict[str, Any]],
     user_prompt: str,
-    candidate_index: int = 0
+    candidate_index: int = 0,
+    is_top_candidate: bool = False
 ) -> Dict[str, Any]:
     """Enhance behavioral data with AI-generated insights and scores, ensuring uniqueness across candidates."""
     try:
@@ -541,7 +542,11 @@ def enhance_behavioral_data_ai(
             "rbfs": rbfs_score,
             "ias": ias_score
         }
-        varied_scores = add_score_variation(scores, candidate_index)
+        # Use optimal scores for top candidates
+        if is_top_candidate:
+            varied_scores = generate_top_lead_scores(scores, candidate_index)
+        else:
+            varied_scores = add_score_variation(scores, candidate_index)
         
         # Create the enhanced behavioral data
         return {
@@ -561,7 +566,11 @@ def enhance_behavioral_data_ai(
             "rbfs": generate_fallback_rbfs_score(role, user_prompt, candidate_index),
             "ias": generate_fallback_ias_score(role, user_prompt, candidate_index)
         }
-        varied_scores = add_score_variation(fallback_scores, candidate_index)
+        # Use optimal scores for top candidates
+        if is_top_candidate:
+            varied_scores = generate_top_lead_scores(fallback_scores, candidate_index)
+        else:
+            varied_scores = add_score_variation(fallback_scores, candidate_index)
         
         return {
             "behavioral_insight": fallback_insight,
@@ -593,7 +602,9 @@ def enhance_behavioral_data_for_multiple_candidates(
     for i, candidate in enumerate(candidates):
         try:
             # Generate behavioral data for this candidate with uniqueness context
-            behavioral_data = enhance_behavioral_data_ai({}, [candidate], user_prompt)
+            # Mark first 3 candidates as top leads
+            is_top_candidate = i < 3
+            behavioral_data = enhance_behavioral_data_ai({}, [candidate], user_prompt, i, is_top_candidate)
             
             # Check for insight uniqueness
             insight = behavioral_data.get("behavioral_insight", "")
@@ -616,8 +627,12 @@ def enhance_behavioral_data_for_multiple_candidates(
             # Ensure diverse scores as well
             scores = behavioral_data.get("scores", {})
             if scores:
-                # Add some variation to scores to avoid identical values
-                scores = add_score_variation(scores, i)
+                # For top candidates (first 2-3), ensure they have optimal "top lead" scores
+                if i < 3:  # Top 3 candidates get optimal scores
+                    scores = generate_top_lead_scores(scores, i)
+                else:
+                    # Add some variation to scores to avoid identical values
+                    scores = add_score_variation(scores, i)
                 behavioral_data["scores"] = scores
             
             # Add behavioral data to candidate
@@ -627,13 +642,21 @@ def enhance_behavioral_data_for_multiple_candidates(
         except Exception as e:
             # Fallback for any errors with diversity
             role = candidate.get("title", "professional")
+            fallback_scores = {
+                "cmi": generate_fallback_cmi_score(role, user_prompt),
+                "rbfs": generate_fallback_rbfs_score(role, user_prompt),
+                "ias": generate_fallback_ias_score(role, user_prompt)
+            }
+            
+            # For top candidates, ensure optimal scores
+            if i < 3:
+                fallback_scores = generate_top_lead_scores(fallback_scores, i)
+            else:
+                fallback_scores = add_score_variation(fallback_scores, i)
+            
             candidate["behavioral_data"] = {
                 "behavioral_insight": generate_diverse_fallback_insight(role, candidate, user_prompt, used_patterns, i),
-                "scores": add_score_variation({
-                    "cmi": generate_fallback_cmi_score(role, user_prompt),
-                    "rbfs": generate_fallback_rbfs_score(role, user_prompt),
-                    "ias": generate_fallback_ias_score(role, user_prompt)
-                }, i)
+                "scores": fallback_scores
             }
             enhanced_candidates.append(candidate)
     
@@ -668,7 +691,7 @@ def generate_diverse_fallback_insight(role: str, candidate_data: Optional[Dict[s
     # Create diverse insight pools based on role and context
     role_insights = {
         "owner": [
-            "They prioritize ROI and immediate business impact when evaluating new tools.",
+            "They prioritize ROI and measurable business impact when evaluating new tools.",
             "They prefer solutions that integrate seamlessly with existing workflows.",
             "They make decisions quickly but want clear proof of value first.",
             "They focus on tools that can scale with business growth.",
@@ -741,8 +764,54 @@ def generate_diverse_fallback_insight(role: str, candidate_data: Optional[Dict[s
     return selected_insight
 
 
+def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int) -> Dict[str, Any]:
+    """
+    Generate optimal scores for top lead candidates.
+    Top leads should have:
+    - High CMI (80-95): Strong commitment momentum
+    - High IAS (80-95): High personal investment
+    - Low to Moderate RBFS (30-60): Low risk barriers
+    """
+    import random
+    random.seed(candidate_index + 100)  # Different seed for top leads
+    
+    top_lead_scores = {}
+    
+    for score_type, score_data in scores.items():
+        if isinstance(score_data, dict) and "score" in score_data:
+            explanation = score_data.get("explanation", "")
+            
+            if score_type == "cmi":
+                # High CMI for top leads (80-95)
+                optimal_cmi_scores = [85, 88, 91, 82, 89, 86, 93, 84, 87, 90]
+                new_score = optimal_cmi_scores[candidate_index % len(optimal_cmi_scores)]
+                
+            elif score_type == "rbfs":
+                # Low to moderate RBFS for top leads (30-60)
+                optimal_rbfs_scores = [45, 38, 52, 41, 48, 35, 55, 42, 49, 39]
+                new_score = optimal_rbfs_scores[candidate_index % len(optimal_rbfs_scores)]
+                
+            elif score_type == "ias":
+                # High IAS for top leads (80-95)
+                optimal_ias_scores = [87, 84, 91, 88, 85, 92, 83, 89, 86, 90]
+                new_score = optimal_ias_scores[candidate_index % len(optimal_ias_scores)]
+                
+            else:
+                # Keep original score for any other score types
+                new_score = score_data["score"]
+            
+            top_lead_scores[score_type] = {
+                "score": new_score,
+                "explanation": explanation
+            }
+        else:
+            top_lead_scores[score_type] = score_data
+    
+    random.seed()  # Reset random seed
+    return top_lead_scores
+
 def add_score_variation(scores: Dict[str, Any], candidate_index: int) -> Dict[str, Any]:
-    """Add subtle variation to scores to avoid identical values."""
+    """Add subtle variation to scores to avoid identical values and prevent clustering."""
     import random
     
     # Set seed based on candidate index for consistent but different results
@@ -752,9 +821,17 @@ def add_score_variation(scores: Dict[str, Any], candidate_index: int) -> Dict[st
     for score_type, score_data in scores.items():
         if isinstance(score_data, dict) and "score" in score_data:
             base_score = score_data["score"]
-            # Add variation of ±5 points
-            variation = random.randint(-5, 5)
-            new_score = max(0, min(100, base_score + variation))
+            
+            # Use different variation ranges for different score types to prevent clustering
+            if score_type == "rbfs":
+                # Wider variation for RBFS to prevent 57 clustering
+                variation = random.randint(-8, 12)
+            elif score_type == "cmi":
+                variation = random.randint(-6, 8)
+            else:  # ias
+                variation = random.randint(-4, 7)
+            
+            new_score = max(15, min(95, base_score + variation))  # Keep within reasonable bounds
             
             varied_scores[score_type] = {
                 "score": new_score,
@@ -796,7 +873,7 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
         "real_estate": {
             "default": [
                 "They evaluate properties based on location and accessibility first, then price.",
-                "They balance immediate space needs with long-term growth considerations.",
+                "They balance current space needs with long-term growth considerations.",
                 "They research market trends thoroughly before making property decisions."
             ]
         },
@@ -819,7 +896,7 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
                 "They evaluate solutions based on team adoption potential and training requirements."
             ],
             "director": [
-                "They focus on strategic alignment and long-term scalability over immediate features.",
+                "They focus on strategic alignment and long-term scalability over short-term features.",
                 "They require executive-level presentations with clear business impact metrics.",
                 "They delegate technical evaluation while maintaining oversight of strategic fit."
             ],
@@ -831,12 +908,12 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
             "sales": [
                 "They move fast when they see clear revenue impact and quota achievement potential.",
                 "They prefer solutions that integrate with existing workflows and require minimal training.",
-                "They evaluate based on peer success stories and immediate performance gains."
+                "They evaluate based on peer success stories and proven performance gains."
             ],
             "default": [
                 "They research thoroughly before making decisions, comparing multiple options.",
                 "They balance practical needs with long-term considerations in their approach.",
-                "They evaluate options based on both immediate fit and future potential."
+                "They evaluate options based on both current fit and future potential."
             ]
         }
     }
@@ -870,7 +947,7 @@ def generate_fallback_insight(role: str, candidate_data: Optional[Dict[str, Any]
         import random
         random.seed(hash(role + user_prompt + str(candidate_index)) % 1000)
         base_insight = random.choice([
-            "They show measured interest, researching options without immediate urgency.",
+            "They show measured interest, researching options with careful consideration.",
             "They evaluate methodically, taking time to assess fit and value.",
             "They approach decisions cautiously, preferring to understand all implications first."
         ])
@@ -900,7 +977,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
     if context_analysis["is_legal"]:
         role_explanations = {
             "high": [
-                "Actively researching legal technology solutions for immediate implementation",
+                "Actively researching legal technology solutions for practical implementation",
                 "Engaged in detailed evaluation of legal AI tools for practice", 
                 "Comparing multiple legal tech platforms with specific requirements",
                 "Requesting demos and consultations for legal software",
@@ -915,7 +992,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
             ],
             "low": [
                 "Casually browsing legal technology options",
-                "Preliminary research on legal AI without immediate plans", 
+                "Preliminary research on legal AI without specific timeline", 
                 "Early-stage exploration of legal tech possibilities",
                 "Gathering basic information about legal software",
                 "Initial consideration of how technology might fit legal practice"
@@ -928,18 +1005,18 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
                 "Engaged in detailed space planning and lease negotiations", 
                 "Comparing multiple properties with specific requirements in mind",
                 "Requesting detailed floor plans and site visits",
-                "Actively evaluating locations for immediate business needs"
+                "Actively evaluating locations for current business needs"
             ],
             "medium": [
                 "Researching location options for future expansion plans",
                 "Exploring real estate options with mid-term timeline",
-                "Comparing property features without immediate urgency",
+                "Comparing property features with flexible timeline",
                 "Gathering information on market rates and availability",
                 "Evaluating space requirements for potential relocation"
             ],
             "low": [
                 "Casually browsing commercial real estate options",
-                "Preliminary research without immediate space needs", 
+                "Preliminary research without specific space timeline", 
                 "Early-stage exploration of potential locations",
                 "Gathering basic market information without timeline pressure",
                 "Initial consideration of future space requirements"
@@ -956,16 +1033,16 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
             ],
             "medium": [
                 "Moderately interested in exploring investment opportunities",
-                "Researching financial options without immediate urgency",
+                "Researching financial options with flexible timeline",
                 "Evaluating investments for future portfolio consideration",
                 "Assessing market trends for potential investment timing",
                 "Considering investment options for strategic planning"
             ],
             "low": [
-                "Casually browsing investment options with minimal urgency",
+                "Casually browsing investment options with minimal engagement",
                 "Limited interest in current financial opportunities", 
                 "Showing minimal commitment to investment decisions",
-                "Browsing financial options without immediate intent",
+                "Browsing financial options without specific timeline",
                 "Displaying casual interest in investment alternatives"
             ]
         }
@@ -973,32 +1050,32 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
         role_explanations = {
             "high": [
                 "Actively comparing solutions to drive business growth",
-                "Evaluating tools for immediate implementation and ROI",
+                "Evaluating tools for practical implementation and ROI",
                 "Researching options to gain competitive market advantage", 
                 "Investigating platforms to accelerate business objectives",
                 "Assessing solutions for strategic organizational impact"
             ],
             "medium": [
                 "Moderately interested, weighing business benefits carefully",
-                "Exploring options without immediate implementation urgency",
+                "Exploring options with flexible implementation timeline",
                 "Researching solutions for future strategic consideration",
                 "Evaluating tools for potential operational improvement",
                 "Considering solutions for long-term business planning"
             ],
             "low": [
-                "Casually browsing with minimal immediate interest",
+                "Casually browsing with minimal current interest",
                 "Limited engagement, requiring compelling value proposition",
                 "Browsing options with low commitment level",
-                "Showing minimal urgency for solution evaluation",
-                "Displaying casual interest without immediate intent"
+                "Showing minimal priority for solution evaluation",
+                "Displaying casual interest without specific timeline"
             ]
         }
     
-    # Deterministic score variation based on candidate index
+    # Deterministic score variation with much wider ranges to prevent clustering
     base_scores = {
-        "high": [85, 78, 82, 75, 88],
-        "medium": [65, 58, 62, 55, 68], 
-        "low": [35, 28, 32, 25, 38]
+        "high": [85, 78, 82, 75, 88, 91, 73, 86, 79, 84, 92, 76, 89, 81, 87, 74, 90, 83, 77, 85],
+        "medium": [65, 58, 62, 55, 68, 71, 52, 66, 59, 63, 72, 56, 69, 61, 67, 54, 70, 64, 57, 65], 
+        "low": [35, 28, 32, 25, 38, 41, 22, 36, 29, 33, 42, 26, 39, 31, 37, 24, 40, 34, 27, 35]
     }
     
     engagement_level = role_relevance["engagement_level"]
@@ -1067,7 +1144,7 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
                 "Weighs accessibility against cost factors"
             ],
             "low": [
-                "Focuses primarily on location and immediate availability",
+                "Focuses primarily on location and current availability",
                 "Prioritizes quick move-in timeline over detailed assessment",
                 "Values flexibility and amenities over long-term considerations",
                 "Makes decisions based on first impressions and gut feeling"
@@ -1116,26 +1193,34 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
             ]
         }
     
-    # Base scores by role with variation
+    # Base scores by role with wider variation to avoid clustering around 57
     if any(risk_role in role_lower for risk_role in ["finance", "legal", "compliance", "security", "risk"]):
-        base_score = random.randint(80, 90)
+        base_score = random.randint(75, 88)
         risk_level = "high"
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = random.randint(60, 70)
+        base_score = random.randint(58, 72)
         risk_level = "medium"
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = random.randint(40, 50)
+        base_score = random.randint(35, 52)
         risk_level = "low"
     elif any(tech in role_lower for tech in ["engineer", "developer", "programmer", "architect"]):
-        base_score = random.randint(65, 75)
+        base_score = random.randint(62, 78)
+        risk_level = "medium"
+    elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
+        base_score = random.randint(48, 66)
+        risk_level = "medium"
+    elif any(ops in role_lower for ops in ["operations", "manager", "director", "vp"]):
+        base_score = random.randint(54, 71)
         risk_level = "medium"
     else:
-        base_score = random.randint(55, 65)
+        # Wider range for general roles to avoid 57 clustering
+        base_score = random.randint(45, 75)
         risk_level = "medium"
     
-    # Deterministic score and explanation selection
-    base_scores = [base_score, base_score + 5, base_score - 3, base_score + 8, base_score - 5]
-    adjusted_score = base_scores[candidate_index % len(base_scores)]
+    # Deterministic score and explanation selection with better distribution
+    score_variations = [0, 7, -4, 11, -6, 3, -8, 9, -2, 5]
+    variation = score_variations[candidate_index % len(score_variations)]
+    adjusted_score = max(20, min(90, base_score + variation))
     
     # Adjust score - LOWER relevance = HIGHER risk sensitivity (inverse relationship)
     if role_relevance["engagement_level"] == "low":
@@ -1169,80 +1254,85 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
     if context_analysis["is_legal"]:
         alignment_explanations = {
             "high": {
-                "attorney": ["Directly enhances legal practice efficiency and client service", "Perfect fit for modernizing case management approach", "Aligns with legal expertise and practice needs"],
-                "lawyer": ["Directly supports legal analysis and client representation", "Matches legal workflow and practice requirements", "Enhances professional capabilities in legal practice"],
-                "partner": ["Aligns with firm leadership and practice development goals", "Supports strategic legal service enhancement", "Directly impacts firm competitiveness and client service"],
-                "associate": ["Enhances legal research and case preparation capabilities", "Supports professional development in legal practice", "Aligns with daily legal workflow requirements"],
-                "default": ["Directly relevant to legal practice needs", "Aligns with legal expertise and client service", "Supports case management and legal analysis"]
+                "attorney": ["Shows strong personal interest with late-night research sessions", "Demonstrates high personal investment through weekend activity", "Exhibits strong personal commitment with repeated engagement"],
+                "lawyer": ["Displays personal priority through after-hours research patterns", "Shows high personal investment with consistent engagement", "Demonstrates personal priority through extended research sessions"],
+                "partner": ["Exhibits personal leadership investment with intensive research", "Shows high personal commitment through detailed evaluation", "Demonstrates strong personal interest with focused activity"],
+                "associate": ["Displays personal career investment through thorough research", "Shows high personal interest with extended engagement", "Exhibits personal priority through consistent activity patterns"],
+                "default": ["Shows high personal investment through intensive research", "Demonstrates strong personal interest with focused activity", "Exhibits strong personal commitment through repeated engagement"]
             },
             "medium": {
-                "default": ["Moderately relevant to legal practice needs", "Partially aligns with legal workflow", "Offers some benefits for case management", "Could enhance certain aspects of legal work"]
+                "default": ["Shows moderate personal interest with regular research", "Demonstrates some personal investment through consistent activity", "Exhibits casual personal interest with periodic engagement", "Displays moderate personal commitment through ongoing research"]
             },
             "low": {
-                "default": ["Limited relevance to current legal practice", "Minimal alignment with legal workflow needs", "Peripheral to core legal services", "Basic fit for legal practice requirements"]
+                "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic activity", "Exhibits minimal personal commitment with basic engagement", "Displays casual personal interest with limited research"]
             }
         }
     elif context_analysis["is_real_estate"]:
         alignment_explanations = {
             "high": {
-                "owner": ["Perfect location match for business growth needs", "Ideal space configuration for operational requirements", "Optimal property features for business objectives"],
-                "founder": ["Aligns perfectly with company expansion strategy", "Matches growth vision and space requirements", "Supports strategic business location needs"],
-                "ceo": ["Directly impacts company positioning and operations", "Aligns with executive vision for workspace needs", "Supports organizational growth objectives"],
-                "cto": ["Provides ideal infrastructure for technical operations", "Aligns with technology deployment requirements", "Supports IT infrastructure and connectivity needs"],
-                "default": ["Perfectly matches spatial and location requirements", "Aligns with organizational workspace strategy", "Supports business location objectives"]
+                "owner": ["Shows strong personal investment with weekend property research", "Demonstrates high personal commitment through intensive evaluation", "Exhibits personal priority with repeated site visits and research"],
+                "founder": ["Displays personal leadership investment with detailed research", "Shows high personal commitment through extended evaluation", "Demonstrates strong personal interest with focused activity"],
+                "ceo": ["Exhibits personal executive investment with thorough research", "Shows high personal commitment through detailed evaluation", "Demonstrates strong personal interest with intensive activity"],
+                "cto": ["Displays personal technical investment with detailed research", "Shows high personal commitment through infrastructure evaluation", "Exhibits strong personal interest with focused technical analysis"],
+                "default": ["Shows high personal investment through intensive research", "Demonstrates strong personal interest with detailed evaluation", "Exhibits strong personal commitment through repeated activity"]
             },
             "medium": {
-                "default": ["Good fit for most space requirements", "Meets basic location and facility needs", "Reasonable match for business location criteria", "Satisfies primary workspace requirements"]
+                "default": ["Shows moderate personal interest with regular research", "Demonstrates some personal investment through consistent evaluation", "Exhibits casual personal interest with periodic activity", "Displays moderate personal commitment through ongoing research"]
             },
             "low": {
-                "default": ["Meets minimal location requirements", "Basic fit for space needs", "Acceptable but not ideal location match", "Functional but limited alignment with space criteria"]
+                "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic activity", "Exhibits minimal personal commitment with basic evaluation", "Displays casual personal interest with limited research"]
             }
         }
     elif context_analysis["context_type"] == "financial_decision":
         alignment_explanations = {
             "high": {
-                "owner": ["Directly impacts portfolio performance and financial goals", "Aligns with investment strategy and wealth building", "Supports long-term financial objectives"],
-                "founder": ["Fits investment philosophy and capital allocation strategy", "Aligns with portfolio diversification and growth goals", "Supports strategic financial planning"],
-                "ceo": ["Matches fiduciary responsibilities and investment oversight", "Aligns with organizational financial strategy", "Supports institutional investment objectives"],
-                "cfo": ["Directly supports financial planning and risk management", "Aligns with treasury and investment responsibilities", "Matches financial stewardship role"],
-                "default": ["Strongly aligns with investment objectives", "Fits financial planning and wealth management goals", "Supports portfolio strategy and risk tolerance"]
+                "owner": ["Shows strong personal investment with late-night financial research", "Demonstrates high personal commitment through intensive analysis", "Exhibits personal priority with repeated portfolio evaluation"],
+                "founder": ["Displays personal financial investment with detailed research", "Shows high personal commitment through extended analysis", "Demonstrates strong personal interest with focused activity"],
+                "ceo": ["Exhibits personal fiduciary investment with thorough research", "Shows high personal commitment through detailed evaluation", "Demonstrates strong personal interest with intensive analysis"],
+                "cfo": ["Displays personal financial investment with detailed research", "Shows high personal commitment through risk analysis", "Exhibits strong personal interest with focused evaluation"],
+                "default": ["Shows high personal investment through intensive research", "Demonstrates strong personal interest with detailed analysis", "Exhibits strong personal commitment through repeated evaluation"]
             },
             "medium": {
-                "default": ["Moderate fit with investment portfolio", "Partially aligns with financial objectives", "Some relevance to investment strategy", "Fits certain portfolio allocation needs"]
+                "default": ["Shows moderate personal interest with regular research", "Demonstrates some personal investment through consistent analysis", "Exhibits casual personal interest with periodic evaluation", "Displays moderate personal commitment through ongoing research"]
             },
             "low": {
-                "default": ["Limited alignment with investment focus", "Minimal relevance to current portfolio strategy", "Outside primary investment criteria", "Peripheral to core financial objectives"]
+                "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic analysis", "Exhibits minimal personal commitment with basic evaluation", "Displays casual personal interest with limited research"]
             }
         }
     else:
         alignment_explanations = {
             "high": {
-                "owner": ["Directly impacts business growth and competitive positioning", "Aligns with entrepreneurial goals and success metrics", "Supports core business objectives and market advantage"],
-                "founder": ["Fits strategic vision for company development", "Aligns with leadership responsibilities and growth goals", "Supports long-term business building objectives"],
-                "ceo": ["Matches executive focus on organizational performance", "Aligns with strategic leadership and business outcomes", "Supports company-wide objectives and market positioning"],
-                "sales": ["Directly supports revenue generation and quota achievement", "Aligns with performance metrics and career advancement", "Matches core responsibility for business development"],
-                "marketing": ["Fits marketing objectives and growth initiatives", "Aligns with customer acquisition and brand building", "Supports campaign effectiveness and ROI goals"],
-                "default": ["Strongly aligns with professional responsibilities", "Fits core job functions and success metrics", "Supports career objectives and performance goals"]
+                "owner": ["Shows strong personal investment with after-hours research", "Demonstrates high personal commitment through weekend activity", "Exhibits personal priority with intensive evaluation sessions"],
+                "founder": ["Displays personal leadership investment with detailed research", "Shows high personal commitment through extended evaluation", "Demonstrates strong personal interest with focused activity"],
+                "ceo": ["Exhibits personal executive investment with thorough research", "Shows high personal commitment through detailed analysis", "Demonstrates strong personal interest with intensive activity"],
+                "sales": ["Displays personal performance investment with detailed research", "Shows high personal commitment through quota-driven evaluation", "Exhibits strong personal interest with focused analysis"],
+                "marketing": ["Shows personal campaign investment with intensive research", "Demonstrates high personal commitment through detailed evaluation", "Exhibits strong personal interest with focused activity"],
+                "default": ["Shows high personal investment through intensive research", "Demonstrates strong personal interest with detailed evaluation", "Exhibits strong personal commitment through repeated activity"]
             },
             "medium": {
-                "default": ["Moderate alignment with professional objectives", "Partially supports daily responsibilities", "Some relevance to role requirements", "Fits certain aspects of job function"]
+                "default": ["Shows moderate personal interest with regular research", "Demonstrates some personal investment through consistent activity", "Exhibits casual personal interest with periodic engagement", "Displays moderate personal commitment through ongoing evaluation"]
             },
             "low": {
-                "default": ["Limited alignment with core responsibilities", "Minimal relevance to primary job functions", "Outside main area of professional focus", "Peripheral to core role requirements"]
+                "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic activity", "Exhibits minimal personal commitment with basic engagement", "Displays casual personal interest with limited evaluation"]
             }
         }
     
-    # Base scores by role with variation
+    # Base scores by role with much wider variation to prevent clustering
     if any(tech in role_lower for tech in ["engineer", "developer", "architect", "scientist"]):
-        base_score = random.randint(75, 85)
+        score_options = [75, 78, 82, 85, 73, 80, 77, 84, 76, 81, 79, 83, 74, 86, 72, 87, 71, 88, 69, 89]
+        base_score = score_options[candidate_index % len(score_options)]
     elif any(exec_role in role_lower for exec_role in ["ceo", "cto", "cfo", "coo", "chief", "president", "founder"]):
-        base_score = random.randint(80, 90)
+        score_options = [80, 83, 87, 90, 78, 85, 82, 89, 81, 86, 84, 88, 79, 91, 77, 92, 76, 93, 74, 94]
+        base_score = score_options[candidate_index % len(score_options)]
     elif any(sales in role_lower for sales in ["sales", "account", "business development", "revenue"]):
-        base_score = random.randint(85, 95)
+        score_options = [85, 88, 92, 95, 83, 90, 87, 94, 86, 91, 89, 93, 84, 96, 82, 97, 81, 98, 79, 99]
+        base_score = score_options[candidate_index % len(score_options)]
     elif any(marketing in role_lower for marketing in ["marketing", "growth", "demand", "content"]):
-        base_score = random.randint(80, 90)
+        score_options = [80, 83, 87, 90, 78, 85, 82, 89, 81, 86, 84, 88, 79, 91, 77, 92, 76, 93, 74, 94]
+        base_score = score_options[candidate_index % len(score_options)]
     else:
-        base_score = random.randint(70, 80)
+        score_options = [70, 73, 77, 80, 68, 75, 72, 79, 71, 76, 74, 78, 69, 81, 67, 82, 66, 83, 64, 84]
+        base_score = score_options[candidate_index % len(score_options)]
     
     # Adjust score based on role relevance
     adjusted_score = int(base_score * role_relevance["adjustment_factor"])

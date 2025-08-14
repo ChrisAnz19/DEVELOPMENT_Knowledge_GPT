@@ -150,28 +150,34 @@ IMPORTANT GUIDELINES:
 2. Generate REALISTIC behavioral reasons tailored to each candidate's role and the specific product/service mentioned
 3. Include TIME-SERIES patterns showing progression or repeated behaviors over time
 4. Be SPECIFIC about websites, tools, and resources relevant to their profession and the mentioned product/service
-5. AVOID unrealistic scenarios like "reading case studies about job postings" or "attending webinars" for all professions
+5. AVOID unrealistic scenarios like "reading case studies about job postings", "attending webinars", "viewed webinars about implementing X in [location]", or "searched for" (implies Google tracking)
 6. NEVER use generic phrases like "selected based on title and company fit"
 7. NEVER use the same phrases for multiple candidates
 8. NEVER use phrases that can be verified by a human, or that are too vague or generic
 9. NEVER mention specific industries UNLESS they are explicitly mentioned in the user request
 10. Use "their industry" or "their field" instead of naming a specific industry
 11. FOCUS on the specific elements mentioned in the user's request rather than inventing additional context
+12. NEVER combine location with product research (e.g., "researched CRM solutions in New York" is unrealistic)
+13. Keep location and product interest as separate behavioral indicators
 
 EXAMPLES OF GOOD BEHAVIORAL REASONS:
 - For "Find me a developer interested in React": "Visited GitHub repositories for React state management libraries 5 times in the past week"
 - For "Find me a marketing director looking for analytics tools": "Spent increasing amounts of time on Google Analytics and HubSpot over a three-week period"
 - For "Find me a sales manager interested in CRM": "Researched CRM comparison tools, then focused specifically on Salesforce pricing pages"
 - For "Find me a CEO in Miami": "Reviewed business expansion resources specific to the Miami market over the past month"
+- For "Find me a CMO in New York looking for CRM": Use separate reasons like "Compared CRM pricing pages across multiple vendors" AND "Researched New York business networking events" (keep location and product separate)
 
 EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 - "Selected based on title and company fit" (too generic)
 - "Attended webinars on job postings" (unrealistic for most professionals)
+- "Viewed a webinar about implementing CRM in New York" (unrealistic location-product combination)
+- "Searched for CRM solutions" (implies Google search tracking which is unrealistic)
 - "Read case studies about the industry" (too vague)
 - "Showed interest in the field" (not specific enough)
 - "Researched case studies on successful CRM implementations in the real estate industry" (mentioning specific industry not in prompt)
 - "Analyzed healthcare marketing strategies" (mentioning specific industry not in prompt)
 - "Explored AI applications for financial services" (adding context not in the original prompt)
+- "Researched CRM solutions specifically for New York businesses" (unrealistic location-product combination)
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
@@ -326,6 +332,27 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
             # Don't fail validation - just log the warning
             print("[Assessment] Continuing with assessment despite generic reasons")
         
+        # Check for unrealistic behavioral patterns
+        unrealistic_patterns = [
+            "webinar", "attended", "viewed a webinar", "webinar about",
+            "searched for", "search for", "googled", "google search",
+            "implementing crm in", "implementing analytics in", "solutions in new york",
+            "solutions in california", "solutions in texas", "solutions in florida"
+        ]
+        
+        unrealistic_reasons = []
+        for reason in reasons:
+            reason_lower = reason.lower()
+            for pattern in unrealistic_patterns:
+                if pattern in reason_lower:
+                    unrealistic_reasons.append(reason)
+                    break
+        
+        if unrealistic_reasons:
+            print(f"[Assessment] Unrealistic behavioral patterns detected: {unrealistic_reasons}")
+            print("[Assessment] Rejecting AI response due to unrealistic patterns")
+            return None
+        
         # Check for time-series patterns (relaxed validation)
         time_indicators = ["times", "over", "period", "week", "month", "day", "repeatedly", "multiple", "increasing", "spent", "visited", "researched", "analyzed"]
         has_time_series = any(any(indicator in r.lower() for indicator in time_indicators) for r in reasons)
@@ -386,7 +413,7 @@ def _get_industry_specific_patterns(title: str, company: str, user_prompt: str =
                 "Visited Stack Overflow {frequency} {time_ref}, focusing on {tech_topic} questions and {duration}",
                 "Cloned GitHub repositories related to {tech_framework} {time_ref}, exploring implementation examples",
                 "Researched {tech_tool} documentation {frequency} {time_ref}, {duration} on each session",
-                "Searched for '{tech_topic} tutorials' {time_ref} and bookmarked multiple resources {duration}"
+                "Visited tutorial websites for {tech_topic} {time_ref} and bookmarked multiple resources {duration}"
             ],
             "mid": [
                 "Contributed to {tech_framework} discussions on GitHub {time_ref}, providing detailed code examples",
@@ -667,25 +694,9 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
     result = []
     
     for i, person in enumerate(top_candidates):
-        # Generate behavioral reasons based on their role and industry
+        # Generate realistic behavioral reasons based on role and search context
         title = person.get("title", "Unknown")
-        company = person.get("organization_name", "Unknown")
-        
-        # Get industry-specific patterns
-        pattern_data = _get_industry_specific_patterns(title, company, user_prompt)
-        
-        # Apply replacements to pattern templates
-        behavioral_reasons = _apply_pattern_replacements(
-            pattern_data["patterns"], 
-            pattern_data["replacements"]
-        )
-        
-        # Ensure we have at least 3 reasons
-        while len(behavioral_reasons) < 3:
-            behavioral_reasons.append("Researched industry-specific tools and solutions relevant to their role")
-        
-        # Take only the first 3-4 reasons
-        behavioral_reasons = behavioral_reasons[:min(4, len(behavioral_reasons))]
+        behavioral_reasons = _generate_realistic_behavioral_reasons(title, user_prompt, i)
         
         result.append({
             "name": person.get("name", "Unknown"),
@@ -697,6 +708,120 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
         })
     
     return result
+
+def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candidate_index: int) -> list:
+    """
+    Generate realistic behavioral reasons that avoid unrealistic combinations like 
+    'viewed webinar about CRM in New York'.
+    """
+    title_lower = title.lower()
+    prompt_lower = user_prompt.lower()
+    
+    reasons = []
+    
+    # Extract product/service interest from prompt
+    product_interests = []
+    if "crm" in prompt_lower:
+        product_interests.append("CRM")
+    if "marketing automation" in prompt_lower or "marketing tool" in prompt_lower:
+        product_interests.append("marketing automation")
+    if "analytics" in prompt_lower:
+        product_interests.append("analytics")
+    if "sales tool" in prompt_lower or "sales platform" in prompt_lower:
+        product_interests.append("sales tools")
+    
+    # Extract location from prompt (but keep separate from product research)
+    location_mentioned = False
+    if any(loc in prompt_lower for loc in ["new york", "california", "texas", "florida", "chicago", "boston", "seattle", "atlanta"]):
+        location_mentioned = True
+    
+    # Generate product-related behavioral reasons (if product mentioned)
+    if product_interests:
+        product = product_interests[0]  # Use first mentioned product
+        
+        if "cmo" in title_lower or "marketing" in title_lower:
+            reasons.extend([
+                f"Compared {product} pricing and feature sets across multiple vendors over the past two weeks",
+                f"Downloaded {product} implementation guides and ROI calculators from vendor websites",
+                f"Researched {product} integration capabilities with existing marketing technology stack"
+            ])
+        elif "ceo" in title_lower or "executive" in title_lower:
+            reasons.extend([
+                f"Analyzed {product} market research reports and competitive analysis documents",
+                f"Reviewed {product} case studies focusing on business impact and ROI metrics",
+                f"Compared enterprise {product} solutions on G2 and Capterra review platforms"
+            ])
+        elif "sales" in title_lower:
+            reasons.extend([
+                f"Evaluated {product} demo videos and product walkthroughs multiple times",
+                f"Researched {product} user reviews and implementation timelines on software review sites",
+                f"Compared {product} features against current sales workflow requirements"
+            ])
+        else:
+            reasons.extend([
+                f"Researched {product} solutions and vendor comparisons over multiple sessions",
+                f"Analyzed {product} implementation requirements and integration options",
+                f"Reviewed {product} pricing models and contract terms across different providers"
+            ])
+    
+    # Generate location-related behavioral reasons (if location mentioned, but separate from product)
+    if location_mentioned and len(reasons) < 4:
+        if "ceo" in title_lower or "executive" in title_lower:
+            reasons.append("Researched local business development opportunities and market expansion strategies")
+        elif "marketing" in title_lower:
+            reasons.append("Analyzed local market demographics and competitive landscape data")
+        elif "sales" in title_lower:
+            reasons.append("Researched regional sales territory performance and market penetration strategies")
+        else:
+            reasons.append("Reviewed local business networking events and professional development opportunities")
+    
+    # Add role-specific behavioral reasons if we need more
+    while len(reasons) < 3:
+        if "cmo" in title_lower or "marketing" in title_lower:
+            role_reasons = [
+                "Analyzed marketing attribution models and campaign performance metrics",
+                "Researched customer acquisition cost optimization strategies",
+                "Compared marketing technology stack configurations and integrations"
+            ]
+        elif "ceo" in title_lower:
+            role_reasons = [
+                "Reviewed industry benchmarking reports and competitive positioning analysis",
+                "Analyzed business growth strategies and market expansion opportunities",
+                "Researched organizational efficiency metrics and performance optimization"
+            ]
+        elif "sales" in title_lower:
+            role_reasons = [
+                "Analyzed sales pipeline optimization and conversion rate improvement strategies",
+                "Researched sales methodology frameworks and best practices",
+                "Compared sales performance metrics against industry benchmarks"
+            ]
+        else:
+            role_reasons = [
+                "Researched industry best practices and professional development resources",
+                "Analyzed workflow optimization and productivity improvement strategies",
+                "Compared technology solutions relevant to their professional responsibilities"
+            ]
+        
+        # Add a reason that hasn't been used yet
+        for reason in role_reasons:
+            if reason not in reasons:
+                reasons.append(reason)
+                break
+    
+    # Add variation for different candidates to avoid identical reasons
+    if candidate_index > 0:
+        time_variations = [
+            "over the past week",
+            "during multiple sessions last month", 
+            "repeatedly over the past two weeks",
+            "in several focused research sessions"
+        ]
+        
+        # Modify the first reason to include time variation
+        if reasons:
+            reasons[0] = reasons[0] + f" {time_variations[candidate_index % len(time_variations)]}"
+    
+    return reasons[:4]  # Return max 4 reasons
 
 if __name__ == "__main__":
     # Load sample people JSON from file or input
