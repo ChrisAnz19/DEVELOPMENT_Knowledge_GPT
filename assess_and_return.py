@@ -379,10 +379,10 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
             # Don't fail validation - just log the warning
             print("[Assessment] Continuing with assessment despite generic reasons")
         
-        # Check for unrealistic behavioral patterns (focus on business/tech combinations that are unrealistic)
+        # Check for unrealistic behavioral patterns
         unrealistic_patterns = [
-            "viewed a webinar about implementing", "webinar about crm in", "webinar about analytics in",
-            "searched for", "search for", "googled", "google search", 
+            "webinar", "attended", "viewed a webinar", "webinar about", "engaged with webinars",
+            "searched for", "search for", "googled", "google search",
             "implementing crm in", "implementing analytics in", "solutions in new york",
             "solutions in california", "solutions in texas", "solutions in florida"
         ]

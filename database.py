@@ -179,6 +179,7 @@ def get_people_for_search(search_id: int) -> List[Dict[str, Any]]:
         res = supabase.table("people").select("*").eq("search_id", search_id).execute()
         
         people = []
+        print(f"[DEBUG] Database query for search_id {search_id} returned {len(res.data) if hasattr(res, 'data') and res.data else 0} people")
         if hasattr(res, 'data'):
             for person in res.data:
                 for field in ['linkedin_profile', 'behavioral_data']:
