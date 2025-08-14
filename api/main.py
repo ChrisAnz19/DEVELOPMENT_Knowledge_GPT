@@ -177,7 +177,7 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         
         try:
             people = await asyncio.wait_for(
-                search_people_via_internal_database(filters, max_candidates),
+                search_people_via_internal_database(filters, page=1, per_page=max_candidates),
                 timeout=60
             )
         except (asyncio.TimeoutError, Exception) as e:
