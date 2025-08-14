@@ -954,29 +954,29 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 # Create more diverse behavioral patterns for different candidates
                 base_patterns = [
                     [
-                        f"Researched expert analysis on {topic} from {vendor1}, {vendor2}, and academic institutions",
-                        f"Listened to political podcasts discussing {recent_context} from NPR, Pod Save America, and {vendor1} podcast series",
-                        f"Analyzed historical precedents related to {topic} using {vendor2} archives and political science research"
+                        f"Read daily political coverage from {vendor1}",
+                        f"Listened to NPR's analysis of presidential power and constitutional limits",
+                        f"Followed legal expert commentary on democracy and executive authority"
                     ],
                     [
-                        f"Followed breaking news on {recent_context} through {vendor1}, {vendor2}, and political news apps",
-                        f"Read in-depth investigative reports on {topic} from {vendor1}, PBS, and Associated Press coverage",
-                        f"Read opinion pieces about {recent_context} from {vendor1} columnists and {vendor2} editorial boards"
+                        f"Tracked breaking news developments through {vendor2} mobile app",
+                        f"Read investigative reporting on election processes and voting rights",
+                        f"Subscribed to political newsletters covering constitutional law debates"
                     ],
                     [
-                        f"Monitored social media discussions about {recent_context} from verified political experts and {vendor1} journalists",
-                        f"Read books and articles on {topic} recommended by {vendor2} book reviews and political scholars",
-                        f"Subscribed to political newsletters covering {recent_context} from {vendor1} and independent analysts"
+                        f"Monitored social media posts from constitutional scholars and political analysts",
+                        f"Read opinion pieces about democratic institutions from {vendor1} editorial board",
+                        f"Followed congressional hearing coverage on government oversight"
                     ],
                     [
-                        f"Tracked real-time updates on {recent_context} through {vendor1} live blogs and {vendor2} news feeds",
-                        f"Compared international coverage of {topic} from {vendor1}, {vendor2}, and BBC World Service",
-                        f"Read analysis articles about {recent_context} from political commentators and {vendor1} opinion sections"
+                        f"Read {vendor2} analysis of recent court decisions on presidential immunity",
+                        f"Tracked polling data on public trust in democratic institutions",
+                        f"Followed international news coverage of American political developments"
                     ],
                     [
-                        f"Read legal expert analysis of {recent_context} from {vendor1} legal correspondents and constitutional law blogs",
-                        f"Followed congressional hearings related to {topic} through {vendor1}, {vendor2}, and C-SPAN live streams",
-                        f"Researched polling trends on {recent_context} using {vendor2} data and FiveThirtyEight analysis"
+                        f"Read legal analysis from constitutional law experts and {vendor1} correspondents",
+                        f"Followed live coverage of congressional hearings on C-SPAN",
+                        f"Researched historical comparisons to current political situations"
                     ]
                 ]
                 
