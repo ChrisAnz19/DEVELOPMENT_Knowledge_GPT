@@ -143,7 +143,32 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
     if not actual_names:
         return {"is_creepy": False, "detected_names": [], "response": None}
     
-    # ULTRA STRICT MODE: Block ANY search that contains what looks like a person's name
+    # Check if this is a legitimate research interest search vs. looking for the person directly
+    research_interest_patterns = [
+        r'\binterested in\b.*\b' + re.escape(actual_names[0]) + r'\b',  # "interested in Donald Trump"
+        r'\bresearching\b.*\b' + re.escape(actual_names[0]) + r'\b',    # "researching Donald Trump"
+        r'\bstudying\b.*\b' + re.escape(actual_names[0]) + r'\b',       # "studying Donald Trump"
+        r'\bfollowing\b.*\b' + re.escape(actual_names[0]) + r'\b',      # "following Donald Trump"
+        r'\btracking\b.*\b' + re.escape(actual_names[0]) + r'\b',       # "tracking Donald Trump"
+        r'\bmonitoring\b.*\b' + re.escape(actual_names[0]) + r'\b',     # "monitoring Donald Trump"
+        r'\bwatching\b.*\b' + re.escape(actual_names[0]) + r'\b',       # "watching Donald Trump"
+        r'\b' + re.escape(actual_names[0]) + r'\b.*\bpolicies\b',       # "Donald Trump policies"
+        r'\b' + re.escape(actual_names[0]) + r'\b.*\bauthoritarian\b',  # "Donald Trump authoritarian"
+        r'\b' + re.escape(actual_names[0]) + r'\b.*\bpolitics\b',       # "Donald Trump politics"
+        r'\b' + re.escape(actual_names[0]) + r'\b.*\bcampaign\b',       # "Donald Trump campaign"
+        r'\b' + re.escape(actual_names[0]) + r'\b.*\belection\b',       # "Donald Trump election"
+        r'\bwho.*\b' + re.escape(actual_names[0]) + r'\b',              # "who [verb] Donald Trump"
+        r'\bpeople.*\b' + re.escape(actual_names[0]) + r'\b',           # "people [interested in] Donald Trump"
+        r'\bsomeone.*\b' + re.escape(actual_names[0]) + r'\b',          # "someone [interested in] Donald Trump"
+    ]
+    
+    # Check if any research interest patterns match
+    is_research_interest = any(re.search(pattern, prompt, re.IGNORECASE) for pattern in research_interest_patterns)
+    
+    if is_research_interest:
+        return {"is_creepy": False, "detected_names": [], "response": None}
+    
+    # ULTRA STRICT MODE: Block searches that are looking for the person directly
     detected_name = actual_names[0]  # Use the first detected name
     witty_response = generate_witty_creepy_response(detected_name, user_first_name)
     
