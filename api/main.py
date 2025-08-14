@@ -176,8 +176,8 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         filters = parse_prompt_to_internal_database_filters(enhanced_prompt)
         
         try:
-            # Get a few extra candidates to account for exclusions, but not too many
-            search_per_page = max_candidates + 2  # Get 2 extra to account for exclusions
+            # Get more candidates to account for heavy exclusions in political searches
+            search_per_page = max_candidates + 6  # Get 6 extra to account for exclusions (was +2)
             people = await asyncio.wait_for(
                 search_people_via_internal_database(filters, page=1, per_page=search_per_page),
                 timeout=60
