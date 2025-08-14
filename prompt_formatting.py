@@ -238,15 +238,12 @@ def generate_fallback_filters(prompt: str) -> dict:
     # News/Media/Political interest patterns
     if any(term in prompt_lower for term in ["news", "political", "politics", "trump", "biden", "election", "media", "journalism", "cnn", "fox news", "dictator", "authoritarian", "democracy"]):
         return {
-            "organization_filters": {
-                "q_organization_keyword_tags": ["media", "news", "publishing", "journalism", "broadcasting"]
-            },
+            "organization_filters": {},  # No industry restriction - people from any industry can be interested in politics
             "person_filters": {
-                "person_titles": ["Journalist", "Reporter", "Editor", "Producer", "Anchor", "Correspondent", "Writer", "Analyst", "Commentator"],
-                "person_seniorities": ["senior", "manager", "director", "vp", "c_suite"],
+                "person_seniorities": ["director", "vp", "c_suite"],  # Target executives who are likely to be engaged in political topics
                 "include_similar_titles": True
             },
-            "reasoning": "Fallback filters for news/political interest search - targeting media professionals and executives"
+            "reasoning": "Fallback filters for political interest search - targeting executives across all industries who are likely engaged in current events"
         }
     
     # General interest fallback - search executives and decision makers across all industries

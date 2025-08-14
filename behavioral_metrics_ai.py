@@ -555,7 +555,7 @@ def enhance_behavioral_data_ai(
         }
         # Use optimal scores for top candidates
         if is_top_candidate:
-            varied_scores = generate_top_lead_scores(scores, candidate_index)
+            varied_scores = generate_top_lead_scores(scores, candidate_index, user_prompt)
         else:
             varied_scores = add_score_variation(scores, candidate_index)
         
@@ -579,7 +579,7 @@ def enhance_behavioral_data_ai(
         }
         # Use optimal scores for top candidates
         if is_top_candidate:
-            varied_scores = generate_top_lead_scores(fallback_scores, candidate_index)
+            varied_scores = generate_top_lead_scores(fallback_scores, candidate_index, user_prompt)
         else:
             varied_scores = add_score_variation(fallback_scores, candidate_index)
         
@@ -640,7 +640,7 @@ def enhance_behavioral_data_for_multiple_candidates(
             if scores:
                 # For top candidates (first 2-3), ensure they have optimal "top lead" scores
                 if i < 3:  # Top 3 candidates get optimal scores
-                    scores = generate_top_lead_scores(scores, i)
+                    scores = generate_top_lead_scores(scores, i, user_prompt)
                 else:
                     # Add some variation to scores to avoid identical values
                     scores = add_score_variation(scores, i)
@@ -661,7 +661,7 @@ def enhance_behavioral_data_for_multiple_candidates(
             
             # For top candidates, ensure optimal scores
             if i < 3:
-                fallback_scores = generate_top_lead_scores(fallback_scores, i)
+                fallback_scores = generate_top_lead_scores(fallback_scores, i, user_prompt)
             else:
                 fallback_scores = add_score_variation(fallback_scores, i)
             
@@ -775,7 +775,7 @@ def generate_diverse_fallback_insight(role: str, candidate_data: Optional[Dict[s
     return selected_insight
 
 
-def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int) -> Dict[str, Any]:
+def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int, user_prompt: str = "") -> Dict[str, Any]:
     """
     Generate optimal scores for top lead candidates.
     Top leads should have:
@@ -788,30 +788,59 @@ def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int) -> Di
     
     top_lead_scores = {}
     
-    # Top lead explanations that match high scores
-    top_lead_explanations = {
-        "cmi": [
-            "Actively comparing vendor solutions and requesting demos",
-            "Evaluating implementation timelines and ROI projections",
-            "Researching integration requirements and technical specifications",
-            "Investigating pricing models and contract terms across multiple vendors",
-            "Assessing solution capabilities against current business requirements"
-        ],
-        "rbfs": [
-            "Willing to try new approaches if they show promise",
-            "Takes calculated risks for potential competitive advantage",
-            "Focuses more on opportunity than potential downsides",
-            "Comfortable with innovative solutions and early adoption",
-            "Values potential competitive advantage over implementation complexity"
-        ],
-        "ias": [
-            "Shows strong personal investment through intensive research",
-            "Demonstrates strong personal interest with detailed evaluation",
-            "Exhibits strong personal commitment through repeated activity",
-            "Displays personal priority through after-hours research patterns",
-            "Shows strong personal interest with focused activity"
-        ]
-    }
+    # Context-aware explanations based on search type
+    context_analysis = analyze_search_context(user_prompt)
+    
+    if context_analysis.get("is_news_media"):
+        # Political/news-specific explanations
+        top_lead_explanations = {
+            "cmi": [
+                "Actively researching multiple news sources for comprehensive coverage",
+                "Comparing different media perspectives on current political events",
+                "Evaluating credibility of various news outlets and journalists",
+                "Investigating fact-checking resources and verification methods",
+                "Assessing different political analysis approaches and methodologies"
+            ],
+            "rbfs": [
+                "Willing to consider diverse viewpoints if they're well-sourced",
+                "Takes measured approach to evaluating political information",
+                "Focuses on credible sources over sensational coverage",
+                "Comfortable with complex political analysis and nuanced perspectives",
+                "Values thorough research over quick political takes"
+            ],
+            "ias": [
+                "Shows strong personal investment through daily news consumption",
+                "Demonstrates deep personal interest with extensive political research",
+                "Exhibits strong personal commitment through consistent news monitoring",
+                "Displays personal priority through after-hours political reading",
+                "Shows strong personal interest with focused political analysis"
+            ]
+        }
+    else:
+        # Business/professional explanations for non-political searches
+        top_lead_explanations = {
+            "cmi": [
+                "Actively comparing vendor solutions and requesting demos",
+                "Evaluating implementation timelines and ROI projections",
+                "Researching integration requirements and technical specifications",
+                "Investigating pricing models and contract terms across multiple vendors",
+                "Assessing solution capabilities against current business requirements"
+            ],
+            "rbfs": [
+                "Willing to try new approaches if they show promise",
+                "Takes calculated risks for potential competitive advantage",
+                "Focuses more on opportunity than potential downsides",
+                "Comfortable with innovative solutions and early adoption",
+                "Values potential competitive advantage over implementation complexity"
+            ],
+            "ias": [
+                "Shows strong personal investment through intensive research",
+                "Demonstrates strong personal interest with detailed evaluation",
+                "Exhibits strong personal commitment through repeated activity",
+                "Displays personal priority through after-hours research patterns",
+                "Shows strong personal interest with focused activity"
+            ]
+        }
     
     for score_type, score_data in scores.items():
         if isinstance(score_data, dict) and "score" in score_data:
@@ -1035,7 +1064,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware explanations by role and engagement level
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_legal"]:
+    if context_analysis.get("is_legal"):
         role_explanations = {
             "high": [
                 "Actively researching legal technology solutions for practical implementation",
@@ -1059,7 +1088,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
                 "Initial consideration of how technology might fit legal practice"
             ]
         }
-    elif context_analysis["is_real_estate"]:
+    elif context_analysis.get("is_real_estate"):
         role_explanations = {
             "high": [
                 "Actively touring properties and comparing location options",
@@ -1083,7 +1112,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
                 "Initial consideration of future space requirements"
             ]
         }
-    elif context_analysis["context_type"] == "financial_decision":
+    elif context_analysis.get("context_type") == "financial_decision":
         role_explanations = {
             "high": [
                 "Actively evaluating investment opportunities for portfolio growth",
@@ -1107,7 +1136,7 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
                 "Displaying casual interest in investment alternatives"
             ]
         }
-    elif context_analysis["is_news_media"]:
+    elif context_analysis.get("is_news_media"):
         role_explanations = {
             "high": [
                 "Actively comparing news sources and fact-checking political claims across multiple outlets",
@@ -1193,7 +1222,7 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
     # Context-aware risk explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_legal"]:
+    if context_analysis.get("is_legal"):
         risk_explanations = {
             "high": [
                 "Thoroughly evaluates legal tech security and compliance features",
@@ -1214,7 +1243,7 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
                 "Makes decisions based on peer adoption and industry trends"
             ]
         }
-    elif context_analysis["is_real_estate"]:
+    elif context_analysis.get("is_real_estate"):
         risk_explanations = {
             "high": [
                 "Thoroughly evaluates location factors and market trends",
@@ -1235,7 +1264,7 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
                 "Makes decisions based on first impressions and gut feeling"
             ]
         }
-    elif context_analysis["context_type"] == "financial_decision":
+    elif context_analysis.get("context_type") == "financial_decision":
         risk_explanations = {
             "high": [
                 "Requires extensive due diligence and financial analysis",
@@ -1256,7 +1285,7 @@ def generate_fallback_rbfs_score(role: str, user_prompt: str = "", candidate_ind
                 "Comfortable with innovative investment strategies"
             ]
         }
-    elif context_analysis["is_news_media"]:
+    elif context_analysis.get("is_news_media"):
         risk_explanations = {
             "high": [
                 "Thoroughly fact-checks information through multiple independent sources",
@@ -1357,7 +1386,7 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
     # Context-aware alignment explanations
     context_analysis = analyze_search_context(user_prompt)
     
-    if context_analysis["is_legal"]:
+    if context_analysis.get("is_legal"):
         alignment_explanations = {
             "high": {
                 "attorney": ["Shows strong personal interest with late-night research sessions", "Demonstrates high personal investment through weekend activity", "Exhibits strong personal commitment with repeated engagement"],
@@ -1373,7 +1402,7 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
                 "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic activity", "Exhibits minimal personal commitment with basic engagement", "Displays casual personal interest with limited research"]
             }
         }
-    elif context_analysis["is_real_estate"]:
+    elif context_analysis.get("is_real_estate"):
         alignment_explanations = {
             "high": {
                 "owner": ["Shows strong personal investment with weekend property research", "Demonstrates high personal commitment through intensive evaluation", "Exhibits personal priority with repeated site visits and research"],
@@ -1389,7 +1418,7 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
                 "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic activity", "Exhibits minimal personal commitment with basic evaluation", "Displays casual personal interest with limited research"]
             }
         }
-    elif context_analysis["context_type"] == "financial_decision":
+    elif context_analysis.get("context_type") == "financial_decision":
         alignment_explanations = {
             "high": {
                 "owner": ["Shows strong personal investment with late-night financial research", "Demonstrates high personal commitment through intensive analysis", "Exhibits personal priority with repeated portfolio evaluation"],
@@ -1405,7 +1434,7 @@ def generate_fallback_ias_score(role: str, user_prompt: str = "", candidate_inde
                 "default": ["Shows limited personal investment with minimal research", "Demonstrates low personal interest through sporadic analysis", "Exhibits minimal personal commitment with basic evaluation", "Displays casual personal interest with limited research"]
             }
         }
-    elif context_analysis["is_news_media"]:
+    elif context_analysis.get("is_news_media"):
         alignment_explanations = {
             "high": {
                 "journalist": ["Shows strong personal investment with after-hours news analysis", "Demonstrates high personal commitment through weekend political research", "Exhibits personal priority with repeated fact-checking activities"],

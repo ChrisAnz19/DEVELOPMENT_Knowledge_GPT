@@ -404,7 +404,7 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                         
                         # Use top lead scores for first 3 candidates
                         if i < 3:
-                            varied_scores = generate_top_lead_scores(base_scores, i)
+                            varied_scores = generate_top_lead_scores(base_scores, i, prompt)
                         else:
                             varied_scores = add_score_variation(base_scores, i)
                         
