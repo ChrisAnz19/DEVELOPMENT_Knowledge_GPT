@@ -806,20 +806,20 @@ def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int) -> Di
         if isinstance(score_data, dict) and "score" in score_data:
             
             if score_type == "cmi":
-                # High CMI for top leads (80-95)
-                optimal_cmi_scores = [85, 88, 91, 82, 89, 86, 93, 84, 87, 90]
+                # High CMI for top leads (85-95) - increased minimum for better top leads
+                optimal_cmi_scores = [89, 92, 95, 87, 91, 88, 94, 86, 90, 93]
                 new_score = optimal_cmi_scores[candidate_index % len(optimal_cmi_scores)]
                 new_explanation = top_lead_explanations["cmi"][candidate_index % len(top_lead_explanations["cmi"])]
                 
             elif score_type == "rbfs":
-                # Low to moderate RBFS for top leads (30-60)
-                optimal_rbfs_scores = [45, 38, 52, 41, 48, 35, 55, 42, 49, 39]
+                # Low to moderate RBFS for top leads (25-55) - lowered for better prospects
+                optimal_rbfs_scores = [38, 32, 45, 35, 41, 28, 48, 36, 42, 31]
                 new_score = optimal_rbfs_scores[candidate_index % len(optimal_rbfs_scores)]
                 new_explanation = top_lead_explanations["rbfs"][candidate_index % len(top_lead_explanations["rbfs"])]
                 
             elif score_type == "ias":
-                # High IAS for top leads (80-95)
-                optimal_ias_scores = [87, 84, 91, 88, 85, 92, 83, 89, 86, 90]
+                # High IAS for top leads (85-95) - increased minimum for better personal investment
+                optimal_ias_scores = [91, 88, 94, 92, 89, 95, 87, 93, 90, 94]
                 new_score = optimal_ias_scores[candidate_index % len(optimal_ias_scores)]
                 new_explanation = top_lead_explanations["ias"][candidate_index % len(top_lead_explanations["ias"])]
                 
