@@ -691,6 +691,7 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
     
     # Take first 3 people and create behavioral assessment (increased from 2)
     top_candidates = people[:min(3, len(people))]
+    print(f"[DEBUG] select_top_candidates: input={len(people)}, taking={len(top_candidates)}")
     result = []
     
     for i, person in enumerate(top_candidates):
@@ -707,6 +708,7 @@ def _fallback_assessment(people: list, user_prompt: str = "", industry_context: 
             "reasons": behavioral_reasons
         })
     
+    print(f"[DEBUG] select_top_candidates: returning {len(result)} candidates")
     return result
 
 def _calculate_context_aware_accuracy(user_prompt: str, candidate_index: int) -> int:

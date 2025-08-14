@@ -270,7 +270,9 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         try:
             if people:
                 # Select top candidates via assessment module
+                print(f"[DEBUG] Input people count: {len(people)}")
                 top_basic = select_top_candidates(prompt, people)
+                print(f"[DEBUG] select_top_candidates returned: {len(top_basic) if top_basic else 0} candidates")
                 
                 # Merge full Apollo details back into the lightweight objects returned
                 candidates = []

@@ -54,6 +54,7 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
         return []
 
     people = data.get("people", [])
+    print(f"[Apollo API] Received {len(people)} people from search")
     enriched = []
     
     async with httpx.AsyncClient(timeout=10) as client:
