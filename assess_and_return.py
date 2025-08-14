@@ -975,7 +975,15 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
                 reasons[1] = reasons[1].replace("Downloaded", f"Downloaded and {intensity_modifiers[candidate_index % len(intensity_modifiers)]} reviewed")
     
     # AI Fallback: If we don't have enough contextually relevant reasons, use AI to generate them
-    if len(reasons) < 3 or any("professional development resources" in reason or "workflow optimization" in reason for reason in reasons):
+    generic_business_phrases = [
+        "professional development resources", "workflow optimization", "business growth strategies",
+        "competitive positioning analysis", "market expansion opportunities", "organizational efficiency metrics",
+        "performance optimization", "industry benchmarking reports", "technology solutions relevant to their professional responsibilities"
+    ]
+    
+    has_generic_reasons = any(any(phrase in reason for phrase in generic_business_phrases) for reason in reasons)
+    
+    if len(reasons) < 3 or has_generic_reasons:
         ai_reasons = _generate_ai_contextual_reasons(title, user_prompt, candidate_index, existing_reasons=reasons)
         if ai_reasons:
             # Replace generic reasons with AI-generated contextual ones
@@ -1030,11 +1038,16 @@ EXAMPLES OF GOOD REASONS:
 - "Evaluated CrowdStrike and SentinelOne threat detection capabilities across multiple enterprise environments"
 - "Analyzed healthcare compliance requirements for HIPAA-compliant patient data management systems"
 - "Compared Salesforce and HubSpot integration capabilities with existing marketing automation workflows"
+- "Researched Rational and Convotherm commercial oven energy efficiency ratings for high-volume kitchen operations"
+- "Evaluated Hobart and Manitowoc kitchen equipment maintenance schedules and warranty coverage options"
 
 EXAMPLES OF BAD REASONS (AVOID):
 - "Researched industry best practices and professional development resources"
 - "Analyzed workflow optimization and productivity improvement strategies"
 - "Compared technology solutions relevant to their professional responsibilities"
+- "Reviewed industry benchmarking reports and competitive positioning analysis"
+- "Analyzed business growth strategies and market expansion opportunities"
+- "Researched organizational efficiency metrics and performance optimization"
 
 Return ONLY a JSON array of 3 strings, nothing else."""
 
