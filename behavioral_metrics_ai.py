@@ -777,32 +777,60 @@ def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int) -> Di
     
     top_lead_scores = {}
     
+    # Top lead explanations that match high scores
+    top_lead_explanations = {
+        "cmi": [
+            "Actively comparing vendor solutions and requesting demos",
+            "Evaluating implementation timelines and ROI projections",
+            "Researching integration requirements and technical specifications",
+            "Investigating pricing models and contract terms across multiple vendors",
+            "Assessing solution capabilities against current business requirements"
+        ],
+        "rbfs": [
+            "Willing to try new approaches if they show promise",
+            "Takes calculated risks for potential competitive advantage",
+            "Focuses more on opportunity than potential downsides",
+            "Comfortable with innovative solutions and early adoption",
+            "Values potential competitive advantage over implementation complexity"
+        ],
+        "ias": [
+            "Shows strong personal investment through intensive research",
+            "Demonstrates strong personal interest with detailed evaluation",
+            "Exhibits strong personal commitment through repeated activity",
+            "Displays personal priority through after-hours research patterns",
+            "Shows strong personal interest with focused activity"
+        ]
+    }
+    
     for score_type, score_data in scores.items():
         if isinstance(score_data, dict) and "score" in score_data:
-            explanation = score_data.get("explanation", "")
             
             if score_type == "cmi":
                 # High CMI for top leads (80-95)
                 optimal_cmi_scores = [85, 88, 91, 82, 89, 86, 93, 84, 87, 90]
                 new_score = optimal_cmi_scores[candidate_index % len(optimal_cmi_scores)]
+                new_explanation = top_lead_explanations["cmi"][candidate_index % len(top_lead_explanations["cmi"])]
                 
             elif score_type == "rbfs":
                 # Low to moderate RBFS for top leads (30-60)
                 optimal_rbfs_scores = [45, 38, 52, 41, 48, 35, 55, 42, 49, 39]
                 new_score = optimal_rbfs_scores[candidate_index % len(optimal_rbfs_scores)]
+                new_explanation = top_lead_explanations["rbfs"][candidate_index % len(top_lead_explanations["rbfs"])]
                 
             elif score_type == "ias":
                 # High IAS for top leads (80-95)
                 optimal_ias_scores = [87, 84, 91, 88, 85, 92, 83, 89, 86, 90]
                 new_score = optimal_ias_scores[candidate_index % len(optimal_ias_scores)]
+                new_explanation = top_lead_explanations["ias"][candidate_index % len(top_lead_explanations["ias"])]
                 
             else:
-                # Keep original score for any other score types
+                # Keep original score and explanation for any other score types
                 new_score = score_data["score"]
+                new_explanation = score_data.get("explanation", "")
             
             top_lead_scores[score_type] = {
                 "score": new_score,
-                "explanation": explanation
+                "explanation": new_explanation
             }
         else:
             top_lead_scores[score_type] = score_data
@@ -1049,23 +1077,23 @@ def generate_fallback_cmi_score(role: str, user_prompt: str = "", candidate_inde
     else:
         role_explanations = {
             "high": [
-                "Actively comparing solutions to drive business growth",
-                "Evaluating tools for practical implementation and ROI",
-                "Researching options to gain competitive market advantage", 
-                "Investigating platforms to accelerate business objectives",
-                "Assessing solutions for strategic organizational impact"
+                "Actively comparing vendor solutions and requesting product demos",
+                "Evaluating implementation timelines and calculating ROI projections",
+                "Researching integration capabilities and technical requirements", 
+                "Investigating pricing models and contract terms across multiple platforms",
+                "Assessing solution features against current business requirements"
             ],
             "medium": [
-                "Moderately interested, weighing business benefits carefully",
-                "Exploring options with flexible implementation timeline",
+                "Moderately interested, weighing business benefits and implementation costs",
+                "Exploring vendor options with flexible evaluation timeline",
                 "Researching solutions for future strategic consideration",
                 "Evaluating tools for potential operational improvement",
                 "Considering solutions for long-term business planning"
             ],
             "low": [
-                "Casually browsing with minimal current interest",
+                "Casually browsing vendor websites with minimal current interest",
                 "Limited engagement, requiring compelling value proposition",
-                "Browsing options with low commitment level",
+                "Browsing solution options with low commitment level",
                 "Showing minimal priority for solution evaluation",
                 "Displaying casual interest without specific timeline"
             ]

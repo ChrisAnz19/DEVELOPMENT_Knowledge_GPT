@@ -274,8 +274,23 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 
                 # Merge full Apollo details back into the lightweight objects returned
                 candidates = []
+                seen_identifiers = set()  # Track seen candidates to prevent duplicates
+                
                 if top_basic and isinstance(top_basic, list):
                     for basic in top_basic:
+                        # Create unique identifier for this candidate
+                        identifier = None
+                        if basic.get("linkedin_url"):
+                            identifier = basic.get("linkedin_url")
+                        elif basic.get("email"):
+                            identifier = basic.get("email")
+                        elif basic.get("name"):
+                            identifier = basic.get("name")
+                        
+                        # Skip if we've already seen this candidate
+                        if identifier and identifier in seen_identifiers:
+                            continue
+                        
                         # Find match in original list by linkedin_url or email or name
                         match = None
                         for p in people:
@@ -288,10 +303,14 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                             ):
                                 match = p
                                 break
+                        
                         merged = {**basic}
                         if match:
                             merged.update(match)  # keep enriched fields (photo, company, etc.)
+                        
                         candidates.append(merged)
+                        if identifier:
+                            seen_identifiers.add(identifier)
                 
                 # Fallback if merging failed
                 if not candidates:
@@ -365,18 +384,25 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                         candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt, candidate_index=i, is_top_candidate=is_top_candidate)
                         candidate["behavioral_data"] = candidate_behavioral_data
                     except Exception:
-                        from behavioral_metrics_ai import generate_diverse_fallback_insight, add_score_variation
+                        from behavioral_metrics_ai import generate_diverse_fallback_insight, generate_top_lead_scores, add_score_variation, generate_fallback_cmi_score, generate_fallback_rbfs_score, generate_fallback_ias_score
                         title = candidate.get('title', 'professional')
                         
                         # Generate diverse fallback with variation
                         fallback_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i)
                         used_patterns.add(fallback_insight)
+                        
+                        # Generate proper fallback scores
                         base_scores = {
-                            "cmi": {"score": 70, "explanation": "Forward motion"},
-                            "rbfs": {"score": 65, "explanation": "Moderately sensitive"},
-                            "ias": {"score": 75, "explanation": "Fits self-image"}
+                            "cmi": generate_fallback_cmi_score(title, prompt, i),
+                            "rbfs": generate_fallback_rbfs_score(title, prompt, i),
+                            "ias": generate_fallback_ias_score(title, prompt, i)
                         }
-                        varied_scores = add_score_variation(base_scores, i)
+                        
+                        # Use top lead scores for first 3 candidates
+                        if i < 3:
+                            varied_scores = generate_top_lead_scores(base_scores, i)
+                        else:
+                            varied_scores = add_score_variation(base_scores, i)
                         
                         candidate["behavioral_data"] = {
                             "behavioral_insight": fallback_insight,

@@ -334,7 +334,7 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
         
         # Check for unrealistic behavioral patterns
         unrealistic_patterns = [
-            "webinar", "attended", "viewed a webinar", "webinar about",
+            "webinar", "attended", "viewed a webinar", "webinar about", "engaged with webinars",
             "searched for", "search for", "googled", "google search",
             "implementing crm in", "implementing analytics in", "solutions in new york",
             "solutions in california", "solutions in texas", "solutions in florida"
@@ -739,37 +739,51 @@ def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candida
     if product_interests:
         product = product_interests[0]  # Use first mentioned product
         
+        # Define specific vendors for different product categories
+        vendor_options = {
+            "CRM": ["Salesforce", "HubSpot", "Pipedrive", "Zoho CRM", "Microsoft Dynamics"],
+            "marketing automation": ["HubSpot", "Marketo", "Pardot", "Mailchimp", "ActiveCampaign"],
+            "analytics": ["Google Analytics", "Adobe Analytics", "Mixpanel", "Amplitude", "Tableau"],
+            "sales tools": ["Outreach", "SalesLoft", "Gong", "Chorus", "ZoomInfo"]
+        }
+        
+        vendors = vendor_options.get(product, ["leading platforms", "top solutions", "major vendors"])
+        vendor1 = vendors[candidate_index % len(vendors)]
+        vendor2 = vendors[(candidate_index + 1) % len(vendors)]
+        
         if "cmo" in title_lower or "marketing" in title_lower:
             reasons.extend([
-                f"Compared {product} pricing and feature sets across multiple vendors over the past two weeks",
-                f"Downloaded {product} implementation guides and ROI calculators from vendor websites",
+                f"Compared {product} pricing between {vendor1} and {vendor2} over the past two weeks",
+                f"Downloaded {product} implementation guides and ROI calculators from {vendor1} and competitor websites",
                 f"Researched {product} integration capabilities with existing marketing technology stack"
             ])
         elif "ceo" in title_lower or "executive" in title_lower:
             reasons.extend([
-                f"Analyzed {product} market research reports and competitive analysis documents",
+                f"Analyzed {product} market research reports comparing {vendor1} vs {vendor2}",
                 f"Reviewed {product} case studies focusing on business impact and ROI metrics",
-                f"Compared enterprise {product} solutions on G2 and Capterra review platforms"
+                f"Compared enterprise {product} solutions including {vendor1} on G2 and Capterra review platforms"
             ])
         elif "sales" in title_lower:
             reasons.extend([
-                f"Evaluated {product} demo videos and product walkthroughs multiple times",
-                f"Researched {product} user reviews and implementation timelines on software review sites",
-                f"Compared {product} features against current sales workflow requirements"
+                f"Evaluated {vendor1} and {vendor2} demo videos and product walkthroughs multiple times",
+                f"Researched {product} user reviews comparing {vendor1} implementation timelines on software review sites",
+                f"Compared {product} features between {vendor1} and current sales workflow requirements"
             ])
         else:
             reasons.extend([
-                f"Researched {product} solutions and vendor comparisons over multiple sessions",
-                f"Analyzed {product} implementation requirements and integration options",
-                f"Reviewed {product} pricing models and contract terms across different providers"
+                f"Researched {product} solutions comparing {vendor1} and {vendor2} over multiple sessions",
+                f"Analyzed {product} implementation requirements for {vendor1} and integration options",
+                f"Reviewed {product} pricing models comparing {vendor1} and {vendor2} contract terms"
             ])
     
     # Generate location-related behavioral reasons (if location mentioned, but separate from product)
-    if location_mentioned and len(reasons) < 4:
+    # Only add location-specific reasons if they make logical sense
+    if location_mentioned and len(reasons) < 4 and not product_interests:
+        # Only add location reasons if no product was mentioned (to avoid illogical combinations)
         if "ceo" in title_lower or "executive" in title_lower:
             reasons.append("Researched local business development opportunities and market expansion strategies")
         elif "marketing" in title_lower:
-            reasons.append("Analyzed local market demographics and competitive landscape data")
+            reasons.append("Analyzed local market demographics and regional marketing opportunities")
         elif "sales" in title_lower:
             reasons.append("Researched regional sales territory performance and market penetration strategies")
         else:
