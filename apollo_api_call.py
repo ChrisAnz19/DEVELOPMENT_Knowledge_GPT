@@ -4,7 +4,7 @@ import asyncio
 import httpx
 from prompt_formatting import INTERNAL_DATABASE_API_KEY
 
-async def search_people_via_internal_database(filters: dict, page: int = 1, per_page: int = 5) -> list:
+async def search_people_via_internal_database(filters: dict, page: int = 1, per_page: int = 10) -> list:
     """
     Search our internal database for people matching the filters, then enrich each person and only return those with a LinkedIn URL.
     Handles enrichment errors gracefully and logs skipped people.
@@ -36,6 +36,7 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
 
     # Debug: Print the payload being sent
     print(f"[Apollo API] Sending payload: {json.dumps(payload, indent=2)}")
+    print(f"[Apollo API] Note: These broad filters should return thousands of executives, but we're requesting per_page={per_page}")
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -46,6 +47,12 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Debug: Print response metadata to understand limitations
+            total_people = data.get("pagination", {}).get("total_entries", "unknown")
+            page_info = data.get("pagination", {})
+            print(f"[Apollo API] Response metadata: total_entries={total_people}, pagination={page_info}")
+            
     except Exception as e:
         print(f"⚠️  Apollo API request failed: {e}")
         if hasattr(e, 'response') and e.response:
@@ -54,7 +61,7 @@ async def search_people_via_internal_database(filters: dict, page: int = 1, per_
         return []
 
     people = data.get("people", [])
-    print(f"[Apollo API] Received {len(people)} people from search")
+    print(f"[Apollo API] Received {len(people)} people from search (out of {data.get('pagination', {}).get('total_entries', 'unknown')} total available)")
     enriched = []
     
     async with httpx.AsyncClient(timeout=10) as client:
