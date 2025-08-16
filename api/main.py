@@ -306,23 +306,18 @@ Generate 1 realistic search query targeting PEOPLE (executives, directors, manag
     def _get_fallback_search(self, category: str, industry: str, location: str) -> Dict[str, Any]:
         """Fallback search examples if AI generation fails"""
         
-        job_title = random.choice(self.job_titles)
-        company_size = random.choice(self.company_sizes)
-        behavioral_signal = random.choice(self.behavioral_signals)
-        style = random.choice(self.search_styles)
-        
         # Hand-crafted realistic search examples
         fallback_queries = [
             # Simple, common searches
             "Find CEOs in New York",
             "Looking for technology executives",
             "Need CFOs who are hiring",
-            "Find companies that are expanding",
+            "Find executives at companies that are expanding",
             "Looking for decision makers in healthcare",
             "Need executives who are fundraising",
             "Find CTOs considering new solutions",
             "Looking for fintech leaders",
-            "Need companies in San Francisco",
+            "Need executives at companies in San Francisco",
             "Find executives who are relocating",
             
             # Sales and business development
@@ -349,16 +344,16 @@ Generate 1 realistic search query targeting PEOPLE (executives, directors, manag
             "Need venture capital firms backing fintech startups",
             "Find asset managers building ESG portfolios",
             
-            # Professional services
-            "Find companies needing management consulting",
+            # Professional services - targeting executives
+            "Find CEOs needing management consulting",
             "Looking for executives who need legal counsel",
-            "Need businesses evaluating accounting firms",
-            "Find organizations requiring cybersecurity audits",
-            "Looking for companies planning tax restructuring",
+            "Need CFOs evaluating accounting firms",
+            "Find CISOs requiring cybersecurity audits",
+            "Looking for tax directors planning restructuring",
             "Need executives seeking executive coaching",
-            "Find businesses requiring compliance consulting",
-            "Looking for companies needing IT consulting",
-            "Need organizations planning digital transformation",
+            "Find compliance officers requiring consulting",
+            "Looking for CTOs needing IT consulting",
+            "Need transformation officers planning digital initiatives",
             "Find executives requiring crisis management support",
             
             # Recruitment and talent acquisition
@@ -395,29 +390,29 @@ Generate 1 realistic search query targeting PEOPLE (executives, directors, manag
             "Find IT managers at accounting firms seeking cloud solutions",
             "Looking for operations managers at restaurants implementing delivery systems",
             
-            # M&A and investment targets
-            "Find SaaS companies in Boston considering acquisition",
-            "Looking for fintech startups seeking Series B funding",
-            "Need manufacturing companies exploring strategic partnerships",
-            "Find healthcare companies preparing for IPO",
-            "Looking for e-commerce businesses seeking growth capital",
-            "Need technology companies considering merger opportunities",
-            "Find biotech companies seeking licensing deals",
-            "Looking for real estate companies exploring joint ventures",
-            "Need energy companies seeking strategic investors",
-            "Find media companies considering divestiture",
+            # M&A and investment - targeting executives
+            "Find CEOs at SaaS companies in Boston considering acquisition",
+            "Looking for founders at fintech startups seeking Series B funding",
+            "Need business development directors at manufacturing companies exploring partnerships",
+            "Find CFOs at healthcare companies preparing for IPO",
+            "Looking for CEOs at e-commerce businesses seeking growth capital",
+            "Need corporate development VPs at technology companies considering mergers",
+            "Find licensing directors at biotech companies seeking deals",
+            "Looking for partnership managers at real estate companies exploring joint ventures",
+            "Need investment directors at energy companies seeking strategic investors",
+            "Find corporate development officers at media companies considering divestiture",
             
-            # Partnerships and business development
-            "Find technology partners for healthcare integration",
-            "Looking for distribution partners in European markets",
-            "Need strategic partners for AI development",
-            "Find channel partners for cybersecurity solutions",
-            "Looking for joint venture partners in renewable energy",
-            "Need licensing partners for pharmaceutical products",
-            "Find integration partners for cloud platforms",
-            "Looking for reseller partners in financial services",
-            "Need alliance partners for digital transformation",
-            "Find ecosystem partners for blockchain initiatives",
+            # Partnerships and business development - targeting people
+            "Find partnership directors seeking healthcare technology integration",
+            "Looking for business development managers seeking European distribution partners",
+            "Need alliance managers seeking strategic AI development partners",
+            "Find channel managers seeking cybersecurity solution partners",
+            "Looking for joint venture directors in renewable energy seeking partners",
+            "Need licensing managers seeking pharmaceutical product partners",
+            "Find integration managers seeking cloud platform partners",
+            "Looking for partnership VPs in financial services seeking reseller partners",
+            "Need alliance directors seeking digital transformation partners",
+            "Find ecosystem managers seeking blockchain initiative partners",
             
             # Interesting but believable searches
             "Find executives who speak at industry conferences",
@@ -439,18 +434,12 @@ Generate 1 realistic search query targeting PEOPLE (executives, directors, manag
             "Looking for leaders planning international expansion",
             "Need executives who entertain high-profile clients",
             "Find leaders interested in luxury concierge services",
-Looking for executives who need personal branding help
+            "Looking for executives who need personal branding help"
         ]
         
         return {
             "search_query": random.choice(fallback_queries),
             "category": category,
-            "industry": industry,
-            "location": location,
-            "style": style,
-            "job_title": job_title,
-            "company_size": company_size,
-            "behavioral_signal": behavioral_signal,
             "timestamp": datetime.now().isoformat(),
             "use_case_type": self._determine_use_case_type(category),
             "refresh_interval": 5,
