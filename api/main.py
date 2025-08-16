@@ -220,11 +220,11 @@ class DemoSearchGenerator:
         # Simple context for the AI prompt - no variable substitutions
         base_prompt = "Generate a professional B2B search query"
         
-        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals who need a specific product, service, investment, or opportunity.
+        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals OR companies who need a specific product, service, investment, or opportunity.
 
 Writing Style: {style}
 
-The search must show someone actively seeking people who are looking FOR something specific like:
+The search can target either PEOPLE or COMPANIES who are looking FOR something specific like:
 - New technology/software solutions
 - Investment opportunities  
 - New job opportunities
@@ -233,22 +233,23 @@ The search must show someone actively seeking people who are looking FOR somethi
 - Funding/capital
 - Vendors/suppliers
 
-Examples of GOOD searches (people looking for people who NEED something):
+Examples of GOOD searches:
+
+PEOPLE searches:
 - "Find CFOs at manufacturing companies looking for ERP software"
 - "Looking for startup founders seeking Series A funding"
 - "Need VPs of Sales who are evaluating CRM solutions"
 - "Find executives looking for cybersecurity consultants"
-- "Looking for companies seeking digital transformation partners"
-- "Need investors interested in renewable energy deals"
-- "Find HR directors looking for recruiting software"
+- "Need HR directors looking for recruiting software"
 - "Looking for CTOs who need cloud migration services"
-- "Need executives seeking executive coaching"
-- "Find companies looking for office space in Austin"
-- "Looking for manufacturers needing supply chain optimization"
-- "Find retailers seeking e-commerce platform upgrades"
-- "Need healthcare systems looking for EMR solutions"
-- "Looking for banks evaluating fraud detection software"
-- "Find startups seeking marketing automation tools"
+
+COMPANY searches:
+- "Find SaaS companies seeking integration partners"
+- "Looking for startups needing Series B funding"
+- "Need manufacturing companies evaluating automation"
+- "Find healthcare companies implementing AI solutions"
+- "Looking for retailers launching e-commerce platforms"
+- "Need banks upgrading their fraud detection systems"
 
 Writing styles:
 - casual: "Looking for...", "Need to find..."
@@ -256,7 +257,7 @@ Writing styles:
 - urgent: "ASAP need...", "Urgent search for..."
 - direct: "Find...", "Need..."
 
-Generate 1 realistic search query where someone is looking for people who NEED something specific. Keep it professional, logical, and focused on a clear business need. Return only the search query text."""
+Generate 1 realistic search query targeting either people OR companies who NEED something specific. Keep it professional and logical. Return only the search query text."""
 
         try:
             response = openai.ChatCompletion.create(
@@ -377,6 +378,28 @@ Generate 1 realistic search query where someone is looking for people who NEED s
             "Looking for consultants interested in in-house roles",
             "Need executives considering relocation to Austin",
             "Find product managers ready for leadership positions",
+            
+            # Company searches (not just people)
+            "Find SaaS companies looking for integration partners",
+            "Looking for startups seeking Series A funding",
+            "Need manufacturing companies evaluating automation",
+            "Find healthcare companies implementing AI solutions",
+            "Looking for fintech startups needing compliance help",
+            "Need e-commerce companies seeking logistics partners",
+            "Find biotech companies preparing for clinical trials",
+            "Looking for real estate companies expanding markets",
+            "Need consulting firms seeking technology partners",
+            "Find media companies evaluating streaming platforms",
+            "Looking for energy companies investing in renewables",
+            "Need retail companies launching online stores",
+            "Find construction companies adopting new technology",
+            "Looking for logistics companies seeking automation",
+            "Need insurance companies evaluating fraud detection",
+            "Find banks implementing digital transformation",
+            "Looking for hospitals seeking EMR upgrades",
+            "Need law firms evaluating case management software",
+            "Find accounting firms seeking cloud solutions",
+            "Looking for restaurants implementing delivery systems",
             
             # M&A and investment targets
             "Find SaaS companies in Boston considering acquisition",
