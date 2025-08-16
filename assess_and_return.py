@@ -192,6 +192,12 @@ def build_assessment_prompt(user_prompt: str, candidates: list, industry_context
 You are an expert at evaluating candidate fit based on simulated behavioral data from website visits and online activity.
 You have access to a trillion rows of website visit data per month across 450k top domains and tens of millions of websites.
 
+CRITICAL RESTRICTIONS - NEVER VIOLATE THESE:
+1. NEVER use "downloaded", "whitepaper", "webinar", "attended", "viewed", "subscribed", "newsletter"
+2. NEVER mention "case studies", "implementation guides", "whitepapers", "webinars"
+3. NEVER use content consumption patterns - focus on decision-making behavior instead
+4. NEVER use "attended virtual", "downloaded whitepapers", "subscribed to weekly"
+
 IMPORTANT GUIDELINES:
 1. ANALYZE the user's request to identify key components: role, location, product/service interest, and any specific requirements
 2. Generate REALISTIC behavioral reasons tailored to each candidate's role and the specific product/service mentioned
@@ -206,6 +212,7 @@ IMPORTANT GUIDELINES:
 11. FOCUS on the specific elements mentioned in the user's request rather than inventing additional context
 12. NEVER combine location with product research (e.g., "researched CRM solutions in New York" is unrealistic)
 13. Keep location and product interest as separate behavioral indicators
+14. Focus on HOW they research and evaluate, not WHAT content they consume
 
 EXAMPLES OF GOOD BEHAVIORAL REASONS:
 - For "Find me a developer interested in React": "Visited GitHub repositories for React state management libraries 5 times in the past week"
@@ -214,10 +221,13 @@ EXAMPLES OF GOOD BEHAVIORAL REASONS:
 - For "Find me a CEO in Miami": "Reviewed business expansion resources specific to the Miami market over the past month"
 - For "Find me a CMO in New York looking for CRM": Use separate reasons like "Compared CRM pricing pages across multiple vendors" AND "Researched New York business networking events" (keep location and product separate)
 
-EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
+EXAMPLES OF BAD BEHAVIORAL REASONS (NEVER USE THESE):
+- "Downloaded whitepapers on [topic]" (FORBIDDEN - content consumption)
+- "Attended webinars about [topic]" (FORBIDDEN - content consumption)
+- "Subscribed to newsletters from [vendor]" (FORBIDDEN - content consumption)
+- "Viewed case studies on [topic]" (FORBIDDEN - content consumption)
+- "Attended virtual events hosted by [vendor]" (FORBIDDEN - content consumption)
 - "Selected based on title and company fit" (too generic)
-- "Attended webinars on job postings" (unrealistic for most professionals)
-- "Viewed a webinar about implementing CRM in New York" (unrealistic location-product combination)
 - "Searched for CRM solutions" (implies Google search tracking which is unrealistic)
 - "Read case studies about the industry" (too vague)
 - "Showed interest in the field" (not specific enough)
@@ -225,6 +235,14 @@ EXAMPLES OF BAD BEHAVIORAL REASONS (AVOID THESE):
 - "Analyzed healthcare marketing strategies" (mentioning specific industry not in prompt)
 - "Explored AI applications for financial services" (adding context not in the original prompt)
 - "Researched CRM solutions specifically for New York businesses" (unrealistic location-product combination)
+
+EXAMPLES OF GOOD BEHAVIORAL REASONS (USE THESE PATTERNS):
+- "Compared pricing models across multiple vendor websites over the past month"
+- "Evaluated technical specifications on vendor documentation sites repeatedly"
+- "Researched integration capabilities through vendor API documentation"
+- "Analyzed user reviews and ratings on G2, Capterra, and TrustRadius platforms"
+- "Monitored vendor social media channels and product update announcements"
+- "Engaged with sales representatives through vendor contact forms and demos"
 
 You will receive a user request and a JSON array of candidates.
 First, think step-by-step and assign each person an accuracy probability (0-100) of matching the request.
@@ -378,6 +396,25 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
             print(f"[Assessment] Generic reasons detected: {generic_reasons}")
             # Don't fail validation - just log the warning
             print("[Assessment] Continuing with assessment despite generic reasons")
+        
+        # Check for FORBIDDEN problematic patterns (STRICT VALIDATION)
+        problematic_patterns = [
+            "downloaded", "whitepaper", "webinar", "attended", "viewed", "subscribed",
+            "case study", "implementation guide", "newsletter", "virtual event"
+        ]
+        
+        problematic_reasons = []
+        for reason in reasons:
+            reason_lower = reason.lower()
+            for pattern in problematic_patterns:
+                if pattern in reason_lower:
+                    problematic_reasons.append(reason)
+                    break
+        
+        if problematic_reasons:
+            print(f"[Assessment] FORBIDDEN patterns detected: {problematic_reasons}")
+            print("[Assessment] Rejecting AI response due to forbidden content consumption patterns")
+            return None
         
         # Check for unrealistic behavioral patterns
         unrealistic_patterns = [
