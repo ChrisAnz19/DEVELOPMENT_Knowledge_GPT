@@ -220,38 +220,23 @@ class DemoSearchGenerator:
         # Simple context for the AI prompt - no variable substitutions
         base_prompt = "Generate a professional B2B search query"
         
-        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals (executives, directors, managers) who need a specific product, service, investment, or opportunity.
+        prompt = f"""Generate a simple, clear B2B search query. Use this exact format:
 
-Writing Style: {style}
+"Find [JOB TITLE] who are [LOOKING FOR SOMETHING]"
 
-The search must target PEOPLE (not companies) who are looking FOR something specific like:
-- New technology/software solutions
-- Investment opportunities  
-- New job opportunities
-- Business partnerships
-- Professional services
-- Funding/capital
-- Vendors/suppliers
+Examples:
+- "Find CFOs who are looking for accounting software"
+- "Find marketing directors who are evaluating CRM systems"
+- "Find IT managers who need cybersecurity solutions"
+- "Find sales VPs who are hiring new reps"
+- "Find CEOs who are seeking investors"
+- "Find HR directors who need recruiting tools"
+- "Find operations managers who are optimizing workflows"
+- "Find CTOs who are planning cloud migrations"
 
-Examples of GOOD searches (always targeting PEOPLE):
-- "Find CFOs at manufacturing companies looking for ERP software"
-- "Looking for startup founders seeking Series A funding"
-- "Need VPs of Sales who are evaluating CRM solutions"
-- "Find IT directors looking for cybersecurity consultants"
-- "Need HR directors looking for recruiting software"
-- "Looking for CTOs who need cloud migration services"
-- "Find marketing directors at retailers launching e-commerce sites"
-- "Need operations managers at logistics companies seeking automation"
-- "Looking for compliance officers at banks upgrading fraud detection"
-- "Find digital transformation officers implementing new systems"
+Writing style: {style}
 
-Writing styles:
-- casual: "Looking for...", "Need to find..."
-- formal: "Seeking...", "Require identification of..."
-- urgent: "ASAP need...", "Urgent search for..."
-- direct: "Find...", "Need..."
-
-Generate 1 realistic search query targeting PEOPLE (executives, directors, managers) who NEED something specific. Always focus on the person, not the company. Return only the search query text."""
+Generate 1 search query using the exact format above. Keep it simple and logical. Return only the search query text."""
 
         try:
             response = openai.ChatCompletion.create(
