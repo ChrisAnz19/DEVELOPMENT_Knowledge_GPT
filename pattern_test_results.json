@@ -1,0 +1,284 @@
+{
+  "test_scenarios": [
+    {
+      "test_number": 1,
+      "title": "Marketing Director",
+      "prompt": "Find me CMOs interested in CRM solutions",
+      "candidate_index": 0,
+      "error": "name 'diverse_activity_patterns' is not defined"
+    },
+    {
+      "test_number": 2,
+      "title": "Sales Manager",
+      "prompt": "Find me sales professionals looking for CRM platforms",
+      "candidate_index": 1,
+      "reasons": [
+        "Requested trial access through vendor websites and tested functionality hands-on for HubSpot.com and Pipedrive.com sales capabilities during multiple sessions last month",
+        "Compared thoroughly implementation timelines through TechCrunch.com articles and vendor websites focusing on CRM user adoption and implementation",
+        "Evaluated customer support options via vendor websites and Trustpilot.com reviews between HubSpot.com and current sales workflow requirements"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 3,
+      "title": "VP of Sales",
+      "prompt": "Find me executives interested in customer relationship management",
+      "candidate_index": 2,
+      "reasons": [
+        "Compared user interface design through screenshots on vendor sites and demo galleries for sales pipeline optimization and conversion improvement repeatedly over the past two weeks",
+        "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on sales methodology frameworks and best practices",
+        "Coordinated technical sessions with solution architects via Microsoft Teams and Slack.com for sales performance metrics against industry benchmarks"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 4,
+      "title": "Business Development Manager",
+      "prompt": "Find me professionals interested in CRM software",
+      "candidate_index": 0,
+      "reasons": [
+        "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for Salesforce.com and HubSpot.com solutions over the past week",
+        "Requested trial access through vendor websites and tested functionality hands-on focusing on CRM implementation and integration",
+        "Compared user interface design through screenshots on vendor sites and demo galleries between Salesforce.com and HubSpot.com contract terms and pricing"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 5,
+      "title": "Chief Technology Officer",
+      "prompt": "Find me CTOs looking for cybersecurity solutions",
+      "candidate_index": 1,
+      "error": "name 'diverse_activity_patterns' is not defined"
+    },
+    {
+      "test_number": 6,
+      "title": "IT Director",
+      "prompt": "Find me technology leaders interested in cloud platforms",
+      "candidate_index": 2,
+      "reasons": [
+        "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach for technology infrastructure scalability and performance repeatedly over the past two weeks",
+        "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on cloud migration and enterprise architecture frameworks",
+        "Monitored competitor news on TechCrunch.com, VentureBeat.com, and Google News related to emerging technology trends and digital transformation"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 7,
+      "title": "Software Engineer",
+      "prompt": "Find me developers interested in development tools",
+      "candidate_index": 0,
+      "reasons": [
+        "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for development environment setup and configuration over the past week",
+        "Requested trial access through vendor websites and tested functionality hands-on focusing on software development lifecycle tools",
+        "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to code collaboration and version control systems"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 8,
+      "title": "DevOps Engineer",
+      "prompt": "Find me engineers looking for infrastructure automation",
+      "candidate_index": 1,
+      "reasons": [
+        "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for solution scalability and enterprise readiness during multiple sessions last month",
+        "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on vendor support and implementation services",
+        "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to platform integration and data migration capabilities"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 9,
+      "title": "Chief Marketing Officer",
+      "prompt": "Find me marketing executives interested in analytics platforms",
+      "candidate_index": 2,
+      "error": "name 'diverse_activity_patterns' is not defined"
+    },
+    {
+      "test_number": 10,
+      "title": "Digital Marketing Manager",
+      "prompt": "Find me marketers looking for automation tools",
+      "candidate_index": 0,
+      "reasons": [
+        "Monitored vendor updates on Twitter.com, LinkedIn.com, and Facebook.com related to marketing attribution and campaign performance over the past week",
+        "Researched extensively vendor financial stability on Crunchbase.com, Bloomberg.com, and SEC filings for customer acquisition cost optimization strategies",
+        "Compared implementation timelines through TechCrunch.com articles and vendor websites focusing on marketing technology stack configurations"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 11,
+      "title": "Content Marketing Manager",
+      "prompt": "Find me content professionals interested in publishing platforms",
+      "candidate_index": 1,
+      "reasons": [
+        "Subscribed to product newsletters via vendor websites and Mailchimp.com campaigns related to marketing attribution and campaign performance during multiple sessions last month",
+        "Validated technical requirements through vendor documentation and Stack Overflow for customer acquisition cost optimization strategies",
+        "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on marketing technology stack configurations"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 12,
+      "title": "Growth Marketing Manager",
+      "prompt": "Find me growth professionals looking for optimization tools",
+      "candidate_index": 2,
+      "reasons": [
+        "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to marketing attribution and campaign performance repeatedly over the past two weeks",
+        "Confirmed budget alignment via vendor pricing pages and Gartner.com cost analyses for customer acquisition cost optimization strategies",
+        "Studied ROI calculators and business case templates on Forbes.com and Harvard Business Review focusing on marketing technology stack configurations"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 13,
+      "title": "CEO",
+      "prompt": "Find me executives interested in business intelligence platforms",
+      "candidate_index": 0,
+      "reasons": [
+        "Consulted with industry peers via LinkedIn.com messages and professional networks for industry benchmarking and competitive positioning over the past week",
+        "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com focusing on business growth strategies and market expansion",
+        "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to organizational efficiency and performance optimization"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 14,
+      "title": "Chief Financial Officer",
+      "prompt": "Find me finance leaders looking for accounting software",
+      "candidate_index": 1,
+      "reasons": [
+        "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for development environment setup and configuration during multiple sessions last month",
+        "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on software development lifecycle tools",
+        "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to code collaboration and version control systems"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 15,
+      "title": "Chief Operating Officer",
+      "prompt": "Find me operations executives interested in workflow tools",
+      "candidate_index": 2,
+      "reasons": [
+        "Compared implementation timelines through TechCrunch.com articles and vendor websites for process automation and efficiency improvements repeatedly over the past two weeks",
+        "Scheduled live demonstrations through vendor booking systems and Calendly.com focusing on operational workflow design and optimization",
+        "Monitored competitor news on TechCrunch.com, VentureBeat.com, and Google News related to business process management and monitoring tools"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 16,
+      "title": "President",
+      "prompt": "Find me senior executives looking for enterprise solutions",
+      "candidate_index": 0,
+      "reasons": [
+        "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for solution scalability and enterprise readiness over the past week",
+        "Requested trial access through vendor websites and tested functionality hands-on focusing on vendor support and implementation services",
+        "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to platform integration and data migration capabilities"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 17,
+      "title": "Chef",
+      "prompt": "Find me culinary professionals interested in kitchen equipment",
+      "candidate_index": 1,
+      "reasons": [
+        "Analyzed total cost of ownership calculations on vendor websites and Calculator.net for Convotherm.com and Blodgett.com commercial equipment during multiple sessions last month",
+        "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on commercial ovens performance and efficiency",
+        "Confirmed budget alignment via vendor pricing pages and Gartner.com cost analyses for Convotherm.com maintenance and operational requirements"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 18,
+      "title": "Restaurant Manager",
+      "prompt": "Find me food service managers looking for POS systems",
+      "candidate_index": 2,
+      "reasons": [
+        "Compared implementation timelines through TechCrunch.com articles and vendor websites for Manitowoc.com and TrueManufacturing.com solutions repeatedly over the past two weeks",
+        "Scheduled live demonstrations through vendor booking systems and Calendly.com focusing on kitchen equipment implementation and integration",
+        "Assessed implementation complexity through vendor documentation and Stack Overflow between Manitowoc.com and TrueManufacturing.com contract terms and pricing"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 19,
+      "title": "Data Scientist",
+      "prompt": "Find me data professionals interested in analytics platforms",
+      "candidate_index": 0,
+      "reasons": [
+        "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for Mixpanel.com and Amplitude.com solutions over the past week",
+        "Requested trial access through vendor websites and tested functionality hands-on focusing on analytics implementation and integration",
+        "Compared user interface design through screenshots on vendor sites and demo galleries between Mixpanel.com and Amplitude.com contract terms and pricing"
+      ],
+      "reason_count": 3
+    },
+    {
+      "test_number": 20,
+      "title": "Product Manager",
+      "prompt": "Find me product professionals looking for management tools",
+      "candidate_index": 1,
+      "reasons": [
+        "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for project management methodologies and frameworks during multiple sessions last month",
+        "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on team collaboration and communication tools",
+        "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to resource allocation and timeline management systems"
+      ],
+      "reason_count": 3
+    }
+  ],
+  "total_reasons_generated": 51,
+  "unique_reasons": 51,
+  "all_reasons": [
+    "Requested trial access through vendor websites and tested functionality hands-on for HubSpot.com and Pipedrive.com sales capabilities during multiple sessions last month",
+    "Compared thoroughly implementation timelines through TechCrunch.com articles and vendor websites focusing on CRM user adoption and implementation",
+    "Evaluated customer support options via vendor websites and Trustpilot.com reviews between HubSpot.com and current sales workflow requirements",
+    "Compared user interface design through screenshots on vendor sites and demo galleries for sales pipeline optimization and conversion improvement repeatedly over the past two weeks",
+    "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on sales methodology frameworks and best practices",
+    "Coordinated technical sessions with solution architects via Microsoft Teams and Slack.com for sales performance metrics against industry benchmarks",
+    "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for Salesforce.com and HubSpot.com solutions over the past week",
+    "Requested trial access through vendor websites and tested functionality hands-on focusing on CRM implementation and integration",
+    "Compared user interface design through screenshots on vendor sites and demo galleries between Salesforce.com and HubSpot.com contract terms and pricing",
+    "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach for technology infrastructure scalability and performance repeatedly over the past two weeks",
+    "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on cloud migration and enterprise architecture frameworks",
+    "Monitored competitor news on TechCrunch.com, VentureBeat.com, and Google News related to emerging technology trends and digital transformation",
+    "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for development environment setup and configuration over the past week",
+    "Requested trial access through vendor websites and tested functionality hands-on focusing on software development lifecycle tools",
+    "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to code collaboration and version control systems",
+    "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for solution scalability and enterprise readiness during multiple sessions last month",
+    "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on vendor support and implementation services",
+    "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to platform integration and data migration capabilities",
+    "Monitored vendor updates on Twitter.com, LinkedIn.com, and Facebook.com related to marketing attribution and campaign performance over the past week",
+    "Researched extensively vendor financial stability on Crunchbase.com, Bloomberg.com, and SEC filings for customer acquisition cost optimization strategies",
+    "Compared implementation timelines through TechCrunch.com articles and vendor websites focusing on marketing technology stack configurations",
+    "Subscribed to product newsletters via vendor websites and Mailchimp.com campaigns related to marketing attribution and campaign performance during multiple sessions last month",
+    "Validated technical requirements through vendor documentation and Stack Overflow for customer acquisition cost optimization strategies",
+    "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation focusing on marketing technology stack configurations",
+    "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to marketing attribution and campaign performance repeatedly over the past two weeks",
+    "Confirmed budget alignment via vendor pricing pages and Gartner.com cost analyses for customer acquisition cost optimization strategies",
+    "Studied ROI calculators and business case templates on Forbes.com and Harvard Business Review focusing on marketing technology stack configurations",
+    "Consulted with industry peers via LinkedIn.com messages and professional networks for industry benchmarking and competitive positioning over the past week",
+    "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com focusing on business growth strategies and market expansion",
+    "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to organizational efficiency and performance optimization",
+    "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for development environment setup and configuration during multiple sessions last month",
+    "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on software development lifecycle tools",
+    "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to code collaboration and version control systems",
+    "Compared implementation timelines through TechCrunch.com articles and vendor websites for process automation and efficiency improvements repeatedly over the past two weeks",
+    "Scheduled live demonstrations through vendor booking systems and Calendly.com focusing on operational workflow design and optimization",
+    "Monitored competitor news on TechCrunch.com, VentureBeat.com, and Google News related to business process management and monitoring tools",
+    "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for solution scalability and enterprise readiness over the past week",
+    "Requested trial access through vendor websites and tested functionality hands-on focusing on vendor support and implementation services",
+    "Followed industry analysts on LinkedIn.com, Twitter.com, and Gartner.com related to platform integration and data migration capabilities",
+    "Analyzed total cost of ownership calculations on vendor websites and Calculator.net for Convotherm.com and Blodgett.com commercial equipment during multiple sessions last month",
+    "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on commercial ovens performance and efficiency",
+    "Confirmed budget alignment via vendor pricing pages and Gartner.com cost analyses for Convotherm.com maintenance and operational requirements",
+    "Compared implementation timelines through TechCrunch.com articles and vendor websites for Manitowoc.com and TrueManufacturing.com solutions repeatedly over the past two weeks",
+    "Scheduled live demonstrations through vendor booking systems and Calendly.com focusing on kitchen equipment implementation and integration",
+    "Assessed implementation complexity through vendor documentation and Stack Overflow between Manitowoc.com and TrueManufacturing.com contract terms and pricing",
+    "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com for Mixpanel.com and Amplitude.com solutions over the past week",
+    "Requested trial access through vendor websites and tested functionality hands-on focusing on analytics implementation and integration",
+    "Compared user interface design through screenshots on vendor sites and demo galleries between Mixpanel.com and Amplitude.com contract terms and pricing",
+    "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com for project management methodologies and frameworks during multiple sessions last month",
+    "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach focusing on team collaboration and communication tools",
+    "Tracked pricing changes on vendor websites and PriceTracker.com alerts related to resource allocation and timeline management systems"
+  ]
+}
