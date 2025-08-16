@@ -49,3 +49,14 @@ This feature implements the missing HubSpot OAuth API endpoints that the fronten
 2. WHEN handling token exchange THEN the system SHALL call the exchange_code_for_tokens method
 3. WHEN errors occur THEN the system SHALL use the existing error handling patterns
 4. IF the client class needs modifications THEN the system SHALL maintain backward compatibility
+
+### Requirement 5
+
+**User Story:** As a frontend application, I want to get the HubSpot authorization URL, so that I can redirect users to start the OAuth flow.
+
+#### Acceptance Criteria
+
+1. WHEN a GET request is made to `/api/hubspot/oauth/authorize` THEN the system SHALL return the HubSpot authorization URL
+2. WHEN the request includes redirect_uri parameter THEN the system SHALL include it in the authorization URL
+3. WHEN the request includes scope parameter THEN the system SHALL include it in the authorization URL
+4. WHEN HubSpot credentials are not configured THEN the system SHALL return HTTP 500 with configuration error

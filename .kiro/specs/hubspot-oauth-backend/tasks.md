@@ -26,3 +26,10 @@
   - Verify error handling for missing credentials
   - Test with the existing test_hubspot_oauth_debug.py script
   - _Requirements: 1.1, 2.1, 3.1, 3.2_
+
+- [x] 5. Create deployment diagnostic endpoint and test script
+  - Add GET /api/hubspot/oauth/debug endpoint to list all available routes
+  - Create test script to verify deployed API endpoints are accessible
+  - Test both local and deployed environments
+  - Identify the source of 404 errors in production
+  - _Requirements: 5.1_

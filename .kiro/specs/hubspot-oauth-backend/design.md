@@ -18,6 +18,7 @@ The design leverages the existing `HubSpotOAuthClient` class and follows the est
 **New Components**:
 - POST `/api/hubspot/oauth/token` endpoint
 - GET `/api/hubspot/oauth/health` endpoint
+- GET `/api/hubspot/oauth/authorize` endpoint
 
 ## Components and Interfaces
 
@@ -88,6 +89,50 @@ async def hubspot_oauth_health():
             "status": "error",
             "message": f"Health check failed: {str(e)}"
         }
+```
+
+### 3. Authorization URL Endpoint
+
+**Route**: `GET /api/hubspot/oauth/authorize`
+
+**Query Parameters**:
+- `redirect_uri` (required): The redirect URI for the OAuth flow
+- `scope` (optional): Comma-separated list of scopes to request
+
+**Response**: JSON object with authorization URL
+
+**Implementation**:
+```python
+@app.get("/api/hubspot/oauth/authorize")
+async def get_hubspot_authorize_url(redirect_uri: str, scope: str = "contacts"):
+    try:
+        client_id = os.getenv('HUBSPOT_CLIENT_ID')
+        if not client_id:
+            raise HTTPException(
+                status_code=500,
+                detail="HubSpot client ID not configured"
+            )
+        
+        # Build HubSpot authorization URL
+        auth_url = (
+            f"https://app.hubspot.com/oauth/authorize"
+            f"?client_id={client_id}"
+            f"&redirect_uri={redirect_uri}"
+            f"&scope={scope}"
+            f"&response_type=code"
+        )
+        
+        return {
+            "authorization_url": auth_url,
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "scope": scope
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating authorization URL: {str(e)}"
+        )
 ```
 
 ## Data Models

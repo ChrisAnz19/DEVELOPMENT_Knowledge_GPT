@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-08-16T13:53:54.535003",
+  "base_url": "https://knowledge-gpt-siuq.onrender.com",
+  "overall_status": "critical_failure",
+  "tests": {
+    "basic_connectivity": {
+      "test_name": "Basic Connectivity",
+      "success": true,
+      "status_code": 200,
+      "response_time": 121.98100000000001,
+      "critical": true
+    },
+    "environment_configuration": {
+      "test_name": "Environment Configuration",
+      "success": false,
+      "error": "Sync check endpoint returned 404",
+      "critical": true
+    },
+    "prismatic_readiness": {
+      "test_name": "Prismatic Readiness",
+      "success": false,
+      "error": "Webhook test endpoint returned 404",
+      "critical": true
+    },
+    "oauth_endpoints": [
+      {
+        "test_name": "OAuth Health",
+        "success": true,
+        "status_code": 200,
+        "expected_status": [
+          200
+        ],
+        "response_time": 105.755,
+        "critical": true
+      },
+      {
+        "test_name": "OAuth Debug",
+        "success": false,
+        "status_code": 404,
+        "expected_status": [
+          200
+        ],
+        "response_time": 55.144,
+        "critical": false
+      },
+      {
+        "test_name": "OAuth Test",
+        "success": true,
+        "status_code": 200,
+        "expected_status": [
+          200
+        ],
+        "response_time": 52.974000000000004,
+        "critical": false
+      },
+      {
+        "test_name": "OAuth Token (Invalid)",
+        "success": true,
+        "status_code": 500,
+        "expected_status": [
+          400,
+          422,
+          500
+        ],
+        "response_time": 167.161,
+        "critical": true
+      }
+    ],
+    "system_diagnostics": [
+      {
+        "test_name": "Prismatic Diagnostics",
+        "success": false,
+        "status_code": 404,
+        "response_time": 99.658,
+        "has_valid_json": true,
+        "critical": false
+      },
+      {
+        "test_name": "Deployment Sync Check",
+        "success": false,
+        "status_code": 404,
+        "response_time": 59.911,
+        "has_valid_json": true,
+        "critical": false
+      },
+      {
+        "test_name": "Comprehensive Health",
+        "success": false,
+        "status_code": 404,
+        "response_time": 50.12,
+        "has_valid_json": true,
+        "critical": false
+      }
+    ]
+  },
+  "summary": {
+    "total_tests": 10,
+    "passed_tests": 4,
+    "failed_tests": 6,
+    "critical_failures": 2,
+    "success_rate": 40.0
+  }
+}

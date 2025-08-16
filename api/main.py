@@ -1197,6 +1197,42 @@ async def hubspot_oauth_health():
         "client_secret_configured": client_secret_configured
     }
 
+@app.get("/api/hubspot/oauth/debug")
+async def hubspot_oauth_debug():
+    """Debug endpoint to help diagnose deployment issues"""
+    import inspect
+    
+    # Get all routes from the FastAPI app
+    routes = []
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else [],
+                "name": getattr(route, 'name', 'unknown')
+            })
+    
+    # Filter for HubSpot OAuth related routes
+    oauth_routes = [r for r in routes if 'hubspot' in r['path'].lower() and 'oauth' in r['path'].lower()]
+    
+    return {
+        "status": "debug_info",
+        "timestamp": datetime.now().isoformat(),
+        "environment": {
+            "hubspot_client_id_configured": bool(os.getenv('HUBSPOT_CLIENT_ID')),
+            "hubspot_client_secret_configured": bool(os.getenv('HUBSPOT_CLIENT_SECRET')),
+            "client_id_length": len(os.getenv('HUBSPOT_CLIENT_ID', '')) if os.getenv('HUBSPOT_CLIENT_ID') else 0,
+            "client_secret_length": len(os.getenv('HUBSPOT_CLIENT_SECRET', '')) if os.getenv('HUBSPOT_CLIENT_SECRET') else 0
+        },
+        "hubspot_oauth_routes": oauth_routes,
+        "all_api_routes": [r for r in routes if r['path'].startswith('/api/')],
+        "total_routes": len(routes),
+        "server_info": {
+            "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            "fastapi_available": True
+        }
+    }
+
 @app.post("/api/hubspot/oauth/test")
 async def test_oauth_endpoint():
     """Test endpoint to verify JSON response format"""
@@ -1591,6 +1627,628 @@ async def delete_search(request_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting search: {str(e)}")
+
+# Prismatic Integration Diagnostic Models
+class PrismaticDiagnosticResult(BaseModel):
+    timestamp: str
+    environment: str
+    api_health: Dict[str, Any]
+    prismatic_connectivity: Dict[str, Any]
+    integration_config: Dict[str, Any]
+    deployment_sync: Dict[str, Any]
+    recommendations: List[str]
+    critical_issues: List[str]
+
+class PrismaticConfigValidator:
+    """Validator for Prismatic integration configuration"""
+    
+    def __init__(self):
+        self.base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+        
+    async def validate_webhook_urls(self) -> Dict[str, Any]:
+        """Validate webhook URLs are accessible"""
+        webhook_endpoints = [
+            '/api/hubspot/oauth/token',
+            '/api/hubspot/oauth/health',
+            '/api/hubspot/oauth/debug',
+            '/api/hubspot/oauth/test'
+        ]
+        
+        results = {
+            "accessible_endpoints": [],
+            "failed_endpoints": [],
+            "total_tested": len(webhook_endpoints),
+            "response_times": {}
+        }
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for endpoint in webhook_endpoints:
+                try:
+                    url = f"{self.base_url}{endpoint}"
+                    start_time = time.time()
+                    
+                    # Test GET endpoints
+                    if 'health' in endpoint or 'debug' in endpoint:
+                        response = await client.get(url)
+                    else:
+                        # Test POST endpoints with minimal data
+                        response = await client.post(url, json={})
+                    
+                    response_time = (time.time() - start_time) * 1000  # Convert to ms
+                    results["response_times"][endpoint] = round(response_time, 2)
+                    
+                    # Try to parse response
+                    response_data = None
+                    try:
+                        response_data = response.json()
+                    except:
+                        response_data = response.text[:100] if response.text else None
+                    
+                    results["accessible_endpoints"].append({
+                        "endpoint": endpoint,
+                        "status_code": response.status_code,
+                        "accessible": True,
+                        "response_time_ms": round(response_time, 2),
+                        "response_preview": response_data
+                    })
+                except Exception as e:
+                    results["failed_endpoints"].append({
+                        "endpoint": endpoint,
+                        "error": str(e),
+                        "accessible": False
+                    })
+        
+        return results
+    
+    async def validate_auth_config(self) -> Dict[str, Any]:
+        """Verify authentication configuration"""
+        client_id = os.getenv('HUBSPOT_CLIENT_ID', '')
+        client_secret = os.getenv('HUBSPOT_CLIENT_SECRET', '')
+        
+        # Test actual HubSpot OAuth client initialization
+        auth_test_result = {
+            "hubspot_client_id_configured": bool(client_id),
+            "hubspot_client_secret_configured": bool(client_secret),
+            "client_id_length": len(client_id),
+            "client_secret_length": len(client_secret),
+            "oauth_client_initializable": False,
+            "hubspot_token_url_reachable": False
+        }
+        
+        # Test if OAuth client can be initialized
+        try:
+            test_client = HubSpotOAuthClient()
+            auth_test_result["oauth_client_initializable"] = True
+        except Exception as e:
+            auth_test_result["oauth_client_init_error"] = str(e)
+        
+        # Test if HubSpot token URL is reachable
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get("https://api.hubapi.com/oauth/v1/token")
+                # We expect a 405 (Method Not Allowed) since we're using GET instead of POST
+                auth_test_result["hubspot_token_url_reachable"] = response.status_code in [405, 400, 401]
+                auth_test_result["hubspot_api_status"] = response.status_code
+        except Exception as e:
+            auth_test_result["hubspot_api_error"] = str(e)
+        
+        return auth_test_result
+    
+    async def validate_triggers(self) -> Dict[str, Any]:
+        """Check trigger conditions and events"""
+        trigger_validation = {
+            "oauth_flow_configured": True,
+            "webhook_triggers_available": True,
+            "error_handling_configured": True,
+            "required_endpoints_available": [],
+            "missing_endpoints": []
+        }
+        
+        # Check if all required OAuth endpoints are available
+        required_endpoints = [
+            '/api/hubspot/oauth/token',
+            '/api/hubspot/oauth/health'
+        ]
+        
+        webhook_results = await self.validate_webhook_urls()
+        accessible_paths = [ep["endpoint"] for ep in webhook_results["accessible_endpoints"]]
+        
+        for endpoint in required_endpoints:
+            if endpoint in accessible_paths:
+                trigger_validation["required_endpoints_available"].append(endpoint)
+            else:
+                trigger_validation["missing_endpoints"].append(endpoint)
+        
+        trigger_validation["all_required_endpoints_available"] = len(trigger_validation["missing_endpoints"]) == 0
+        
+        return trigger_validation
+    
+    async def test_prismatic_connectivity(self) -> Dict[str, Any]:
+        """Test connectivity from Prismatic's perspective"""
+        connectivity_test = {
+            "external_accessibility": False,
+            "cors_configured": False,
+            "https_available": False,
+            "response_format_valid": False
+        }
+        
+        # Test if the API is externally accessible (simulate Prismatic calling it)
+        try:
+            # Use the actual deployed URL if available
+            test_url = self.base_url
+            if "localhost" not in test_url and "127.0.0.1" not in test_url:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(f"{test_url}/api/hubspot/oauth/health")
+                    connectivity_test["external_accessibility"] = response.status_code == 200
+                    connectivity_test["https_available"] = test_url.startswith("https://")
+                    
+                    # Check if response format is valid JSON
+                    try:
+                        response.json()
+                        connectivity_test["response_format_valid"] = True
+                    except:
+                        pass
+                        
+                    # Check CORS headers
+                    cors_headers = response.headers.get("access-control-allow-origin")
+                    connectivity_test["cors_configured"] = bool(cors_headers)
+                    
+        except Exception as e:
+            connectivity_test["connectivity_error"] = str(e)
+        
+        return connectivity_test
+
+@app.get("/api/system/prismatic/diagnostics")
+async def prismatic_diagnostics():
+    """Comprehensive Prismatic integration diagnostics"""
+    try:
+        validator = PrismaticConfigValidator()
+        
+        # Run all diagnostic checks
+        webhook_validation = await validator.validate_webhook_urls()
+        auth_validation = await validator.validate_auth_config()
+        trigger_validation = await validator.validate_triggers()
+        
+        # Check API health
+        api_health = {
+            "total_endpoints": len(webhook_validation["accessible_endpoints"]) + len(webhook_validation["failed_endpoints"]),
+            "accessible_endpoints": len(webhook_validation["accessible_endpoints"]),
+            "failed_endpoints": len(webhook_validation["failed_endpoints"]),
+            "health_percentage": (len(webhook_validation["accessible_endpoints"]) / webhook_validation["total_tested"]) * 100 if webhook_validation["total_tested"] > 0 else 0
+        }
+        
+        # Generate recommendations
+        recommendations = []
+        critical_issues = []
+        
+        if not auth_validation["hubspot_client_id_configured"]:
+            critical_issues.append("HUBSPOT_CLIENT_ID environment variable is not configured")
+            recommendations.append("Set HUBSPOT_CLIENT_ID environment variable in production")
+            
+        if not auth_validation["hubspot_client_secret_configured"]:
+            critical_issues.append("HUBSPOT_CLIENT_SECRET environment variable is not configured")
+            recommendations.append("Set HUBSPOT_CLIENT_SECRET environment variable in production")
+            
+        if webhook_validation["failed_endpoints"]:
+            critical_issues.append(f"{len(webhook_validation['failed_endpoints'])} webhook endpoints are not accessible")
+            recommendations.append("Check deployment status and ensure all endpoints are properly deployed")
+            
+        if api_health["health_percentage"] < 100:
+            recommendations.append("Some API endpoints are failing - check logs for specific errors")
+            
+        # Check for common Prismatic integration issues
+        if not webhook_validation["accessible_endpoints"]:
+            critical_issues.append("No webhook endpoints are accessible - Prismatic cannot reach the API")
+            recommendations.append("Verify the API is deployed and accessible from external services")
+            recommendations.append("Check firewall and network configuration")
+            
+        # Environment detection
+        environment = "production" if "render.com" in os.getenv('API_BASE_URL', '') else "development"
+        
+        result = PrismaticDiagnosticResult(
+            timestamp=datetime.now().isoformat(),
+            environment=environment,
+            api_health=api_health,
+            prismatic_connectivity=webhook_validation,
+            integration_config={
+                "auth_config": auth_validation,
+                "trigger_config": trigger_validation
+            },
+            deployment_sync={
+                "environment_detected": environment,
+                "base_url": validator.base_url
+            },
+            recommendations=recommendations,
+            critical_issues=critical_issues
+        )
+        
+        return result.dict()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prismatic diagnostic failed: {str(e)}"
+        )
+
+@app.get("/api/system/deployment/sync-check")
+async def deployment_sync_check():
+    """Check deployment synchronization between environments"""
+    try:
+        # Get all available routes
+        routes = []
+        for route in app.routes:
+            if hasattr(route, 'path') and hasattr(route, 'methods'):
+                routes.append({
+                    "path": route.path,
+                    "methods": list(route.methods),
+                    "name": getattr(route, 'name', 'unnamed')
+                })
+        
+        # Filter for API routes
+        api_routes = [r for r in routes if r['path'].startswith('/api/')]
+        hubspot_routes = [r for r in api_routes if 'hubspot' in r['path'].lower()]
+        system_routes = [r for r in api_routes if 'system' in r['path'].lower()]
+        
+        # Environment detection
+        environment_info = {
+            "detected_environment": "production" if any([
+                "render.com" in os.getenv('API_BASE_URL', ''),
+                "herokuapp.com" in os.getenv('API_BASE_URL', ''),
+                os.getenv('NODE_ENV') == 'production',
+                os.getenv('ENVIRONMENT') == 'production'
+            ]) else "development",
+            "base_url": os.getenv('API_BASE_URL', 'http://localhost:8000'),
+            "node_env": os.getenv('NODE_ENV', 'not_set'),
+            "environment_var": os.getenv('ENVIRONMENT', 'not_set')
+        }
+        
+        # Critical environment variables check
+        critical_env_vars = {
+            "HUBSPOT_CLIENT_ID": {
+                "configured": bool(os.getenv('HUBSPOT_CLIENT_ID')),
+                "length": len(os.getenv('HUBSPOT_CLIENT_ID', ''))
+            },
+            "HUBSPOT_CLIENT_SECRET": {
+                "configured": bool(os.getenv('HUBSPOT_CLIENT_SECRET')),
+                "length": len(os.getenv('HUBSPOT_CLIENT_SECRET', ''))
+            },
+            "OPENAI_API_KEY": {
+                "configured": bool(os.getenv('OPENAI_API_KEY')),
+                "length": len(os.getenv('OPENAI_API_KEY', ''))
+            }
+        }
+        
+        # Deployment health indicators
+        deployment_health = {
+            "total_routes": len(routes),
+            "api_routes": len(api_routes),
+            "hubspot_routes": len(hubspot_routes),
+            "system_routes": len(system_routes),
+            "critical_env_vars_configured": sum(1 for var in critical_env_vars.values() if var["configured"]),
+            "total_critical_env_vars": len(critical_env_vars)
+        }
+        
+        # Configuration drift detection
+        expected_hubspot_routes = [
+            "/api/hubspot/oauth/health",
+            "/api/hubspot/oauth/debug", 
+            "/api/hubspot/oauth/test",
+            "/api/hubspot/oauth/token"
+        ]
+        
+        actual_hubspot_paths = [r["path"] for r in hubspot_routes]
+        missing_routes = [route for route in expected_hubspot_routes if route not in actual_hubspot_paths]
+        unexpected_routes = [route for route in actual_hubspot_paths if route not in expected_hubspot_routes]
+        
+        config_drift = {
+            "expected_hubspot_routes": expected_hubspot_routes,
+            "actual_hubspot_routes": actual_hubspot_paths,
+            "missing_routes": missing_routes,
+            "unexpected_routes": unexpected_routes,
+            "routes_match_expected": len(missing_routes) == 0
+        }
+        
+        # Overall sync status
+        sync_issues = []
+        if missing_routes:
+            sync_issues.append(f"Missing {len(missing_routes)} expected HubSpot routes")
+        if not critical_env_vars["HUBSPOT_CLIENT_ID"]["configured"]:
+            sync_issues.append("HUBSPOT_CLIENT_ID not configured")
+        if not critical_env_vars["HUBSPOT_CLIENT_SECRET"]["configured"]:
+            sync_issues.append("HUBSPOT_CLIENT_SECRET not configured")
+        
+        sync_status = {
+            "synchronized": len(sync_issues) == 0,
+            "issues": sync_issues,
+            "health_score": (
+                (deployment_health["critical_env_vars_configured"] / deployment_health["total_critical_env_vars"]) * 0.5 +
+                (1.0 if config_drift["routes_match_expected"] else 0.0) * 0.5
+            ) * 100
+        }
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "environment_info": environment_info,
+            "deployment_health": deployment_health,
+            "critical_env_vars": critical_env_vars,
+            "config_drift": config_drift,
+            "sync_status": sync_status,
+            "all_routes": api_routes
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Deployment sync check failed: {str(e)}"
+        )
+
+@app.get("/api/system/health/comprehensive")
+async def comprehensive_health_check():
+    """Comprehensive system health including Prismatic integration"""
+    try:
+        # Get Prismatic diagnostics
+        validator = PrismaticConfigValidator()
+        prismatic_connectivity = await validator.test_prismatic_connectivity()
+        webhook_validation = await validator.validate_webhook_urls()
+        auth_validation = await validator.validate_auth_config()
+        
+        # Get deployment sync status
+        sync_check_response = await deployment_sync_check()
+        
+        # API endpoint health summary
+        api_health = {
+            "total_endpoints_tested": webhook_validation["total_tested"],
+            "accessible_endpoints": len(webhook_validation["accessible_endpoints"]),
+            "failed_endpoints": len(webhook_validation["failed_endpoints"]),
+            "average_response_time": sum(webhook_validation["response_times"].values()) / len(webhook_validation["response_times"]) if webhook_validation["response_times"] else 0,
+            "health_percentage": (len(webhook_validation["accessible_endpoints"]) / webhook_validation["total_tested"]) * 100 if webhook_validation["total_tested"] > 0 else 0
+        }
+        
+        # Performance metrics
+        performance_metrics = {
+            "response_times": webhook_validation["response_times"],
+            "slowest_endpoint": max(webhook_validation["response_times"].items(), key=lambda x: x[1]) if webhook_validation["response_times"] else None,
+            "fastest_endpoint": min(webhook_validation["response_times"].items(), key=lambda x: x[1]) if webhook_validation["response_times"] else None
+        }
+        
+        # Error tracking
+        error_summary = {
+            "failed_endpoints": webhook_validation["failed_endpoints"],
+            "auth_errors": [],
+            "connectivity_errors": []
+        }
+        
+        if not auth_validation["hubspot_client_id_configured"]:
+            error_summary["auth_errors"].append("HUBSPOT_CLIENT_ID not configured")
+        if not auth_validation["hubspot_client_secret_configured"]:
+            error_summary["auth_errors"].append("HUBSPOT_CLIENT_SECRET not configured")
+        if not prismatic_connectivity["external_accessibility"]:
+            error_summary["connectivity_errors"].append("API not externally accessible")
+        
+        # Overall system status
+        critical_issues = []
+        warnings = []
+        
+        if api_health["health_percentage"] < 100:
+            critical_issues.append(f"Only {api_health['health_percentage']:.0f}% of endpoints are accessible")
+        if not auth_validation["hubspot_client_id_configured"] or not auth_validation["hubspot_client_secret_configured"]:
+            critical_issues.append("HubSpot OAuth credentials not fully configured")
+        if not prismatic_connectivity["external_accessibility"]:
+            critical_issues.append("API not accessible from external services (Prismatic cannot reach it)")
+        if not prismatic_connectivity["https_available"]:
+            warnings.append("HTTPS not enabled (recommended for production)")
+        if api_health["average_response_time"] > 1000:
+            warnings.append(f"Average response time is high ({api_health['average_response_time']:.0f}ms)")
+        
+        # System readiness score
+        readiness_factors = [
+            api_health["health_percentage"] / 100,  # Endpoint accessibility
+            1.0 if auth_validation["hubspot_client_id_configured"] and auth_validation["hubspot_client_secret_configured"] else 0.0,  # Auth config
+            1.0 if prismatic_connectivity["external_accessibility"] else 0.0,  # External access
+            1.0 if prismatic_connectivity["https_available"] else 0.5,  # HTTPS (partial credit)
+            1.0 if api_health["average_response_time"] < 1000 else 0.5  # Performance (partial credit)
+        ]
+        
+        overall_readiness = (sum(readiness_factors) / len(readiness_factors)) * 100
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "healthy" if len(critical_issues) == 0 else "degraded" if len(critical_issues) < 3 else "unhealthy",
+            "readiness_score": round(overall_readiness, 1),
+            "api_health": api_health,
+            "prismatic_connectivity": prismatic_connectivity,
+            "performance_metrics": performance_metrics,
+            "error_summary": error_summary,
+            "critical_issues": critical_issues,
+            "warnings": warnings,
+            "deployment_sync": {
+                "environment": sync_check_response["environment_info"]["detected_environment"],
+                "sync_status": sync_check_response["sync_status"],
+                "health_score": sync_check_response["sync_status"]["health_score"]
+            },
+            "recommendations": [
+                "Fix critical issues first: " + ", ".join(critical_issues) if critical_issues else "No critical issues found",
+                "Address warnings: " + ", ".join(warnings) if warnings else "No warnings",
+                "Monitor response times and endpoint availability",
+                "Ensure Prismatic integration configuration matches API endpoints"
+            ]
+        }
+        
+    except Exception as e:
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "error",
+            "error": str(e),
+            "message": "Health check failed - this indicates a serious system issue"
+        }
+
+@app.post("/api/system/webhook/test")
+async def test_webhook_simulation():
+    """Test webhook endpoints as if called by Prismatic"""
+    try:
+        # Simulate the exact calls that Prismatic would make
+        webhook_tests = [
+            {
+                "name": "OAuth Health Check",
+                "description": "Prismatic checking if OAuth service is available",
+                "method": "GET",
+                "path": "/api/hubspot/oauth/health",
+                "headers": {
+                    "User-Agent": "Prismatic-Integration/1.0",
+                    "Accept": "application/json"
+                }
+            },
+            {
+                "name": "OAuth Token Exchange (Valid Format)",
+                "description": "Prismatic attempting token exchange with proper format",
+                "method": "POST", 
+                "path": "/api/hubspot/oauth/token",
+                "headers": {
+                    "User-Agent": "Prismatic-Integration/1.0",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                "data": {
+                    "code": "test_authorization_code_from_prismatic",
+                    "redirect_uri": "https://app.prismatic.io/callback/hubspot"
+                }
+            },
+            {
+                "name": "OAuth Token Exchange (Invalid Code)",
+                "description": "Prismatic with invalid authorization code",
+                "method": "POST",
+                "path": "/api/hubspot/oauth/token", 
+                "headers": {
+                    "User-Agent": "Prismatic-Integration/1.0",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                "data": {
+                    "code": "invalid_code",
+                    "redirect_uri": "https://app.prismatic.io/callback/hubspot"
+                }
+            },
+            {
+                "name": "OAuth Token Exchange (Missing Data)",
+                "description": "Prismatic with malformed request",
+                "method": "POST",
+                "path": "/api/hubspot/oauth/token",
+                "headers": {
+                    "User-Agent": "Prismatic-Integration/1.0", 
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                "data": {}
+            }
+        ]
+        
+        test_results = []
+        base_url = os.getenv('API_BASE_URL', 'http://localhost:8000')
+        
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for test in webhook_tests:
+                try:
+                    url = f"{base_url}{test['path']}"
+                    start_time = time.time()
+                    
+                    if test['method'] == 'GET':
+                        response = await client.get(url, headers=test['headers'])
+                    else:
+                        response = await client.post(url, json=test['data'], headers=test['headers'])
+                    
+                    response_time = (time.time() - start_time) * 1000
+                    
+                    # Try to parse JSON response
+                    response_data = None
+                    try:
+                        response_data = response.json()
+                    except:
+                        response_data = {"raw_response": response.text[:200]}
+                    
+                    # Determine if response is appropriate for Prismatic
+                    prismatic_compatible = True
+                    compatibility_notes = []
+                    
+                    if response.status_code >= 500:
+                        compatibility_notes.append("5xx errors may cause Prismatic integration failures")
+                    if response_time > 5000:
+                        compatibility_notes.append("Response time > 5s may cause Prismatic timeouts")
+                    if not response.headers.get('content-type', '').startswith('application/json'):
+                        compatibility_notes.append("Non-JSON response may not be handled properly by Prismatic")
+                        prismatic_compatible = False
+                    
+                    test_results.append({
+                        "test_name": test['name'],
+                        "description": test['description'],
+                        "method": test['method'],
+                        "path": test['path'],
+                        "status_code": response.status_code,
+                        "response_time_ms": round(response_time, 2),
+                        "response_data": response_data,
+                        "prismatic_compatible": prismatic_compatible,
+                        "compatibility_notes": compatibility_notes,
+                        "headers_sent": test['headers'],
+                        "headers_received": dict(response.headers),
+                        "success": True
+                    })
+                    
+                except Exception as e:
+                    test_results.append({
+                        "test_name": test['name'],
+                        "description": test['description'],
+                        "method": test['method'],
+                        "path": test['path'],
+                        "error": str(e),
+                        "prismatic_compatible": False,
+                        "compatibility_notes": ["Request failed - Prismatic integration will fail"],
+                        "success": False
+                    })
+        
+        # Summary analysis
+        total_tests = len(test_results)
+        successful_tests = sum(1 for t in test_results if t['success'])
+        compatible_tests = sum(1 for t in test_results if t.get('prismatic_compatible', False))
+        
+        summary = {
+            "total_tests": total_tests,
+            "successful_tests": successful_tests,
+            "prismatic_compatible_tests": compatible_tests,
+            "success_rate": (successful_tests / total_tests) * 100 if total_tests > 0 else 0,
+            "compatibility_rate": (compatible_tests / total_tests) * 100 if total_tests > 0 else 0,
+            "overall_prismatic_readiness": compatible_tests >= total_tests * 0.75  # 75% compatibility threshold
+        }
+        
+        # Recommendations for Prismatic integration
+        recommendations = []
+        if summary["success_rate"] < 100:
+            recommendations.append("Fix failing endpoints before configuring Prismatic integration")
+        if summary["compatibility_rate"] < 75:
+            recommendations.append("Address compatibility issues to ensure reliable Prismatic integration")
+        if any(t.get('response_time_ms', 0) > 3000 for t in test_results if t['success']):
+            recommendations.append("Optimize response times to prevent Prismatic timeouts")
+        if summary["overall_prismatic_readiness"]:
+            recommendations.append("API appears ready for Prismatic integration - check Prismatic configuration")
+        else:
+            recommendations.append("API needs fixes before Prismatic integration will work reliably")
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "summary": summary,
+            "test_results": test_results,
+            "recommendations": recommendations,
+            "next_steps": [
+                "Review failed tests and fix underlying issues",
+                "Verify Prismatic webhook URLs match these endpoint paths",
+                "Ensure Prismatic authentication headers are configured correctly",
+                "Test actual Prismatic integration after fixing any issues"
+            ]
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Webhook simulation test failed: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn

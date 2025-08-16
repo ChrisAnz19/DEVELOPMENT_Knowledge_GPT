@@ -1,0 +1,487 @@
+{
+  "Local Development": {
+    "results": {
+      "base_url": "http://localhost:8000",
+      "timestamp": "2025-08-16T17:32:00Z",
+      "tests": {
+        "Health Check": {
+          "url": "http://localhost:8000/api/hubspot/oauth/health",
+          "method": "GET",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:20 GMT",
+            "server": "uvicorn",
+            "content-length": "110",
+            "content-type": "application/json"
+          },
+          "response_size": 110,
+          "success": true,
+          "json_response": {
+            "status": "ok",
+            "hubspot_oauth_configured": false,
+            "client_id_configured": false,
+            "client_secret_configured": false
+          }
+        },
+        "Debug Info": {
+          "url": "http://localhost:8000/api/hubspot/oauth/debug",
+          "method": "GET",
+          "status_code": 404,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "22",
+            "content-type": "application/json"
+          },
+          "response_size": 22,
+          "success": false,
+          "json_response": {
+            "detail": "Not Found"
+          }
+        },
+        "Test Endpoint": {
+          "url": "http://localhost:8000/api/hubspot/oauth/test",
+          "method": "POST",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "167",
+            "content-type": "application/json"
+          },
+          "response_size": 167,
+          "success": true,
+          "json_response": {
+            "test": "success",
+            "message": "This endpoint returns valid JSON",
+            "timestamp": "2025-08-16T13:49:21.387102",
+            "version": "updated_with_json_fixes",
+            "hubspot_configured": false
+          }
+        },
+        "Token Exchange (Invalid)": {
+          "url": "http://localhost:8000/api/hubspot/oauth/token",
+          "method": "POST",
+          "status_code": 500,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "127",
+            "content-type": "application/json"
+          },
+          "response_size": 127,
+          "success": false,
+          "json_response": {
+            "detail": {
+              "error": "configuration_error",
+              "error_description": "HubSpot OAuth credentials are not configured",
+              "status_code": 500
+            }
+          }
+        },
+        "Token Exchange (Missing Data)": {
+          "url": "http://localhost:8000/api/hubspot/oauth/token",
+          "method": "POST",
+          "status_code": 422,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "170",
+            "content-type": "application/json"
+          },
+          "response_size": 170,
+          "success": false,
+          "json_response": {
+            "detail": [
+              {
+                "type": "missing",
+                "loc": [
+                  "body",
+                  "code"
+                ],
+                "msg": "Field required",
+                "input": {}
+              },
+              {
+                "type": "missing",
+                "loc": [
+                  "body",
+                  "redirect_uri"
+                ],
+                "msg": "Field required",
+                "input": {}
+              }
+            ]
+          }
+        },
+        "Root Health": {
+          "url": "http://localhost:8000/",
+          "method": "GET",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "85",
+            "content-type": "application/json"
+          },
+          "response_size": 85,
+          "success": true,
+          "json_response": {
+            "status": "healthy",
+            "timestamp": "2025-08-16T17:49:21.454233+00:00",
+            "version": "1.0.0"
+          }
+        },
+        "Prismatic Diagnostics": {
+          "url": "http://localhost:8000/api/system/prismatic/diagnostics",
+          "method": "GET",
+          "status_code": 404,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "server": "uvicorn",
+            "content-length": "22",
+            "content-type": "application/json"
+          },
+          "response_size": 22,
+          "success": false,
+          "json_response": {
+            "detail": "Not Found"
+          }
+        }
+      },
+      "summary": {
+        "total_tests": 7,
+        "passed": 3,
+        "failed": 4,
+        "errors": [
+          "Debug Info: 404 Not Found",
+          "Prismatic Diagnostics: 404 Not Found"
+        ]
+      }
+    },
+    "analysis": {
+      "found_404s": [
+        {
+          "test": "Debug Info",
+          "url": "http://localhost:8000/api/hubspot/oauth/debug",
+          "method": "GET"
+        },
+        {
+          "test": "Prismatic Diagnostics",
+          "url": "http://localhost:8000/api/system/prismatic/diagnostics",
+          "method": "GET"
+        }
+      ],
+      "missing_endpoints": [],
+      "recommendations": [
+        "Some endpoints are returning 404 - check if they're deployed",
+        "Verify the deployed code includes all OAuth endpoints",
+        "Check if there are any routing conflicts or middleware issues"
+      ]
+    },
+    "prismatic_analysis": {
+      "environment_variables": {
+        "error": "Diagnostic endpoint not accessible"
+      },
+      "external_connectivity": {
+        "skipped": "localhost environment"
+      },
+      "webhook_simulation": [
+        {
+          "test_name": "OAuth Health Check",
+          "success": true,
+          "status_code": 200,
+          "expected": [
+            200
+          ]
+        },
+        {
+          "test_name": "OAuth Token Exchange",
+          "success": true,
+          "status_code": 500,
+          "expected": [
+            400,
+            422,
+            500
+          ]
+        }
+      ],
+      "integration_readiness": {
+        "score": 1,
+        "total_checks": 4,
+        "percentage": 25.0,
+        "ready": false
+      }
+    }
+  },
+  "Production/Deployed": {
+    "results": {
+      "base_url": "https://knowledge-gpt-siuq.onrender.com",
+      "timestamp": "2025-08-16T17:32:00Z",
+      "tests": {
+        "Health Check": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/health",
+          "method": "GET",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:21 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "a261dd71-e60f-499f",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c49379ce42e7-EWR",
+            "content-encoding": "gzip",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 107,
+          "success": true,
+          "json_response": {
+            "status": "ok",
+            "hubspot_oauth_configured": true,
+            "client_id_configured": true,
+            "client_secret_configured": true
+          }
+        },
+        "Debug Info": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/debug",
+          "method": "GET",
+          "status_code": 404,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "a744d8b7-ff9d-484d",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c4944d9d42c3-EWR",
+            "content-encoding": "gzip",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 22,
+          "success": false,
+          "json_response": {
+            "detail": "Not Found"
+          }
+        },
+        "Test Endpoint": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/test",
+          "method": "POST",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "8ac1f023-f112-4e26",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c49528675e68-EWR",
+            "content-encoding": "gzip",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 166,
+          "success": true,
+          "json_response": {
+            "test": "success",
+            "message": "This endpoint returns valid JSON",
+            "timestamp": "2025-08-16T17:49:22.131291",
+            "version": "updated_with_json_fixes",
+            "hubspot_configured": true
+          }
+        },
+        "Token Exchange (Invalid)": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/token",
+          "method": "POST",
+          "status_code": 500,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "672f36e8-ebeb-46ea",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c495eb0c577b-EWR",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 136,
+          "success": false,
+          "json_response": {
+            "detail": {
+              "error": "internal_server_error",
+              "error_description": "An unexpected error occurred during token exchange.",
+              "status_code": 500
+            }
+          }
+        },
+        "Token Exchange (Missing Data)": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/token",
+          "method": "POST",
+          "status_code": 422,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "ec626613-199f-4cbd",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c498a861b9c6-EWR",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 170,
+          "success": false,
+          "json_response": {
+            "detail": [
+              {
+                "type": "missing",
+                "loc": [
+                  "body",
+                  "code"
+                ],
+                "msg": "Field required",
+                "input": {}
+              },
+              {
+                "type": "missing",
+                "loc": [
+                  "body",
+                  "redirect_uri"
+                ],
+                "msg": "Field required",
+                "input": {}
+              }
+            ]
+          }
+        },
+        "Root Health": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/",
+          "method": "GET",
+          "status_code": 200,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "51f37367-aef0-4d2c",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c4995d38a446-EWR",
+            "content-encoding": "gzip",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 85,
+          "success": true,
+          "json_response": {
+            "status": "healthy",
+            "timestamp": "2025-08-16T17:49:22.805561+00:00",
+            "version": "1.0.0"
+          }
+        },
+        "Prismatic Diagnostics": {
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/system/prismatic/diagnostics",
+          "method": "GET",
+          "status_code": 404,
+          "headers": {
+            "date": "Sat, 16 Aug 2025 17:49:22 GMT",
+            "content-type": "application/json",
+            "transfer-encoding": "chunked",
+            "connection": "keep-alive",
+            "rndr-id": "4b383397-617f-4073",
+            "vary": "Accept-Encoding",
+            "x-render-origin-server": "uvicorn",
+            "cf-cache-status": "DYNAMIC",
+            "server": "cloudflare",
+            "cf-ray": "9702c49a0956440d-EWR",
+            "content-encoding": "gzip",
+            "alt-svc": "h3=\":443\"; ma=86400"
+          },
+          "response_size": 22,
+          "success": false,
+          "json_response": {
+            "detail": "Not Found"
+          }
+        }
+      },
+      "summary": {
+        "total_tests": 7,
+        "passed": 3,
+        "failed": 4,
+        "errors": [
+          "Debug Info: 404 Not Found",
+          "Prismatic Diagnostics: 404 Not Found"
+        ]
+      }
+    },
+    "analysis": {
+      "found_404s": [
+        {
+          "test": "Debug Info",
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/hubspot/oauth/debug",
+          "method": "GET"
+        },
+        {
+          "test": "Prismatic Diagnostics",
+          "url": "https://knowledge-gpt-siuq.onrender.com/api/system/prismatic/diagnostics",
+          "method": "GET"
+        }
+      ],
+      "missing_endpoints": [],
+      "recommendations": [
+        "Some endpoints are returning 404 - check if they're deployed",
+        "Verify the deployed code includes all OAuth endpoints",
+        "Check if there are any routing conflicts or middleware issues"
+      ]
+    },
+    "prismatic_analysis": {
+      "environment_variables": {
+        "error": "Diagnostic endpoint not accessible"
+      },
+      "external_connectivity": {
+        "accessible": true,
+        "https": true
+      },
+      "webhook_simulation": [
+        {
+          "test_name": "OAuth Health Check",
+          "success": true,
+          "status_code": 200,
+          "expected": [
+            200
+          ]
+        },
+        {
+          "test_name": "OAuth Token Exchange",
+          "success": true,
+          "status_code": 500,
+          "expected": [
+            400,
+            422,
+            500
+          ]
+        }
+      ],
+      "integration_readiness": {
+        "score": 3,
+        "total_checks": 4,
+        "percentage": 75.0,
+        "ready": true
+      }
+    }
+  }
+}
