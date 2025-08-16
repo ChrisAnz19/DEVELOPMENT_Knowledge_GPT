@@ -484,12 +484,12 @@ def validate_hubspot_credentials():
     
     print(f"HubSpot OAuth credentials loaded successfully")
 
-# Validate HubSpot credentials on startup
+# Validate HubSpot credentials on startup (non-blocking)
 try:
     validate_hubspot_credentials()
 except ValueError as e:
     print(f"Warning: {e}")
-    print("HubSpot OAuth functionality will not be available")
+    print("HubSpot OAuth functionality will not be available until credentials are configured")
 
 class HubSpotOAuthClient:
     """Client for handling HubSpot OAuth token exchange"""
@@ -1144,31 +1144,62 @@ async def get_demo_categories():
         "message": "Demo categories retrieved successfully"
     }
 
-@app.post("/api/hubspot/oauth/token", response_model=HubSpotOAuthResponse)
+@app.get("/api/hubspot/oauth/health")
+async def hubspot_oauth_health():
+    """Health check for HubSpot OAuth configuration"""
+    client_id_configured = bool(os.getenv('HUBSPOT_CLIENT_ID'))
+    client_secret_configured = bool(os.getenv('HUBSPOT_CLIENT_SECRET'))
+    
+    return {
+        "status": "ok",
+        "hubspot_oauth_configured": client_id_configured and client_secret_configured,
+        "client_id_configured": client_id_configured,
+        "client_secret_configured": client_secret_configured
+    }
+
+@app.post("/api/hubspot/oauth/token")
 async def exchange_hubspot_oauth_token(request: HubSpotOAuthRequest):
     """
     Exchange HubSpot authorization code for access and refresh tokens
     """
     try:
+        print(f"HubSpot OAuth request received: code={request.code[:10]}..., redirect_uri={request.redirect_uri}")
+        
+        # Check if credentials are configured
+        if not hubspot_oauth_client.client_id or not hubspot_oauth_client.client_secret:
+            print("HubSpot credentials not configured")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "configuration_error",
+                    "error_description": "HubSpot OAuth credentials are not configured",
+                    "status_code": 500
+                }
+            )
+        
         # Exchange code for tokens using the OAuth client
         token_data = await hubspot_oauth_client.exchange_code_for_tokens(
             code=request.code,
             redirect_uri=request.redirect_uri
         )
         
-        # Return the tokens in the expected format
-        return HubSpotOAuthResponse(
-            access_token=token_data.get('access_token'),
-            refresh_token=token_data.get('refresh_token'),
-            expires_in=token_data.get('expires_in'),
-            token_type=token_data.get('token_type', 'bearer'),
-            scope=token_data.get('scope')
-        )
+        print("HubSpot token exchange successful")
         
-    except HTTPException:
+        # Return the tokens in the expected format
+        return {
+            "access_token": token_data.get('access_token'),
+            "refresh_token": token_data.get('refresh_token'),
+            "expires_in": token_data.get('expires_in'),
+            "token_type": token_data.get('token_type', 'bearer'),
+            "scope": token_data.get('scope')
+        }
+        
+    except HTTPException as e:
+        print(f"HubSpot OAuth HTTPException: {e.detail}")
         # Re-raise HTTP exceptions from the OAuth client
         raise
     except ValueError as e:
+        print(f"HubSpot OAuth ValueError: {str(e)}")
         # Handle configuration errors
         raise HTTPException(
             status_code=500,
@@ -1179,6 +1210,7 @@ async def exchange_hubspot_oauth_token(request: HubSpotOAuthRequest):
             }
         )
     except Exception as e:
+        print(f"HubSpot OAuth unexpected error: {str(e)}")
         # Handle any other unexpected errors
         raise HTTPException(
             status_code=500,
