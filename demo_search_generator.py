@@ -112,7 +112,7 @@ Generate 1 unique, realistic search query that matches the style and context. Be
                 "style": style,
                 "timestamp": datetime.now().isoformat(),
                 "use_case_type": self._determine_use_case_type(category),
-                "refresh_interval": 11
+                "refresh_interval": 5
             }
             
         except Exception as e:
@@ -165,7 +165,7 @@ Generate 1 unique, realistic search query that matches the style and context. Be
             "style": style,
             "timestamp": datetime.now().isoformat(),
             "use_case_type": self._determine_use_case_type(category),
-            "refresh_interval": 11,
+            "refresh_interval": 5,
             "source": "fallback"
         }
 
