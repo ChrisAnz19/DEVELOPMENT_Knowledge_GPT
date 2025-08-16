@@ -809,8 +809,16 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                         }
         
         search_db_id = search_data.get("id")
-        if search_db_id:
-            store_people_to_database(search_db_id, candidates)
+        print(f"[DEBUG] About to store candidates. search_db_id: {search_db_id}, candidates count: {len(candidates) if candidates else 0}")
+        if search_db_id and candidates:
+            print(f"[DEBUG] Calling store_people_to_database with {len(candidates)} candidates")
+            try:
+                result = store_people_to_database(search_db_id, candidates)
+                print(f"[DEBUG] store_people_to_database returned: {result}")
+            except Exception as e:
+                print(f"[DEBUG] Error calling store_people_to_database: {str(e)}")
+        else:
+            print(f"[DEBUG] Skipping storage - search_db_id: {search_db_id}, candidates: {len(candidates) if candidates else 0}")
         
         # Generate estimation for the search
         try:
