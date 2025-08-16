@@ -231,41 +231,43 @@ class DemoSearchGenerator:
         
         base_prompt = random.choice(prompt_variations)
         
-        prompt = f"""Generate a realistic, diverse search query based on this context: {base_prompt}
+        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals who need a specific product, service, investment, or opportunity.
 
 Writing Style: {style}
-Category: {category}
 
-Create a natural-sounding search query that demonstrates advanced behavioral targeting. Make it sound like it's written by a real person with the specified writing style. Be creative and vary the language, structure, and approach.
+The search must show someone actively seeking people who are looking FOR something specific like:
+- New technology/software solutions
+- Investment opportunities  
+- New job opportunities
+- Business partnerships
+- Professional services
+- Funding/capital
+- Vendors/suppliers
 
-Examples of diverse search patterns:
-- "Manufacturing CIOs researching cloud ERP solutions in the Midwest"
-- "Private equity partners looking at Series B FinTech deals"
-- "Healthcare IT directors evaluating cybersecurity vendors post-breach"
-- "Sustainability officers at Fortune 500 companies implementing ESG reporting"
-- "Quantum computing researchers transitioning from academia to industry"
-- "Family office investment committees exploring alternative assets"
-- "Supply chain executives dealing with post-pandemic disruptions"
-- "Chief Data Officers at insurance companies building AI capabilities"
-- "Renewable energy project developers seeking construction partners"
-- "Biotech CEOs preparing for IPO in the next 18 months"
-- "Real estate developers focusing on mixed-use urban projects"
-- "EdTech founders scaling internationally after successful Series A"
-- "Aerospace engineers working on next-gen propulsion systems"
-- "Food & beverage brands launching direct-to-consumer channels"
-- "Wealth management advisors serving ultra-high-net-worth clients"
+Examples of GOOD searches (people looking for people who NEED something):
+- "Find CFOs at manufacturing companies looking for ERP software"
+- "Looking for startup founders seeking Series A funding"
+- "Need VPs of Sales who are evaluating CRM solutions"
+- "Find executives looking for cybersecurity consultants"
+- "Looking for companies seeking digital transformation partners"
+- "Need investors interested in renewable energy deals"
+- "Find HR directors looking for recruiting software"
+- "Looking for CTOs who need cloud migration services"
+- "Need executives seeking executive coaching"
+- "Find companies looking for office space in Austin"
+- "Looking for manufacturers needing supply chain optimization"
+- "Find retailers seeking e-commerce platform upgrades"
+- "Need healthcare systems looking for EMR solutions"
+- "Looking for banks evaluating fraud detection software"
+- "Find startups seeking marketing automation tools"
 
 Writing styles:
-- casual: relaxed, informal ("Looking for...", "Need to find...")
-- formal: professional, structured ("Seeking to identify...", "Request assistance locating...")
-- urgent: time-sensitive ("ASAP need...", "Urgent search for...")
-- analytical: data-focused ("Analyzing market for...", "Quantifying opportunities with...")
-- conversational: friendly, natural ("Anyone know...", "Wondering if you can help find...")
-- direct: brief, to-the-point ("Find:", "Need:", "Search:")
-- enthusiastic: energetic ("Excited to connect with...", "Amazing opportunity to find...")
-- strategic: big-picture ("Strategic search for...", "Long-term partnership with...")
+- casual: "Looking for...", "Need to find..."
+- formal: "Seeking...", "Require identification of..."
+- urgent: "ASAP need...", "Urgent search for..."
+- direct: "Find...", "Need..."
 
-Generate 1 unique, realistic search query. Be wildly creative and vary the approach, industry focus, geographic scope, company stage, and behavioral indicators. Return only the search query text, nothing else."""
+Generate 1 realistic search query where someone is looking for people who NEED something specific. Keep it professional, logical, and focused on a clear business need. Return only the search query text."""
 
         try:
             response = openai.ChatCompletion.create(
