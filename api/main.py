@@ -713,9 +713,11 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 
                 # Fallback if merging failed
                 if not candidates:
+                    print(f"[DEBUG] Merging failed, using fallback: {len(people[:max_candidates])} people")
                     candidates = people[:max_candidates]
             
             if not candidates:
+                print(f"[DEBUG] Still no candidates, using final fallback: {len(people[:max_candidates])} people")
                 candidates = people[:max_candidates]
         except Exception:
             candidates = people[:max_candidates] if people else []
@@ -810,6 +812,9 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
         
         search_db_id = search_data.get("id")
         print(f"[DEBUG] About to store candidates. search_db_id: {search_db_id}, candidates count: {len(candidates) if candidates else 0}")
+        if candidates:
+            print(f"[DEBUG] Candidates list: {[c.get('name', 'Unknown') for c in candidates if isinstance(c, dict)]}")
+        
         if search_db_id and candidates:
             print(f"[DEBUG] Calling store_people_to_database with {len(candidates)} candidates")
             try:
