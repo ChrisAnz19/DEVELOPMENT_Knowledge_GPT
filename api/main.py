@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 import uvicorn
 import json
@@ -27,6 +27,8 @@ if not os.getenv('OPENAI_API_KEY'):
             os.environ['SCRAPING_DOG_API_KEY'] = secrets.get('scraping_dog_api_key', '') or secrets.get('SCRAPING_DOG_API_KEY', '')
             os.environ['SUPABASE_URL'] = secrets.get('supabase_url', '') or secrets.get('SUPABASE_URL', '')
             os.environ['SUPABASE_KEY'] = secrets.get('supabase_key', '') or secrets.get('SUPABASE_KEY', '')
+            os.environ['HUBSPOT_CLIENT_ID'] = secrets.get('hubspot_client_id', '') or secrets.get('HUBSPOT_CLIENT_ID', '')
+            os.environ['HUBSPOT_CLIENT_SECRET'] = secrets.get('hubspot_client_secret', '') or secrets.get('HUBSPOT_CLIENT_SECRET', '')
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
@@ -470,6 +472,151 @@ async def is_public_figure(full_name: str) -> bool:
         _public_figure_cache[name_key] = False
         return False
 
+def validate_hubspot_credentials():
+    """Validate that required HubSpot OAuth credentials are present"""
+    client_id = os.getenv('HUBSPOT_CLIENT_ID')
+    client_secret = os.getenv('HUBSPOT_CLIENT_SECRET')
+    
+    if not client_id:
+        raise ValueError("HUBSPOT_CLIENT_ID environment variable is required but not set")
+    if not client_secret:
+        raise ValueError("HUBSPOT_CLIENT_SECRET environment variable is required but not set")
+    
+    print(f"HubSpot OAuth credentials loaded successfully")
+
+# Validate HubSpot credentials on startup
+try:
+    validate_hubspot_credentials()
+except ValueError as e:
+    print(f"Warning: {e}")
+    print("HubSpot OAuth functionality will not be available")
+
+class HubSpotOAuthClient:
+    """Client for handling HubSpot OAuth token exchange"""
+    
+    def __init__(self):
+        self.client_id = os.getenv('HUBSPOT_CLIENT_ID')
+        self.client_secret = os.getenv('HUBSPOT_CLIENT_SECRET')
+        self.token_url = "https://api.hubapi.com/oauth/v1/token"
+        
+    async def exchange_code_for_tokens(self, code: str, redirect_uri: str) -> Dict[str, Any]:
+        """Exchange authorization code for access and refresh tokens"""
+        if not self.client_id or not self.client_secret:
+            raise ValueError("HubSpot credentials not configured")
+            
+        payload = {
+            "grant_type": "authorization_code",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "redirect_uri": redirect_uri,
+            "code": code
+        }
+        
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    self.token_url,
+                    data=payload,
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    return response.json()
+                elif response.status_code == 429:
+                    # Rate limiting
+                    retry_after = response.headers.get('Retry-After', '60')
+                    raise HTTPException(
+                        status_code=429,
+                        detail={
+                            "error": "rate_limit_exceeded",
+                            "error_description": "Rate limit exceeded. Please try again later.",
+                            "retry_after": retry_after,
+                            "status_code": 429
+                        }
+                    )
+                elif response.status_code >= 500:
+                    # HubSpot server errors
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "error": "hubspot_unavailable",
+                            "error_description": "HubSpot API is temporarily unavailable. Please try again later.",
+                            "status_code": 503
+                        }
+                    )
+                else:
+                    # Handle HubSpot OAuth errors
+                    try:
+                        error_data = response.json()
+                        raise HTTPException(
+                            status_code=self._map_hubspot_error_to_http_status(error_data.get('error', 'unknown_error')),
+                            detail={
+                                "error": error_data.get('error', 'unknown_error'),
+                                "error_description": error_data.get('error_description', 'Unknown error occurred'),
+                                "status_code": response.status_code
+                            }
+                        )
+                    except json.JSONDecodeError:
+                        # If response is not JSON, create generic error
+                        raise HTTPException(
+                            status_code=500,
+                            detail={
+                                "error": "hubspot_api_error",
+                                "error_description": f"HubSpot API returned status {response.status_code}",
+                                "status_code": response.status_code
+                            }
+                        )
+                        
+        except httpx.TimeoutException:
+            # Network timeout
+            raise HTTPException(
+                status_code=504,
+                detail={
+                    "error": "request_timeout",
+                    "error_description": "Request to HubSpot API timed out. Please try again.",
+                    "status_code": 504
+                }
+            )
+        except httpx.NetworkError:
+            # Network connectivity issues
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "network_error",
+                    "error_description": "Unable to connect to HubSpot API. Please try again later.",
+                    "status_code": 503
+                }
+            )
+        except Exception as e:
+            # Catch any other unexpected errors
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "internal_server_error",
+                    "error_description": "An unexpected error occurred during token exchange.",
+                    "status_code": 500
+                }
+            )
+    
+    def _map_hubspot_error_to_http_status(self, hubspot_error: str) -> int:
+        """Map HubSpot OAuth errors to appropriate HTTP status codes"""
+        error_mapping = {
+            "invalid_grant": 400,
+            "invalid_client": 500,
+            "invalid_request": 422,
+            "unsupported_grant_type": 422,
+            "unauthorized_client": 500,
+            "access_denied": 403
+        }
+        return error_mapping.get(hubspot_error, 500)
+
+# Initialize HubSpot OAuth client
+hubspot_oauth_client = HubSpotOAuthClient()
+
 app = FastAPI(title="Knowledge_GPT API with People Estimation", version="1.1.0")
 
 app.add_middleware(
@@ -500,6 +647,42 @@ class DemoSearchResponse(BaseModel):
     success: bool
     data: Optional[Dict[str, Any]] = None
     message: str
+
+# HubSpot OAuth Models
+class HubSpotOAuthRequest(BaseModel):
+    code: str = Field(..., description="Authorization code from HubSpot", min_length=1, max_length=512)
+    redirect_uri: str = Field(..., description="Redirect URI used in OAuth flow")
+    
+    @validator('code')
+    def sanitize_code(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Authorization code cannot be empty')
+        # Remove any potential XSS characters
+        sanitized = re.sub(r'[<>"\']', '', v.strip())
+        return sanitized
+    
+    @validator('redirect_uri')
+    def validate_redirect_uri(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Redirect URI cannot be empty')
+        # Basic URL validation
+        if not re.match(r'^https?://', v):
+            raise ValueError('Redirect URI must be a valid HTTP/HTTPS URL')
+        # Remove any potential XSS characters
+        sanitized = re.sub(r'[<>"\']', '', v.strip())
+        return sanitized
+
+class HubSpotOAuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    token_type: str = "bearer"
+    scope: Optional[str] = None
+
+class HubSpotOAuthError(BaseModel):
+    error: str
+    error_description: str
+    status_code: int
 
 def extract_profile_photo_url(candidate_data, linkedin_profile=None):
     try:
@@ -960,6 +1143,51 @@ async def get_demo_categories():
         },
         "message": "Demo categories retrieved successfully"
     }
+
+@app.post("/api/hubspot/oauth/token", response_model=HubSpotOAuthResponse)
+async def exchange_hubspot_oauth_token(request: HubSpotOAuthRequest):
+    """
+    Exchange HubSpot authorization code for access and refresh tokens
+    """
+    try:
+        # Exchange code for tokens using the OAuth client
+        token_data = await hubspot_oauth_client.exchange_code_for_tokens(
+            code=request.code,
+            redirect_uri=request.redirect_uri
+        )
+        
+        # Return the tokens in the expected format
+        return HubSpotOAuthResponse(
+            access_token=token_data.get('access_token'),
+            refresh_token=token_data.get('refresh_token'),
+            expires_in=token_data.get('expires_in'),
+            token_type=token_data.get('token_type', 'bearer'),
+            scope=token_data.get('scope')
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions from the OAuth client
+        raise
+    except ValueError as e:
+        # Handle configuration errors
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "configuration_error",
+                "error_description": str(e),
+                "status_code": 500
+            }
+        )
+    except Exception as e:
+        # Handle any other unexpected errors
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "internal_server_error",
+                "error_description": "An unexpected error occurred during token exchange.",
+                "status_code": 500
+            }
+        )
 
 @app.post("/api/search")
 async def create_search(request: SearchRequest, background_tasks: BackgroundTasks):
