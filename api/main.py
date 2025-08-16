@@ -92,64 +92,27 @@ class DemoSearchGenerator:
         ]
         
         self.industry_contexts = [
-            "saas", "fintech", "healthtech", "edtech", "e-commerce", "manufacturing",
-            "real estate", "healthcare", "financial services", "retail", "consulting",
-            "media", "automotive", "energy", "telecommunications", "aerospace",
+            # Common, broad industries (70%)
+            "technology", "healthcare", "finance", "manufacturing", "retail", "consulting",
+            "real estate", "media", "automotive", "energy", "telecommunications", "aerospace",
             "logistics", "construction", "agriculture", "biotechnology", "gaming",
-            "cybersecurity", "ai/ml", "blockchain", "iot", "robotics",
-            "pharmaceuticals", "medical devices", "diagnostics", "telemedicine",
-            "digital health", "mental health", "elder care", "veterinary",
-            "food & beverage", "restaurant", "hospitality", "travel", "tourism",
-            "entertainment", "sports", "fitness", "beauty", "fashion",
-            "luxury goods", "jewelry", "art", "collectibles", "antiques",
-            "publishing", "journalism", "broadcasting", "podcasting", "streaming",
-            "social media", "influencer marketing", "content creation", "seo/sem",
-            "public relations", "event planning", "trade shows", "conferences",
-            "legal services", "accounting", "tax advisory", "audit", "compliance",
-            "human resources", "recruiting", "training", "coaching", "mentoring",
-            "supply chain", "procurement", "inventory management", "warehousing",
-            "transportation", "shipping", "freight", "last mile delivery",
-            "insurance", "reinsurance", "claims processing", "underwriting",
-            "banking", "credit unions", "payment processing", "remittances",
-            "cryptocurrency", "defi", "nfts", "web3", "metaverse",
-            "virtual reality", "augmented reality", "mixed reality", "simulation",
-            "quantum computing", "edge computing", "cloud infrastructure", "devops",
-            "privacy", "data protection", "identity management",
-            "oil & gas", "mining", "metals", "chemicals", "materials science",
-            "renewable energy", "solar", "wind", "hydroelectric", "geothermal",
-            "nuclear", "battery technology", "energy storage", "smart grid",
-            "electric vehicles", "autonomous vehicles", "mobility", "micromobility",
-            "defense", "satellites", "space exploration", "drones",
-            "maritime", "shipping", "ports", "offshore", "subsea technology",
-            "precision farming", "vertical farming", "aquaculture",
-            "food security", "nutrition", "supplements", "organic", "sustainable",
-            "waste management", "recycling", "circular economy", "carbon capture",
-            "climate technology", "environmental services", "water treatment",
-            "smart cities", "urban planning", "infrastructure", "public transit",
-            "government", "defense contracting", "public safety", "emergency services",
-            "education", "k-12", "higher education", "vocational training", "moocs",
-            "research institutions", "think tanks", "policy organizations", "ngos",
-            # Weird and niche industries
-            "yacht manufacturing", "private aviation", "luxury watches", "fine wine",
-            "rare books", "vintage guitars", "classic cars", "sports memorabilia",
-            "pokemon cards", "comic books", "stamp collecting", "coin collecting",
-            "meteorite hunting", "fossil trading", "mineral specimens", "gemstones",
-            "truffle hunting", "caviar farming", "exotic pets", "rare orchids",
-            "bonsai trees", "koi fish", "racing pigeons", "show dogs",
-            "escape rooms", "haunted houses", "murder mystery", "treasure hunting",
-            "paranormal investigation", "ufo research", "conspiracy theories", "flat earth",
-            "time travel", "alien abduction", "bigfoot hunting", "ghost tours",
-            "psychic services", "tarot reading", "astrology", "numerology",
-            "crystal healing", "reiki", "chakra alignment", "aura photography",
-            "past life regression", "hypnotherapy", "dream analysis", "meditation",
-            "life coaching", "relationship coaching", "dating coaching", "pickup artistry",
-            "sugar daddy", "sugar baby", "escort services", "adult entertainment",
-            "cam girls", "onlyfans", "adult toys", "sex therapy",
-            "divorce mediation", "prenups", "custody battles", "alimony",
-            "witness protection", "identity theft", "credit repair", "debt collection",
-            "payday loans", "pawn shops", "check cashing", "money laundering",
-            "tax evasion", "offshore banking", "shell companies", "dark web",
-            "ransomware", "phishing", "social engineering", "identity fraud"
+            "pharmaceuticals", "food & beverage", "hospitality", "entertainment", "sports",
+            "education", "government", "nonprofit", "legal", "accounting", "insurance",
+            "banking", "investment", "private equity", "venture capital", "hedge funds",
+            
+            # More specific but recognizable (20%)
+            "saas", "fintech", "healthtech", "edtech", "e-commerce", "cybersecurity",
+            "artificial intelligence", "blockchain", "renewable energy", "electric vehicles",
+            "medical devices", "biotech", "pharmaceuticals", "digital marketing",
+            "cloud computing", "data analytics", "mobile apps", "social media",
+            "streaming", "podcasting", "influencer marketing", "supply chain",
+            
+            # Interesting/niche but understandable (10%)
+            "luxury goods", "private aviation", "yacht industry", "art market", "wine industry",
+            "collectibles", "antiques", "jewelry", "fashion", "beauty", "fitness",
+            "travel", "tourism", "event planning", "wedding industry", "pet services",
+            "elder care", "childcare", "personal services", "concierge services",
+            "executive search", "talent acquisition", "management consulting", "executive coaching"
         ]
         
         self.geographic_regions = [
@@ -187,39 +150,24 @@ class DemoSearchGenerator:
         ]
         
         self.job_titles = [
-            "CEO", "COO", "CFO", "CTO", "CIO", "CMO", "CHRO", "CLO", "CSO", "CDO",
-            "President", "Vice President", "Senior Vice President", "Executive Vice President",
-            "Managing Director", "General Manager", "Division President", "Regional Director",
-            "Country Manager", "Global Head", "Head of", "Director of", "Senior Director",
-            "Principal", "Partner", "Senior Partner", "Managing Partner", "Founding Partner",
-            "Chairman", "Board Member", "Independent Director", "Advisory Board Member",
-            "Founder", "Co-Founder", "Serial Entrepreneur", "Angel Investor", "Venture Partner",
-            "Investment Director", "Portfolio Manager", "Fund Manager", "Asset Manager",
-            "Research Director", "Chief Scientist", "Principal Scientist", "Lead Researcher",
-            "Professor", "Associate Professor", "Assistant Professor", "Department Head",
-            "Dean", "Provost", "Chancellor", "President", "Rector", "Vice Chancellor",
-            "Senior Analyst", "Principal Analyst", "Research Analyst", "Investment Analyst",
-            "Strategy Consultant", "Management Consultant", "Senior Consultant", "Principal Consultant",
-            "Practice Leader", "Engagement Manager", "Project Manager", "Program Manager",
-            "Product Manager", "Senior Product Manager", "Group Product Manager", "VP Product",
-            "Engineering Manager", "Senior Engineering Manager", "VP Engineering", "CTO",
-            "Software Engineer", "Senior Software Engineer", "Staff Engineer", "Principal Engineer",
-            "Architect", "Senior Architect", "Principal Architect", "Distinguished Engineer",
-            "Data Scientist", "Senior Data Scientist", "Principal Data Scientist", "Chief Data Officer",
-            "Machine Learning Engineer", "AI Researcher", "Robotics Engineer", "Quantum Researcher",
-            "Sales Director", "VP Sales", "Chief Revenue Officer", "Head of Sales",
-            "Account Executive", "Senior Account Executive", "Enterprise Sales", "Inside Sales Manager",
-            "Business Development Manager", "VP Business Development", "Head of Partnerships",
-            "Marketing Director", "VP Marketing", "Chief Marketing Officer", "Brand Manager",
-            "Digital Marketing Manager", "Content Marketing Manager", "Growth Marketing Manager",
-            "Operations Manager", "VP Operations", "Chief Operating Officer", "Supply Chain Director",
-            "Finance Director", "VP Finance", "Chief Financial Officer", "Controller",
-            "Treasurer", "Tax Director", "Audit Manager", "Risk Manager", "Compliance Officer",
-            "Legal Counsel", "General Counsel", "Chief Legal Officer", "IP Attorney",
-            "HR Director", "VP Human Resources", "Chief People Officer", "Talent Acquisition Manager",
-            "Compensation & Benefits Manager", "Learning & Development Manager", "HRBP",
-            "IT Director", "VP IT", "Chief Information Officer", "Infrastructure Manager",
-            "Security Manager", "CISO", "DevOps Manager", "Cloud Architect", "Solutions Architect"
+            # C-Suite and senior executives (40%)
+            "CEO", "COO", "CFO", "CTO", "CIO", "CMO", "President", "Vice President", 
+            "Managing Director", "General Manager", "Director", "Senior Director",
+            
+            # Department heads and managers (30%)
+            "Sales Director", "Marketing Director", "Operations Manager", "Finance Director",
+            "HR Director", "IT Director", "Product Manager", "Engineering Manager",
+            "Business Development Manager", "Account Manager", "Project Manager",
+            
+            # Specialized roles (20%)
+            "Founder", "Partner", "Investment Manager", "Consultant", "Analyst",
+            "Software Engineer", "Data Scientist", "Sales Rep", "Account Executive",
+            "Marketing Manager", "Operations Director", "Strategy Manager",
+            
+            # Unique but understandable roles (10%)
+            "Board Member", "Angel Investor", "Venture Partner", "Fund Manager",
+            "Research Director", "Innovation Manager", "Chief Scientist", "Principal",
+            "Practice Leader", "Portfolio Manager", "Investment Director", "Head of Growth"
         ]
         
         self.company_sizes = [
@@ -377,30 +325,45 @@ Generate 1 unique, realistic search query. Be wildly creative and vary the appro
         behavioral_signal = random.choice(self.behavioral_signals)
         style = random.choice(self.search_styles)
         
-        fallback_queries = [
-            # Sales professionals looking for buyers/prospects
+        # Mix simple and complex searches
+        simple_queries = [
+            f"Find {job_title}s in {location}",
+            f"Looking for {industry} executives",
+            f"Need {job_title}s who are hiring",
+            f"Find companies that are expanding",
+            f"Looking for decision makers in {industry}",
+            f"Need executives who are fundraising",
+            f"Find {job_title}s considering new solutions",
+            f"Looking for {industry} leaders",
+            f"Need companies in {location}",
+            f"Find executives who are relocating"
+        ]
+        
+        complex_queries = [
             f"Find {job_title}s at {company_size} {industry} companies who are {behavioral_signal}",
             f"Looking for {industry} decision makers in {location} who are {behavioral_signal}",
             f"Need {job_title}s at companies that are {behavioral_signal}",
-            f"Show me {industry} executives who are {behavioral_signal} new solutions",
-            f"Find {industry} companies in {location} that are {behavioral_signal}",
-            f"Looking for {job_title}s who are evaluating {industry} technology",
-            f"Need technical buyers at {industry} companies who are {behavioral_signal}",
+            f"Find {industry} executives who are evaluating new solutions",
+            f"Looking for {job_title}s who are planning digital transformation",
+            f"Need {industry} companies in {location} that are {behavioral_signal}",
             f"Find {job_title}s at {company_size} firms that are {behavioral_signal}",
-            f"Looking for {industry} prospects in {location} who are {behavioral_signal}",
-            f"Show me {job_title}s at existing clients who are {behavioral_signal}",
+            f"Looking for {industry} prospects who are {behavioral_signal}",
+            f"Need {job_title}s at companies considering acquisitions",
+            f"Find {industry} leaders who are {behavioral_signal}"
+        ]
+        
+        fallback_queries = [
             
-            # Recruiters looking for talent
-            f"Find {job_title}s in {industry} who might be open to new opportunities",
-            f"Looking for passive {industry} candidates who are {behavioral_signal}",
-            f"Need {job_title}s at {company_size} companies who might consider a move",
-            f"Find {industry} professionals in {location} who are {behavioral_signal}",
-            f"Looking for {job_title} candidates who aren't actively job searching",
-            f"Show me {industry} leaders who are {behavioral_signal}",
-            f"Find {job_title}s at companies that are {behavioral_signal}",
-            f"Looking for {industry} executives in {location}",
-            f"Need high-potential {job_title}s who are {behavioral_signal}",
-            f"Find passive {industry} candidates who might be interested",
+            # Mix of simple and complex searches
+            *simple_queries,
+            *complex_queries,
+            
+            # Specific professional scenarios
+            f"Find {job_title}s who might be open to new opportunities",
+            f"Looking for passive candidates in {industry}",
+            f"Need executives considering career moves",
+            f"Find professionals who aren't actively job searching",
+            f"Looking for {industry} leaders in {location}",
             
             # Finance/investment professionals looking for investors/LPs
             f"Find LPs who are interested in {industry} investments",
