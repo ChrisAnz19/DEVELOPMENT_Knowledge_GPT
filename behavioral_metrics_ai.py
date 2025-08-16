@@ -343,6 +343,9 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         3. NEVER use generic software/technology language for non-technology contexts
         4. Tailor your language to the specific domain of {context_type}
         5. For legal contexts, use legal terminology; for real estate, use property terminology, etc.
+        6. NEVER use repetitive patterns like "downloaded whitepaper", "attended webinar", "viewed webinar"
+        7. NEVER mention "whitepapers", "webinars", "case studies", or "implementation guides"
+        8. Focus on decision-making behavior, not content consumption
         
         REQUIREMENTS:
         1. Write exactly 1-2 sentences (25-40 words)
@@ -354,12 +357,19 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
            - LOW (0.3-0.5): Casual browsing, minimal commitment
         5. Avoid generic phrases like "business needs" or "professional goals"
         6. Make it actionable for engagement
+        7. Focus on HOW they make decisions, not WHAT they consume
         
         EXAMPLES OF GOOD INSIGHTS BY CONTEXT:
         - Legal: "They research case precedents thoroughly before adopting new legal technologies, prioritizing ethical compliance over efficiency gains."
         - Real Estate: "They evaluate properties based on location and client accessibility first, considering price as a secondary factor."
         - Healthcare: "They consult extensively with colleagues before adopting new treatment approaches, requiring solid evidence-based research."
         - Business: "They research extensively before decisions, preferring detailed demos over high-level pitches."
+        
+        EXAMPLES OF BAD INSIGHTS (NEVER USE):
+        - "They downloaded whitepapers on [topic]"
+        - "They attended webinars about [topic]"
+        - "They viewed case studies on [topic]"
+        - "They subscribed to newsletters about [topic]"
         """
         
         # Check for personal research patterns to enhance context
@@ -391,10 +401,15 @@ def generate_focused_insight_ai(role: str, user_prompt: str, candidate_data: Opt
         
         insight = response.choices[0].message.content.strip()
         
-        # Validate the insight quality
-        if len(insight.split()) < 10 or any(generic in insight.lower() for generic in [
-            "business needs", "professional goals", "specific requirements", "their role"
-        ]):
+        # Validate the insight quality and reject problematic patterns
+        problematic_patterns = [
+            "downloaded", "whitepaper", "webinar", "attended", "viewed", "subscribed",
+            "case study", "implementation guide", "newsletter", "business needs", 
+            "professional goals", "specific requirements", "their role"
+        ]
+        
+        if (len(insight.split()) < 10 or 
+            any(pattern in insight.lower() for pattern in problematic_patterns)):
             return generate_fallback_insight(role, candidate_data, user_prompt)
         
         return insight
