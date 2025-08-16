@@ -54,7 +54,24 @@ class DemoSearchGenerator:
             "vendor_evaluation", "market_expansion", "partnership_discovery",
             "talent_acquisition", "competitive_intelligence", "funding_search",
             "customer_acquisition", "solution_research", "merger_acquisition",
-            "real_estate_commercial", "startup_discovery", "supplier_sourcing"
+            "real_estate_commercial", "startup_discovery", "supplier_sourcing",
+            "board_recruitment", "advisory_search", "consultant_discovery",
+            "speaker_booking", "expert_witness", "industry_analyst",
+            "patent_research", "regulatory_compliance", "sustainability_initiatives",
+            "digital_transformation", "crisis_management", "turnaround_specialists",
+            "international_expansion", "joint_ventures", "licensing_deals",
+            "acquisition_targets", "divestiture_planning", "ipo_preparation",
+            "private_equity", "venture_capital", "angel_investors",
+            "family_office", "sovereign_wealth", "pension_funds",
+            "insurance_companies", "hedge_funds", "asset_management",
+            "wealth_management", "investment_banking", "commercial_banking",
+            "credit_analysis", "risk_management", "compliance_officers",
+            "cybersecurity_experts", "data_scientists", "ai_researchers",
+            "blockchain_developers", "quantum_computing", "space_technology",
+            "renewable_energy", "clean_technology", "carbon_markets",
+            "esg_specialists", "impact_investing", "social_entrepreneurs",
+            "nonprofit_leaders", "government_relations", "policy_experts",
+            "academic_researchers", "thought_leaders", "innovation_labs"
         ]
         
         self.industry_contexts = [
@@ -62,18 +79,129 @@ class DemoSearchGenerator:
             "Real Estate", "Healthcare", "Financial Services", "Retail", "Consulting",
             "Media", "Automotive", "Energy", "Telecommunications", "Aerospace",
             "Logistics", "Construction", "Agriculture", "Biotechnology", "Gaming",
-            "Cybersecurity", "AI/ML", "Blockchain", "IoT", "Robotics"
+            "Cybersecurity", "AI/ML", "Blockchain", "IoT", "Robotics",
+            "Pharmaceuticals", "Medical Devices", "Diagnostics", "Telemedicine",
+            "Digital Health", "Mental Health", "Elder Care", "Veterinary",
+            "Food & Beverage", "Restaurant", "Hospitality", "Travel", "Tourism",
+            "Entertainment", "Sports", "Fitness", "Beauty", "Fashion",
+            "Luxury Goods", "Jewelry", "Art", "Collectibles", "Antiques",
+            "Publishing", "Journalism", "Broadcasting", "Podcasting", "Streaming",
+            "Social Media", "Influencer Marketing", "Content Creation", "SEO/SEM",
+            "Public Relations", "Event Planning", "Trade Shows", "Conferences",
+            "Legal Services", "Accounting", "Tax Advisory", "Audit", "Compliance",
+            "Human Resources", "Recruiting", "Training", "Coaching", "Mentoring",
+            "Supply Chain", "Procurement", "Inventory Management", "Warehousing",
+            "Transportation", "Shipping", "Freight", "Last Mile Delivery",
+            "Insurance", "Reinsurance", "Claims Processing", "Underwriting",
+            "Banking", "Credit Unions", "Payment Processing", "Remittances",
+            "Cryptocurrency", "DeFi", "NFTs", "Web3", "Metaverse",
+            "Virtual Reality", "Augmented Reality", "Mixed Reality", "Simulation",
+            "Quantum Computing", "Edge Computing", "Cloud Infrastructure", "DevOps",
+            "Cybersecurity", "Privacy", "Data Protection", "Identity Management",
+            "Oil & Gas", "Mining", "Metals", "Chemicals", "Materials Science",
+            "Renewable Energy", "Solar", "Wind", "Hydroelectric", "Geothermal",
+            "Nuclear", "Battery Technology", "Energy Storage", "Smart Grid",
+            "Electric Vehicles", "Autonomous Vehicles", "Mobility", "Micromobility",
+            "Aerospace", "Defense", "Satellites", "Space Exploration", "Drones",
+            "Maritime", "Shipping", "Ports", "Offshore", "Subsea Technology",
+            "Agriculture", "Precision Farming", "Vertical Farming", "Aquaculture",
+            "Food Security", "Nutrition", "Supplements", "Organic", "Sustainable",
+            "Waste Management", "Recycling", "Circular Economy", "Carbon Capture",
+            "Climate Technology", "Environmental Services", "Water Treatment",
+            "Smart Cities", "Urban Planning", "Infrastructure", "Public Transit",
+            "Government", "Defense Contracting", "Public Safety", "Emergency Services",
+            "Education", "K-12", "Higher Education", "Vocational Training", "MOOCs",
+            "Research Institutions", "Think Tanks", "Policy Organizations", "NGOs"
         ]
         
         self.geographic_regions = [
             "New York", "San Francisco", "Los Angeles", "Chicago", "Boston", "Austin",
             "Seattle", "Miami", "Denver", "Atlanta", "Dallas", "Philadelphia",
             "Washington DC", "San Diego", "Phoenix", "Las Vegas", "Portland", "Nashville",
-            "Silicon Valley", "Research Triangle", "Detroit", "Houston", "Minneapolis"
+            "Silicon Valley", "Research Triangle", "Detroit", "Houston", "Minneapolis",
+            "Charlotte", "Tampa", "Orlando", "Jacksonville", "Kansas City", "St. Louis",
+            "Cincinnati", "Cleveland", "Columbus", "Indianapolis", "Milwaukee", "Pittsburgh",
+            "Baltimore", "Richmond", "Norfolk", "Raleigh", "Charleston", "Savannah",
+            "New Orleans", "Memphis", "Birmingham", "Louisville", "Nashville", "Knoxville",
+            "Oklahoma City", "Tulsa", "Little Rock", "Jackson", "Mobile", "Huntsville",
+            "Baton Rouge", "Shreveport", "Lafayette", "Lake Charles", "Beaumont", "Tyler",
+            "Waco", "Corpus Christi", "McAllen", "Brownsville", "El Paso", "Lubbock",
+            "Amarillo", "Midland", "Odessa", "Abilene", "Wichita Falls", "Longview",
+            "Salt Lake City", "Provo", "Ogden", "Park City", "Boise", "Coeur d'Alene",
+            "Spokane", "Yakima", "Bellingham", "Olympia", "Tacoma", "Everett",
+            "Anchorage", "Fairbanks", "Juneau", "Honolulu", "Hilo", "Kona",
+            "Albuquerque", "Santa Fe", "Las Cruces", "Roswell", "Farmington", "Gallup",
+            "Flagstaff", "Tucson", "Yuma", "Prescott", "Sedona", "Scottsdale",
+            "Reno", "Carson City", "Henderson", "North Las Vegas", "Boulder City",
+            "Sacramento", "Fresno", "Bakersfield", "Stockton", "Modesto", "Salinas",
+            "Santa Barbara", "Ventura", "Oxnard", "Thousand Oaks", "Simi Valley",
+            "Riverside", "San Bernardino", "Palm Springs", "Indio", "Coachella Valley",
+            "Orange County", "Irvine", "Anaheim", "Santa Ana", "Huntington Beach",
+            "Long Beach", "Pasadena", "Glendale", "Burbank", "Santa Monica",
+            "Beverly Hills", "West Hollywood", "Culver City", "Manhattan Beach"
         ]
         
         self.search_styles = [
-            "casual", "formal", "urgent", "analytical", "conversational", "direct"
+            "casual", "formal", "urgent", "analytical", "conversational", "direct",
+            "enthusiastic", "cautious", "strategic", "tactical", "visionary", "pragmatic",
+            "collaborative", "decisive", "exploratory", "focused", "broad", "specific",
+            "innovative", "traditional", "disruptive", "conservative", "aggressive", "passive"
+        ]
+        
+        self.job_titles = [
+            "CEO", "COO", "CFO", "CTO", "CIO", "CMO", "CHRO", "CLO", "CSO", "CDO",
+            "President", "Vice President", "Senior Vice President", "Executive Vice President",
+            "Managing Director", "General Manager", "Division President", "Regional Director",
+            "Country Manager", "Global Head", "Head of", "Director of", "Senior Director",
+            "Principal", "Partner", "Senior Partner", "Managing Partner", "Founding Partner",
+            "Chairman", "Board Member", "Independent Director", "Advisory Board Member",
+            "Founder", "Co-Founder", "Serial Entrepreneur", "Angel Investor", "Venture Partner",
+            "Investment Director", "Portfolio Manager", "Fund Manager", "Asset Manager",
+            "Research Director", "Chief Scientist", "Principal Scientist", "Lead Researcher",
+            "Professor", "Associate Professor", "Assistant Professor", "Department Head",
+            "Dean", "Provost", "Chancellor", "President", "Rector", "Vice Chancellor",
+            "Senior Analyst", "Principal Analyst", "Research Analyst", "Investment Analyst",
+            "Strategy Consultant", "Management Consultant", "Senior Consultant", "Principal Consultant",
+            "Practice Leader", "Engagement Manager", "Project Manager", "Program Manager",
+            "Product Manager", "Senior Product Manager", "Group Product Manager", "VP Product",
+            "Engineering Manager", "Senior Engineering Manager", "VP Engineering", "CTO",
+            "Software Engineer", "Senior Software Engineer", "Staff Engineer", "Principal Engineer",
+            "Architect", "Senior Architect", "Principal Architect", "Distinguished Engineer",
+            "Data Scientist", "Senior Data Scientist", "Principal Data Scientist", "Chief Data Officer",
+            "Machine Learning Engineer", "AI Researcher", "Robotics Engineer", "Quantum Researcher",
+            "Sales Director", "VP Sales", "Chief Revenue Officer", "Head of Sales",
+            "Account Executive", "Senior Account Executive", "Enterprise Sales", "Inside Sales Manager",
+            "Business Development Manager", "VP Business Development", "Head of Partnerships",
+            "Marketing Director", "VP Marketing", "Chief Marketing Officer", "Brand Manager",
+            "Digital Marketing Manager", "Content Marketing Manager", "Growth Marketing Manager",
+            "Operations Manager", "VP Operations", "Chief Operating Officer", "Supply Chain Director",
+            "Finance Director", "VP Finance", "Chief Financial Officer", "Controller",
+            "Treasurer", "Tax Director", "Audit Manager", "Risk Manager", "Compliance Officer",
+            "Legal Counsel", "General Counsel", "Chief Legal Officer", "IP Attorney",
+            "HR Director", "VP Human Resources", "Chief People Officer", "Talent Acquisition Manager",
+            "Compensation & Benefits Manager", "Learning & Development Manager", "HRBP",
+            "IT Director", "VP IT", "Chief Information Officer", "Infrastructure Manager",
+            "Security Manager", "CISO", "DevOps Manager", "Cloud Architect", "Solutions Architect"
+        ]
+        
+        self.company_sizes = [
+            "startup", "early-stage", "growth-stage", "mid-market", "enterprise", "Fortune 500",
+            "Fortune 100", "unicorn", "decacorn", "public company", "private company",
+            "family-owned", "PE-backed", "VC-funded", "bootstrapped", "Series A", "Series B",
+            "Series C", "pre-IPO", "post-IPO", "SPAC", "emerging growth", "scale-up"
+        ]
+        
+        self.behavioral_signals = [
+            "researching", "evaluating", "comparing", "piloting", "implementing", "upgrading",
+            "expanding", "scaling", "hiring", "fundraising", "acquiring", "divesting",
+            "relocating", "opening offices", "closing facilities", "restructuring", "pivoting",
+            "launching products", "entering markets", "forming partnerships", "seeking advisors",
+            "attending conferences", "speaking at events", "publishing research", "filing patents",
+            "regulatory compliance", "digital transformation", "cloud migration", "automation",
+            "sustainability initiatives", "ESG reporting", "diversity programs", "remote work",
+            "hybrid work", "return to office", "cost reduction", "efficiency improvements",
+            "customer acquisition", "market expansion", "competitive analysis", "benchmarking",
+            "due diligence", "risk assessment", "scenario planning", "strategic planning"
         ]
 
     def generate_search_example(self) -> Dict[str, Any]:
@@ -83,36 +211,59 @@ class DemoSearchGenerator:
         industry = random.choice(self.industry_contexts)
         location = random.choice(self.geographic_regions)
         style = random.choice(self.search_styles)
+        job_title = random.choice(self.job_titles)
+        company_size = random.choice(self.company_sizes)
+        behavioral_signal = random.choice(self.behavioral_signals)
         
-        prompt = f"""Generate a realistic search query that demonstrates advanced behavioral targeting capabilities. 
+        # Create more diverse prompt variations
+        prompt_variations = [
+            f"Generate a search for {job_title}s at {company_size} {industry} companies in {location} who are {behavioral_signal}",
+            f"Find professionals in {industry} showing signs of {behavioral_signal} in the {location} market",
+            f"Looking for {job_title} level executives in {industry} who have been {behavioral_signal}",
+            f"Search for decision makers at {company_size} companies in {location} {behavioral_signal} {industry} solutions",
+            f"Identify {job_title}s in the {industry} space who are actively {behavioral_signal}",
+            f"Find {company_size} {industry} leaders in {location} showing {behavioral_signal} behavior",
+            f"Locate {job_title} professionals at {industry} companies who are {behavioral_signal}",
+            f"Search for {industry} executives in {location} with {behavioral_signal} activity"
+        ]
+        
+        base_prompt = random.choice(prompt_variations)
+        
+        prompt = f"""Generate a realistic, diverse search query based on this context: {base_prompt}
 
-Context:
-- Category: {category}
-- Industry: {industry}  
-- Location: {location}
-- Writing Style: {style}
+Writing Style: {style}
+Category: {category}
 
-Create a search query that shows someone looking for a specific type of person based on their behavioral patterns, job role, and intent signals. Make it sound like it's written by a real person with the specified writing style.
+Create a natural-sounding search query that demonstrates advanced behavioral targeting. Make it sound like it's written by a real person with the specified writing style. Be creative and vary the language, structure, and approach.
 
-Examples of diverse queries:
-- "Manufacturing CIOs researching cloud ERP solutions"
-- "People looking to invest in early stage venture funds"
-- "Find me a CMO at a mid-size SaaS company who's been researching marketing automation tools"
-- "Show me VPs of Sales in NYC who've been looking at CRM solutions"
-- "Looking for executives showing signs of office expansion in Boston area"
-- "Need to find startup founders in AI space seeking Series A funding"
-- "Healthcare IT directors evaluating cybersecurity vendors"
-- "Real estate developers researching sustainable building materials"
+Examples of diverse search patterns:
+- "Manufacturing CIOs researching cloud ERP solutions in the Midwest"
+- "Private equity partners looking at Series B FinTech deals"
+- "Healthcare IT directors evaluating cybersecurity vendors post-breach"
+- "Sustainability officers at Fortune 500 companies implementing ESG reporting"
+- "Quantum computing researchers transitioning from academia to industry"
+- "Family office investment committees exploring alternative assets"
+- "Supply chain executives dealing with post-pandemic disruptions"
+- "Chief Data Officers at insurance companies building AI capabilities"
+- "Renewable energy project developers seeking construction partners"
+- "Biotech CEOs preparing for IPO in the next 18 months"
+- "Real estate developers focusing on mixed-use urban projects"
+- "EdTech founders scaling internationally after successful Series A"
+- "Aerospace engineers working on next-gen propulsion systems"
+- "Food & beverage brands launching direct-to-consumer channels"
+- "Wealth management advisors serving ultra-high-net-worth clients"
 
 Writing styles:
-- casual: relaxed, informal tone
-- formal: professional, structured language  
-- urgent: time-sensitive, action-oriented
-- analytical: data-focused, precise
-- conversational: friendly, natural speech
-- direct: brief, to-the-point
+- casual: relaxed, informal ("Looking for...", "Need to find...")
+- formal: professional, structured ("Seeking to identify...", "Request assistance locating...")
+- urgent: time-sensitive ("ASAP need...", "Urgent search for...")
+- analytical: data-focused ("Analyzing market for...", "Quantifying opportunities with...")
+- conversational: friendly, natural ("Anyone know...", "Wondering if you can help find...")
+- direct: brief, to-the-point ("Find:", "Need:", "Search:")
+- enthusiastic: energetic ("Excited to connect with...", "Amazing opportunity to find...")
+- strategic: big-picture ("Strategic search for...", "Long-term partnership with...")
 
-Generate 1 unique, realistic search query that matches the style and context. Be creative and vary the approach. Return only the search query text, nothing else."""
+Generate 1 unique, realistic search query. Be wildly creative and vary the approach, industry focus, geographic scope, company stage, and behavioral indicators. Return only the search query text, nothing else."""
 
         try:
             response = openai.ChatCompletion.create(
@@ -166,20 +317,124 @@ Generate 1 unique, realistic search query that matches the style and context. Be
     
     def _get_fallback_search(self, category: str, industry: str, location: str) -> Dict[str, Any]:
         """Fallback search examples if AI generation fails"""
-        fallback_queries = [
-            f"Manufacturing CIOs in {location} researching cloud ERP solutions",
-            f"People looking to invest in early stage {industry} venture funds",
-            f"Find me a Director of Marketing who's been researching {industry} automation tools",
-            f"Show me CTOs at {industry} companies evaluating cybersecurity platforms",
-            f"Looking for executives in {location} showing expansion signals in {industry}",
-            f"Need VPs of Sales who've been attending {industry} trade conferences",
-            f"Healthcare IT directors evaluating new {industry} vendor solutions",
-            f"Startup founders in {industry} space seeking Series A funding in {location}",
-            f"Real estate developers researching sustainable {industry} materials",
-            f"Find decision makers researching {industry} digital transformation tools"
-        ]
         
+        job_title = random.choice(self.job_titles)
+        company_size = random.choice(self.company_sizes)
+        behavioral_signal = random.choice(self.behavioral_signals)
         style = random.choice(self.search_styles)
+        
+        fallback_queries = [
+            f"{job_title}s at {company_size} {industry} companies in {location} who are {behavioral_signal}",
+            f"Private equity partners looking at {industry} deals in {location}",
+            f"Venture capital investors focused on {industry} startups {behavioral_signal}",
+            f"Family office investment committees exploring {industry} opportunities",
+            f"Sovereign wealth fund managers evaluating {industry} assets in {location}",
+            f"Hedge fund analysts covering {industry} stocks showing {behavioral_signal} trends",
+            f"Asset management firms building {industry} portfolios in {location}",
+            f"Investment banking MDs working on {industry} M&A deals",
+            f"Commercial banking relationship managers serving {industry} clients",
+            f"Insurance company executives {behavioral_signal} {industry} risks",
+            f"Pension fund trustees considering {industry} investments",
+            f"Endowment CIOs allocating to {industry} strategies",
+            f"Board members at {company_size} {industry} companies in {location}",
+            f"Independent directors with {industry} expertise {behavioral_signal}",
+            f"Advisory board members helping {industry} startups with {behavioral_signal}",
+            f"Serial entrepreneurs in {industry} {behavioral_signal} their next venture",
+            f"Angel investors backing {industry} founders in {location}",
+            f"Venture partners sourcing {industry} deals {behavioral_signal}",
+            f"Corporate venture capital arms investing in {industry}",
+            f"Strategic investors in {industry} {behavioral_signal} partnerships",
+            f"Management consultants advising {industry} clients on {behavioral_signal}",
+            f"Strategy consultants helping {industry} companies with {behavioral_signal}",
+            f"Digital transformation experts working with {industry} in {location}",
+            f"Change management specialists supporting {industry} {behavioral_signal}",
+            f"Turnaround specialists working with distressed {industry} companies",
+            f"Interim executives leading {industry} companies through {behavioral_signal}",
+            f"Executive search consultants placing {job_title}s in {industry}",
+            f"Talent acquisition leaders at {company_size} {industry} companies",
+            f"HR executives at {industry} companies {behavioral_signal} workforce strategies",
+            f"Compensation consultants working with {industry} clients in {location}",
+            f"Legal counsel specializing in {industry} {behavioral_signal} matters",
+            f"IP attorneys helping {industry} companies with {behavioral_signal}",
+            f"Regulatory experts guiding {industry} compliance with {behavioral_signal}",
+            f"Tax advisors serving {industry} clients {behavioral_signal} structures",
+            f"Audit partners working with {company_size} {industry} companies",
+            f"Risk management experts helping {industry} with {behavioral_signal}",
+            f"Cybersecurity specialists protecting {industry} companies {behavioral_signal}",
+            f"Data privacy officers at {industry} companies {behavioral_signal} compliance",
+            f"ESG consultants helping {industry} with {behavioral_signal} initiatives",
+            f"Sustainability officers at {company_size} {industry} companies",
+            f"Climate risk experts advising {industry} on {behavioral_signal}",
+            f"Carbon accounting specialists working with {industry} in {location}",
+            f"Renewable energy developers {behavioral_signal} {industry} partnerships",
+            f"Clean technology investors backing {industry} innovations",
+            f"Impact investors supporting {industry} social enterprises",
+            f"Social entrepreneurs in {industry} {behavioral_signal} scale",
+            f"Nonprofit leaders partnering with {industry} on {behavioral_signal}",
+            f"Foundation program officers funding {industry} initiatives",
+            f"Government relations experts helping {industry} with {behavioral_signal}",
+            f"Policy experts advising {industry} on {behavioral_signal} regulations",
+            f"Think tank researchers studying {industry} {behavioral_signal} trends",
+            f"Academic researchers collaborating with {industry} on {behavioral_signal}",
+            f"University professors consulting for {industry} companies",
+            f"Research institute directors partnering with {industry}",
+            f"Innovation lab leaders at {company_size} {industry} companies",
+            f"Corporate development executives {behavioral_signal} {industry} acquisitions",
+            f"Business development managers at {industry} companies {behavioral_signal}",
+            f"Partnership managers building {industry} ecosystems in {location}",
+            f"Alliance managers at {company_size} {industry} companies",
+            f"Channel partners supporting {industry} companies with {behavioral_signal}",
+            f"Systems integrators helping {industry} with {behavioral_signal}",
+            f"Technology vendors serving {industry} customers {behavioral_signal}",
+            f"Software developers building {industry} solutions for {behavioral_signal}",
+            f"Cloud architects designing {industry} infrastructure for {behavioral_signal}",
+            f"DevOps engineers at {industry} companies {behavioral_signal} automation",
+            f"Product managers at {industry} companies {behavioral_signal} features",
+            f"UX designers creating {industry} experiences for {behavioral_signal}",
+            f"Marketing executives at {industry} companies {behavioral_signal} campaigns",
+            f"Brand managers at {company_size} {industry} companies in {location}",
+            f"Digital marketing specialists helping {industry} with {behavioral_signal}",
+            f"Content creators serving {industry} audiences {behavioral_signal}",
+            f"Influencer marketing experts working with {industry} brands",
+            f"Public relations professionals supporting {industry} {behavioral_signal}",
+            f"Crisis communications experts helping {industry} with {behavioral_signal}",
+            f"Investor relations officers at {company_size} {industry} companies",
+            f"Analyst relations managers at {industry} companies {behavioral_signal}",
+            f"Media relations specialists covering {industry} {behavioral_signal}",
+            f"Industry analysts covering {industry} companies {behavioral_signal}",
+            f"Research analysts following {industry} stocks in {location}",
+            f"Equity research directors covering {industry} {behavioral_signal}",
+            f"Credit analysts evaluating {industry} companies {behavioral_signal}",
+            f"Rating agency analysts assessing {industry} {behavioral_signal} risks",
+            f"Due diligence professionals investigating {industry} targets",
+            f"Valuation experts appraising {industry} companies {behavioral_signal}",
+            f"Financial advisors serving {industry} executives in {location}",
+            f"Wealth managers working with {industry} entrepreneurs",
+            f"Tax planners helping {industry} owners with {behavioral_signal}",
+            f"Estate planners serving {industry} families {behavioral_signal}",
+            f"Insurance brokers covering {industry} risks in {location}",
+            f"Real estate advisors helping {industry} with {behavioral_signal}",
+            f"Commercial real estate brokers serving {industry} tenants",
+            f"Industrial real estate specialists working with {industry}",
+            f"Construction managers building {industry} facilities for {behavioral_signal}",
+            f"Architects designing {industry} spaces for {behavioral_signal}",
+            f"Engineers supporting {industry} companies with {behavioral_signal}",
+            f"Environmental consultants helping {industry} with {behavioral_signal}",
+            f"Supply chain experts optimizing {industry} operations for {behavioral_signal}",
+            f"Logistics managers at {industry} companies {behavioral_signal}",
+            f"Procurement specialists at {company_size} {industry} companies",
+            f"Vendor management experts serving {industry} in {location}",
+            f"Quality assurance managers at {industry} companies {behavioral_signal}",
+            f"Regulatory affairs specialists at {industry} companies",
+            f"Clinical research professionals in {industry} {behavioral_signal}",
+            f"Medical affairs directors at {industry} companies",
+            f"Pharmacovigilance experts in {industry} {behavioral_signal} safety",
+            f"Biostatisticians supporting {industry} {behavioral_signal} studies",
+            f"Health economics researchers in {industry} {behavioral_signal}",
+            f"Market access specialists at {industry} companies",
+            f"Payer relations managers in {industry} {behavioral_signal}",
+            f"Health policy experts advising {industry} on {behavioral_signal}"
+        ]
         
         return {
             "search_query": random.choice(fallback_queries),
@@ -187,6 +442,9 @@ Generate 1 unique, realistic search query that matches the style and context. Be
             "industry": industry,
             "location": location,
             "style": style,
+            "job_title": job_title,
+            "company_size": company_size,
+            "behavioral_signal": behavioral_signal,
             "timestamp": datetime.now().isoformat(),
             "use_case_type": self._determine_use_case_type(category),
             "refresh_interval": 5,
