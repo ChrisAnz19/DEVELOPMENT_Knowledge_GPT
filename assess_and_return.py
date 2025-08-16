@@ -399,8 +399,9 @@ def _validate_assessment_response(result: list, user_prompt: str) -> list:
         
         # Check for FORBIDDEN problematic patterns (STRICT VALIDATION)
         problematic_patterns = [
-            "downloaded", "whitepaper", "webinar", "attended", "viewed", "subscribed",
-            "case study", "implementation guide", "newsletter", "virtual event"
+            "downloaded whitepaper", "downloaded implementation", "attended webinar", 
+            "viewed webinar", "subscribed to newsletter", "attended virtual",
+            "viewed case study", "downloaded case study"
         ]
         
         problematic_reasons = []
