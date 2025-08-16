@@ -124,54 +124,65 @@ def delete_search_from_database(request_id: str) -> bool:
 
 def store_people_to_database(search_id: int, people: List[Dict[str, Any]]) -> bool:
     try:
+        print(f"[Database] Attempting to store {len(people)} people for search_id {search_id}")
+        
         schema_fields = {
             'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
             'profile_photo_url', 'location', 'accuracy', 'reasons', 
             'linkedin_profile', 'linkedin_posts', 'behavioral_data'
         }
         
-        for person in people:
-            filtered_person = {'search_id': search_id}
+        stored_count = 0
+        for i, person in enumerate(people):
+            try:
+                filtered_person = {'search_id': search_id}
+                
+                for field in schema_fields:
+                    if field in person and person[field] is not None:
+                        if field in ['linkedin_profile', 'behavioral_data'] and isinstance(person[field], dict):
+                            filtered_person[field] = json.dumps(person[field])
+                        else:
+                            filtered_person[field] = person[field]
+                
+                if 'company' not in filtered_person and 'organization' in person:
+                    org = person['organization']
+                    if isinstance(org, dict) and 'name' in org:
+                        filtered_person['company'] = org['name']
+                    elif isinstance(org, str):
+                        filtered_person['company'] = org
+                
+                if 'linkedin_url' in filtered_person and not filtered_person['linkedin_url'].startswith('http'):
+                    filtered_person['linkedin_url'] = f"https://{filtered_person['linkedin_url']}"
+                
+                # Store the person in the database
+                result = supabase.table("people").insert(filtered_person).execute()
+                stored_count += 1
+                print(f"[Database] Successfully stored person {i+1}: {filtered_person.get('name', 'Unknown')}")
+                
+            except Exception as e:
+                print(f"[Database] Failed to store person {i+1}: {person.get('name', 'Unknown')} - Error: {str(e)}")
+                continue
             
-            for field in schema_fields:
-                if field in person and person[field] is not None:
-                    if field in ['linkedin_profile', 'behavioral_data'] and isinstance(person[field], dict):
-                        filtered_person[field] = json.dumps(person[field])
-                    else:
-                        filtered_person[field] = person[field]
-            
-            if 'company' not in filtered_person and 'organization' in person:
-                org = person['organization']
-                if isinstance(org, dict) and 'name' in org:
-                    filtered_person['company'] = org['name']
-                elif isinstance(org, str):
-                    filtered_person['company'] = org
-            
-            if 'linkedin_url' in filtered_person and not filtered_person['linkedin_url'].startswith('http'):
-                filtered_person['linkedin_url'] = f"https://{filtered_person['linkedin_url']}"
-            
-            # Store the person in the database
-            supabase.table("people").insert(filtered_person).execute()
-            
-            # Also add to exclusions to prevent returning in future searches
-            if 'linkedin_url' in filtered_person and filtered_person['linkedin_url']:
-                try:
-                    # Only add to exclusions if not already there
-                    if not is_person_excluded_in_database(filtered_person['linkedin_url']):
-                        exclusion_data = {
-                            'linkedin_url': filtered_person['linkedin_url'],
-                            'name': filtered_person.get('name', ''),
-                            'reason': 'Previously returned in search results',
-                            'created_at': datetime.now(timezone.utc).isoformat() if 'datetime' in globals() else None
-                        }
-                        supabase.table("exclusions").insert(exclusion_data).execute()
-                except Exception:
-                    # Continue even if exclusion fails
-                    pass
+            # Don't automatically add to exclusions - let users decide
+            # Commenting out automatic exclusion to allow candidates to appear in multiple searches
+            # if 'linkedin_url' in filtered_person and filtered_person['linkedin_url']:
+            #     try:
+            #         if not is_person_excluded_in_database(filtered_person['linkedin_url']):
+            #             exclusion_data = {
+            #                 'linkedin_url': filtered_person['linkedin_url'],
+            #                 'name': filtered_person.get('name', ''),
+            #                 'reason': 'Previously returned in search results',
+            #                 'created_at': datetime.now(timezone.utc).isoformat() if 'datetime' in globals() else None
+            #             }
+            #             supabase.table("exclusions").insert(exclusion_data).execute()
+            #     except Exception:
+            #         pass
         
-        return True
+        print(f"[Database] Successfully stored {stored_count} out of {len(people)} people")
+        return stored_count > 0
         
-    except Exception:
+    except Exception as e:
+        print(f"[Database] Failed to store people: {str(e)}")
         return False
 
 def get_people_for_search(search_id: int) -> List[Dict[str, Any]]:
