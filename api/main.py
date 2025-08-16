@@ -525,7 +525,17 @@ class HubSpotOAuthClient:
                 )
                 
                 if response.status_code == 200:
-                    return response.json()
+                    try:
+                        return response.json()
+                    except json.JSONDecodeError:
+                        raise HTTPException(
+                            status_code=502,
+                            detail={
+                                "error": "invalid_response",
+                                "error_description": "HubSpot returned an invalid response format",
+                                "status_code": 502
+                            }
+                        )
                 elif response.status_code == 429:
                     # Rate limiting
                     retry_after = response.headers.get('Retry-After', '60')
@@ -563,11 +573,11 @@ class HubSpotOAuthClient:
                     except json.JSONDecodeError:
                         # If response is not JSON, create generic error
                         raise HTTPException(
-                            status_code=500,
+                            status_code=502,
                             detail={
-                                "error": "hubspot_api_error",
-                                "error_description": f"HubSpot API returned status {response.status_code}",
-                                "status_code": response.status_code
+                                "error": "invalid_response",
+                                "error_description": f"HubSpot returned an invalid response format (status {response.status_code})",
+                                "status_code": 502
                             }
                         )
                         
