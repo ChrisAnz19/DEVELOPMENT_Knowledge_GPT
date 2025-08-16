@@ -48,21 +48,18 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
     start_full_names = re.findall(start_name_pattern, prompt)
     
     # Check for single names that could be first names or last names
-    # Look for patterns like "named John", "called Mary", "get me Sarah", "find David", etc.
+    # Look for patterns like "named John", "called Mary", but be more specific to avoid job titles
     single_name_patterns = [
         r'\bnamed\s+([A-Z][a-z]{2,})\b',  # "named John"
         r'\bcalled\s+([A-Z][a-z]{2,})\b',  # "called Mary"
-        r'\bget\s+me\s+([A-Z][a-z]{2,})\b',  # "get me Sarah"
-        r'\bfind\s+me\s+([A-Z][a-z]{2,})\b',  # "find me David"
-        r'\bshow\s+me\s+([A-Z][a-z]{2,})\b',  # "show me Lisa"
-        r'\bgive\s+me\s+([A-Z][a-z]{2,})\b',  # "give me Michael"
-        r'\bfind\s+([A-Z][a-z]{2,})\s+from\b',  # "find Sarah from"
-        r'\bget\s+([A-Z][a-z]{2,})\s+from\b',  # "get David from"
-        r'\bshow\s+([A-Z][a-z]{2,})\s+from\b',  # "show Lisa from"
-        r'\blooking\s+for\s+([A-Z][a-z]{2,})\s+(?:from|at|in)\b',  # "looking for John from/at/in"
-        r'\bsearch\s+for\s+([A-Z][a-z]{2,})\s+(?:from|at|in)\b',  # "search for Mary from/at/in"
-        r'\bwant\s+([A-Z][a-z]{2,})\s+(?:from|at|in)\b',  # "want Sarah from/at/in"
-        r'\bneed\s+([A-Z][a-z]{2,})\s+(?:from|at|in)\b',  # "need David from/at/in"
+        r'\bfind\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "find Sarah from/at/in/who/that" (more specific)
+        r'\bget\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "get David from/at/in/who/that" (more specific)
+        r'\bshow\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "show Lisa from/at/in/who/that" (more specific)
+        r'\blooking\s+for\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "looking for John from/at/in/who/that"
+        r'\bsearch\s+for\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "search for Mary from/at/in/who/that"
+        r'\bwant\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "want Sarah from/at/in/who/that"
+        r'\bneed\s+([A-Z][a-z]{2,})\s+(?:from|at|in|who|that)\b',  # "need David from/at/in/who/that"
+        # Remove the overly broad patterns that were catching job titles
     ]
     
     single_names = []
@@ -119,7 +116,7 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         
         # Common job-related words that might be capitalized
         "Manager", "Managers", "Director", "Directors", "Engineer", "Engineers", "Developer", "Developers", "Analyst", "Analysts", "Specialist", "Specialists", "Coordinator", "Coordinators",
-        "Assistant", "Assistants", "Executive", "Executives", "Officer", "Officers", "Representative", "Representatives", "Consultant", "Consultants", "Administrator", "Administrators", "Founder", "Founders", "Co-founder", "Co-founders", "CoFounder", "CoFounders", "CEO", "CEOs", "CTO", "CTOs", "CFO", "CFOs", "COO", "COOs", "President", "Presidents", "Owner", "Owners", "Managing Director", "Managing Directors",
+        "Assistant", "Assistants", "Executive", "Executives", "Officer", "Officers", "Representative", "Representatives", "Consultant", "Consultants", "Administrator", "Administrators", "Founder", "Founders", "Co-founder", "Co-founders", "CoFounder", "CoFounders", "CEO", "CEOs", "CTO", "CTOs", "CFO", "CFOs", "COO", "COOs", "CMO", "CMOs", "CISO", "CISOs", "VP", "VPs", "President", "Presidents", "Owner", "Owners", "Managing Director", "Managing Directors",
         
         # Common words that might be mistaken for names
         "Find", "Get", "Show", "Looking", "Search", "Tell", "Give", "Bring", "Send", "Take",
@@ -133,7 +130,19 @@ def detect_specific_person_search(prompt: str, user_first_name: str = None) -> D
         # Professional terms that might be capitalized
         "Marketing", "Sales", "Finance", "Technology", "Engineering", "Operations", "Legal",
         "Professionals", "Executives", "Leaders", "Managers", "Directors", "Officers",
-        "CEOs", "CTOs", "CFOs", "VPs", "Developers", "Engineers", "Analysts", "Specialists"
+        "CEOs", "CTOs", "CFOs", "CMOs", "VPs", "Developers", "Engineers", "Analysts", "Specialists",
+        
+        # Additional job titles and professional terms
+        "Chief Marketing Officer", "Chief Technology Officer", "Chief Financial Officer", "Chief Operating Officer",
+        "Software Engineers", "Marketing Directors", "Sales Managers", "Product Managers", "Data Scientists",
+        "Business Analysts", "Project Managers", "Account Executives", "Customer Success Managers",
+        "DevOps Engineers", "Full Stack Developers", "Frontend Developers", "Backend Developers",
+        "UX Designers", "UI Designers", "Graphic Designers", "Content Creators", "Social Media Managers",
+        "Digital Marketers", "Growth Hackers", "SEO Specialists", "PPC Specialists", "Email Marketers",
+        "Business Development", "Sales Development", "Account Management", "Customer Support",
+        "Technical Writers", "Quality Assurance", "Software Testers", "System Administrators",
+        "Network Engineers", "Security Engineers", "Cloud Engineers", "Machine Learning Engineers",
+        "Data Engineers", "Research Scientists", "Product Owners", "Scrum Masters", "Agile Coaches"
     ]
     
     # Filter out the common non-names (case insensitive)
