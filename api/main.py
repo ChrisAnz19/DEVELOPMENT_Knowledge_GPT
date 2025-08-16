@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
@@ -525,9 +525,31 @@ class HubSpotOAuthClient:
                 )
                 
                 if response.status_code == 200:
+                    print(f"HubSpot response status: 200")
+                    print(f"HubSpot response headers: {dict(response.headers)}")
+                    print(f"HubSpot response text: {response.text}")
+                    print(f"HubSpot response text length: {len(response.text)}")
+                    
                     try:
-                        return response.json()
-                    except json.JSONDecodeError:
+                        json_data = response.json()
+                        print(f"Successfully parsed JSON: {json_data}")
+                        
+                        # Validate that we got the expected token data
+                        if not json_data or not isinstance(json_data, dict):
+                            print(f"Invalid token data structure: {json_data}")
+                            raise HTTPException(
+                                status_code=502,
+                                detail={
+                                    "error": "invalid_response",
+                                    "error_description": "HubSpot returned invalid token data structure",
+                                    "status_code": 502
+                                }
+                            )
+                        
+                        return json_data
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
+                        print(f"Response content: {repr(response.text)}")
                         raise HTTPException(
                             status_code=502,
                             detail={
@@ -560,8 +582,14 @@ class HubSpotOAuthClient:
                     )
                 else:
                     # Handle HubSpot OAuth errors
+                    print(f"HubSpot error response status: {response.status_code}")
+                    print(f"HubSpot error response headers: {dict(response.headers)}")
+                    print(f"HubSpot error response text: {response.text}")
+                    print(f"HubSpot error response text length: {len(response.text)}")
+                    
                     try:
                         error_data = response.json()
+                        print(f"Successfully parsed error JSON: {error_data}")
                         raise HTTPException(
                             status_code=self._map_hubspot_error_to_http_status(error_data.get('error', 'unknown_error')),
                             detail={
@@ -570,7 +598,9 @@ class HubSpotOAuthClient:
                                 "status_code": response.status_code
                             }
                         )
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as e:
+                        print(f"Error JSON decode error: {e}")
+                        print(f"Error response content: {repr(response.text)}")
                         # If response is not JSON, create generic error
                         raise HTTPException(
                             status_code=502,
@@ -1167,25 +1197,39 @@ async def hubspot_oauth_health():
         "client_secret_configured": client_secret_configured
     }
 
+@app.post("/api/hubspot/oauth/test")
+async def test_oauth_endpoint():
+    """Test endpoint to verify JSON response format"""
+    return {
+        "test": "success",
+        "message": "This endpoint returns valid JSON",
+        "timestamp": datetime.now().isoformat(),
+        "version": "updated_with_json_fixes",
+        "hubspot_configured": bool(os.getenv('HUBSPOT_CLIENT_ID') and os.getenv('HUBSPOT_CLIENT_SECRET'))
+    }
+
 @app.post("/api/hubspot/oauth/token")
 async def exchange_hubspot_oauth_token(request: HubSpotOAuthRequest):
     """
     Exchange HubSpot authorization code for access and refresh tokens
     """
     try:
-        print(f"HubSpot OAuth request received: code={request.code[:10]}..., redirect_uri={request.redirect_uri}")
+        print(f"=== HubSpot OAuth Request Started ===")
+        print(f"Request code: {request.code[:10]}...")
+        print(f"Request redirect_uri: {request.redirect_uri}")
+        print(f"Client ID configured: {bool(hubspot_oauth_client.client_id)}")
+        print(f"Client Secret configured: {bool(hubspot_oauth_client.client_secret)}")
         
         # Check if credentials are configured
         if not hubspot_oauth_client.client_id or not hubspot_oauth_client.client_secret:
-            print("HubSpot credentials not configured")
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "error": "configuration_error",
-                    "error_description": "HubSpot OAuth credentials are not configured",
-                    "status_code": 500
-                }
-            )
+            print("❌ HubSpot credentials not configured")
+            error_response = {
+                "error": "configuration_error",
+                "error_description": "HubSpot OAuth credentials are not configured",
+                "status_code": 500
+            }
+            print(f"Returning error: {error_response}")
+            raise HTTPException(status_code=500, detail=error_response)
         
         # Exchange code for tokens using the OAuth client
         token_data = await hubspot_oauth_client.exchange_code_for_tokens(
@@ -1194,15 +1238,31 @@ async def exchange_hubspot_oauth_token(request: HubSpotOAuthRequest):
         )
         
         print("HubSpot token exchange successful")
+        print(f"Token data received: {token_data}")
+        
+        # Validate token data
+        if not token_data or not isinstance(token_data, dict):
+            print(f"Invalid token data received: {token_data}")
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "invalid_token_response",
+                    "error_description": "Invalid token data received from HubSpot",
+                    "status_code": 502
+                }
+            )
         
         # Return the tokens in the expected format
-        return {
+        response_data = {
             "access_token": token_data.get('access_token'),
             "refresh_token": token_data.get('refresh_token'),
             "expires_in": token_data.get('expires_in'),
             "token_type": token_data.get('token_type', 'bearer'),
             "scope": token_data.get('scope')
         }
+        
+        print(f"Returning response: {response_data}")
+        return response_data
         
     except HTTPException as e:
         print(f"HubSpot OAuth HTTPException: {e.detail}")

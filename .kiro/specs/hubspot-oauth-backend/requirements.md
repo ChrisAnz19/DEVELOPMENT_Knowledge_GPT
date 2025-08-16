@@ -2,61 +2,50 @@
 
 ## Introduction
 
-This feature implements a secure backend OAuth integration for HubSpot that handles the token exchange process. The backend will receive authorization codes from the frontend, exchange them for access and refresh tokens with HubSpot's OAuth API, and return the tokens securely to the frontend. This enables users to connect their HubSpot accounts through a seamless OAuth flow while keeping sensitive credentials server-side.
+This feature implements the missing HubSpot OAuth API endpoints that the frontend expects to exist. Currently, the system has a `HubSpotOAuthClient` class but no actual API routes to handle OAuth token exchange requests. The frontend is making requests to `/api/hubspot/oauth/token` which returns 404 because the endpoint doesn't exist.
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a frontend application, I want to exchange HubSpot authorization codes for access tokens, so that users can securely connect their HubSpot accounts.
+**User Story:** As a frontend application, I want to exchange HubSpot authorization codes for access tokens, so that users can complete the OAuth flow.
 
 #### Acceptance Criteria
 
-1. WHEN a POST request is made to `/api/hubspot/oauth/token` with a valid authorization code and redirect_uri THEN the system SHALL exchange the code for access and refresh tokens with HubSpot
-2. WHEN the token exchange is successful THEN the system SHALL return the access token, refresh token, and expiration information to the frontend
-3. WHEN the authorization code is invalid or expired THEN the system SHALL return a 400 error with appropriate error message
-4. WHEN HubSpot's OAuth API is unavailable THEN the system SHALL return a 503 error with retry information
+1. WHEN a POST request is made to `/api/hubspot/oauth/token` THEN the system SHALL accept the request
+2. WHEN the request contains valid authorization code and redirect_uri THEN the system SHALL exchange them for tokens using HubSpot's API
+3. WHEN the token exchange succeeds THEN the system SHALL return the access token, refresh token, and expiration data
+4. WHEN the token exchange fails THEN the system SHALL return appropriate error responses
 
 ### Requirement 2
 
-**User Story:** As a system administrator, I want HubSpot OAuth credentials to be securely managed, so that sensitive information is never exposed to the frontend.
+**User Story:** As a frontend application, I want to check the health of the HubSpot OAuth service, so that I can verify the integration is working.
 
 #### Acceptance Criteria
 
-1. WHEN the system starts THEN it SHALL load HubSpot client ID and client secret from secure environment variables
-2. WHEN making requests to HubSpot's OAuth API THEN the system SHALL use the stored client credentials without exposing them
-3. WHEN environment variables are missing THEN the system SHALL fail to start with clear error messages
-4. IF client credentials are invalid THEN HubSpot SHALL return authentication errors that are properly handled
+1. WHEN a GET request is made to `/api/hubspot/oauth/health` THEN the system SHALL return a health status
+2. WHEN HubSpot credentials are configured THEN the system SHALL return healthy status
+3. WHEN HubSpot credentials are missing THEN the system SHALL return unhealthy status with details
+4. IF the health check succeeds THEN the system SHALL return HTTP 200 with status information
 
 ### Requirement 3
 
-**User Story:** As a developer, I want comprehensive error handling for OAuth failures, so that users receive clear feedback when authentication issues occur.
+**User Story:** As a developer, I want proper error handling for OAuth requests, so that I can debug integration issues effectively.
 
 #### Acceptance Criteria
 
-1. WHEN HubSpot returns an OAuth error THEN the system SHALL parse the error response and return appropriate HTTP status codes
-2. WHEN network timeouts occur THEN the system SHALL return a 504 error with timeout information
-3. WHEN malformed requests are received THEN the system SHALL return a 422 error with validation details
-4. WHEN rate limits are exceeded THEN the system SHALL return a 429 error with retry-after headers
+1. WHEN required parameters are missing THEN the system SHALL return HTTP 400 with validation errors
+2. WHEN HubSpot credentials are not configured THEN the system SHALL return HTTP 500 with configuration error
+3. WHEN HubSpot API returns errors THEN the system SHALL forward appropriate error messages
+4. WHEN network timeouts occur THEN the system SHALL return HTTP 502 with timeout error
 
 ### Requirement 4
 
-**User Story:** As a security-conscious application, I want request validation and CORS handling, so that only authorized frontend applications can use the OAuth endpoint.
+**User Story:** As a system administrator, I want the OAuth endpoints to use the existing HubSpotOAuthClient, so that the implementation is consistent and maintainable.
 
 #### Acceptance Criteria
 
-1. WHEN requests are made from unauthorized origins THEN the system SHALL reject them with CORS errors
-2. WHEN required fields (code, redirect_uri) are missing THEN the system SHALL return a 400 error with field validation details
-3. WHEN the redirect_uri doesn't match expected patterns THEN the system SHALL reject the request for security
-4. WHEN requests contain malicious payloads THEN the system SHALL sanitize inputs and prevent injection attacks
-
-### Requirement 5
-
-**User Story:** As a monitoring system, I want comprehensive logging of OAuth operations, so that authentication issues can be debugged and security events tracked.
-
-#### Acceptance Criteria
-
-1. WHEN OAuth token exchanges occur THEN the system SHALL log the operation with timestamps and success/failure status
-2. WHEN errors occur THEN the system SHALL log detailed error information without exposing sensitive data
-3. WHEN suspicious activity is detected THEN the system SHALL log security events with appropriate severity levels
-4. IF logging fails THEN the system SHALL continue operating but attempt to restore logging functionality
+1. WHEN implementing the endpoints THEN the system SHALL use the existing HubSpotOAuthClient class
+2. WHEN handling token exchange THEN the system SHALL call the exchange_code_for_tokens method
+3. WHEN errors occur THEN the system SHALL use the existing error handling patterns
+4. IF the client class needs modifications THEN the system SHALL maintain backward compatibility

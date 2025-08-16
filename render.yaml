@@ -18,5 +18,9 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      - key: HUBSPOT_CLIENT_ID
+        sync: false
+      - key: HUBSPOT_CLIENT_SECRET
+        sync: false
     healthCheckPath: /
     autoDeploy: true 
