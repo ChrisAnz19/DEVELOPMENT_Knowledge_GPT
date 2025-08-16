@@ -220,11 +220,11 @@ class DemoSearchGenerator:
         # Simple context for the AI prompt - no variable substitutions
         base_prompt = "Generate a professional B2B search query"
         
-        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals OR companies who need a specific product, service, investment, or opportunity.
+        prompt = f"""Generate a realistic B2B search query where someone is looking for professionals (executives, directors, managers) who need a specific product, service, investment, or opportunity.
 
 Writing Style: {style}
 
-The search can target either PEOPLE or COMPANIES who are looking FOR something specific like:
+The search must target PEOPLE (not companies) who are looking FOR something specific like:
 - New technology/software solutions
 - Investment opportunities  
 - New job opportunities
@@ -233,23 +233,17 @@ The search can target either PEOPLE or COMPANIES who are looking FOR something s
 - Funding/capital
 - Vendors/suppliers
 
-Examples of GOOD searches:
-
-PEOPLE searches:
+Examples of GOOD searches (always targeting PEOPLE):
 - "Find CFOs at manufacturing companies looking for ERP software"
 - "Looking for startup founders seeking Series A funding"
 - "Need VPs of Sales who are evaluating CRM solutions"
-- "Find executives looking for cybersecurity consultants"
+- "Find IT directors looking for cybersecurity consultants"
 - "Need HR directors looking for recruiting software"
 - "Looking for CTOs who need cloud migration services"
-
-COMPANY searches:
-- "Find SaaS companies seeking integration partners"
-- "Looking for startups needing Series B funding"
-- "Need manufacturing companies evaluating automation"
-- "Find healthcare companies implementing AI solutions"
-- "Looking for retailers launching e-commerce platforms"
-- "Need banks upgrading their fraud detection systems"
+- "Find marketing directors at retailers launching e-commerce sites"
+- "Need operations managers at logistics companies seeking automation"
+- "Looking for compliance officers at banks upgrading fraud detection"
+- "Find digital transformation officers implementing new systems"
 
 Writing styles:
 - casual: "Looking for...", "Need to find..."
@@ -257,7 +251,7 @@ Writing styles:
 - urgent: "ASAP need...", "Urgent search for..."
 - direct: "Find...", "Need..."
 
-Generate 1 realistic search query targeting either people OR companies who NEED something specific. Keep it professional and logical. Return only the search query text."""
+Generate 1 realistic search query targeting PEOPLE (executives, directors, managers) who NEED something specific. Always focus on the person, not the company. Return only the search query text."""
 
         try:
             response = openai.ChatCompletion.create(
@@ -379,27 +373,27 @@ Generate 1 realistic search query targeting either people OR companies who NEED 
             "Need executives considering relocation to Austin",
             "Find product managers ready for leadership positions",
             
-            # Company searches (not just people)
-            "Find SaaS companies looking for integration partners",
-            "Looking for startups seeking Series A funding",
-            "Need manufacturing companies evaluating automation",
-            "Find healthcare companies implementing AI solutions",
-            "Looking for fintech startups needing compliance help",
-            "Need e-commerce companies seeking logistics partners",
-            "Find biotech companies preparing for clinical trials",
-            "Looking for real estate companies expanding markets",
-            "Need consulting firms seeking technology partners",
-            "Find media companies evaluating streaming platforms",
-            "Looking for energy companies investing in renewables",
-            "Need retail companies launching online stores",
-            "Find construction companies adopting new technology",
-            "Looking for logistics companies seeking automation",
-            "Need insurance companies evaluating fraud detection",
-            "Find banks implementing digital transformation",
-            "Looking for hospitals seeking EMR upgrades",
-            "Need law firms evaluating case management software",
-            "Find accounting firms seeking cloud solutions",
-            "Looking for restaurants implementing delivery systems",
+            # More people searches - executives at companies with specific needs
+            "Find CTOs at SaaS companies looking for integration partners",
+            "Looking for CEOs at startups seeking Series A funding",
+            "Need operations directors at manufacturing companies evaluating automation",
+            "Find IT directors at healthcare companies implementing AI solutions",
+            "Looking for compliance officers at fintech startups needing regulatory help",
+            "Need logistics VPs at e-commerce companies seeking fulfillment partners",
+            "Find clinical directors at biotech companies preparing for trials",
+            "Looking for expansion managers at real estate companies entering new markets",
+            "Need partnership directors at consulting firms seeking technology alliances",
+            "Find CTOs at media companies evaluating streaming platforms",
+            "Looking for project managers at energy companies investing in renewables",
+            "Need e-commerce directors at retail companies launching online stores",
+            "Find technology managers at construction companies adopting new systems",
+            "Looking for automation directors at logistics companies seeking efficiency",
+            "Need fraud directors at insurance companies evaluating detection systems",
+            "Find digital transformation officers at banks implementing new technology",
+            "Looking for IT directors at hospitals seeking EMR upgrades",
+            "Need technology partners at law firms evaluating case management software",
+            "Find IT managers at accounting firms seeking cloud solutions",
+            "Looking for operations managers at restaurants implementing delivery systems",
             
             # M&A and investment targets
             "Find SaaS companies in Boston considering acquisition",
