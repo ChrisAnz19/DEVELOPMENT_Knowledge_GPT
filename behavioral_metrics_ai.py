@@ -166,103 +166,230 @@ def analyze_role_relevance(role: str, search_context: str) -> dict:
 
 def analyze_search_context(user_prompt: str) -> dict:
     """
-    Analyze the user's search context to understand what they're actually looking for.
-    Uses a more flexible approach that can identify various context types.
+    Enhanced search context analysis that better categorizes search intent with confidence scoring.
     
     Returns:
-        Dictionary with context analysis including context type, decision factors, etc.
+        Dictionary with context analysis including context type, decision factors, confidence score, and activity templates.
     """
     prompt_lower = user_prompt.lower()
     
-    # Define context categories with their indicators
+    # Enhanced context categories with weighted indicators
     context_categories = {
-        "legal_services": [
-            "attorney", "lawyer", "law firm", "legal services", "legal advice", "legal counsel",
-            "divorce attorney", "family law", "criminal defense", "personal injury", "estate planning",
-            "immigration lawyer", "corporate law", "intellectual property", "patent attorney"
-        ],
+        "real_estate": {
+            "primary_indicators": [
+                "buy home", "buy house", "buying home", "buying house", "home purchase", "house purchase",
+                "real estate", "residential property", "commercial property", "commercial real estate"
+            ],
+            "secondary_indicators": [
+                "property", "office space", "retail space", "industrial space", "warehouse", "lease", "rent", 
+                "commercial building", "office building", "square feet", "sqft", "location", "home", "house",
+                "neighborhood", "greenwich", "connecticut", "manhattan", "brooklyn", "westchester"
+            ],
+            "weight": 2.5
+        },
+        "legal_services": {
+            "primary_indicators": [
+                "attorney", "lawyer", "law firm", "legal services", "legal advice", "legal counsel",
+                "divorce attorney", "family law", "criminal defense", "personal injury", "estate planning"
+            ],
+            "secondary_indicators": [
+                "immigration lawyer", "corporate law", "intellectual property", "patent attorney",
+                "litigation", "contract law", "employment law", "tax law"
+            ],
+            "weight": 2.0
+        },
+        "personal_purchase": {
+            "primary_indicators": [
+                "buy car", "new car", "car purchase", "vehicle purchase", "auto purchase",
+                "personal insurance", "personal loan", "mortgage", "credit card"
+            ],
+            "secondary_indicators": [
+                "car", "vehicle", "auto", "apartment", "vacation", "travel", 
+                "phone", "personal laptop", "furniture", "appliance", "personal"
+            ],
+            "weight": 1.8
+        },
+        "financial_decision": {
+            "primary_indicators": [
+                "investment", "invest", "portfolio", "financial advisor", "financial planner",
+                "wealth management", "asset management", "private equity", "venture capital", "hedge fund"
+            ],
+            "secondary_indicators": [
+                "stock", "fund", "capital", "retirement", "401k", "climate", "esg", "sustainable",
+                "green investment", "impact investing", "funding", "finance"
+            ],
+            "weight": 1.5
+        },
+        "business_solution": {
+            "primary_indicators": [
+                "crm", "marketing automation", "sales tool", "analytics platform", "business intelligence",
+                "enterprise software", "saas", "cloud solution", "cloud migration", "crm solutions"
+            ],
+            "secondary_indicators": [
+                "software", "tool", "platform", "system", "solution", "service", "evaluating",
+                "consultant", "agency", "vendor", "provider", "contractor", "freelancer", "analytics",
+                "enterprise", "solutions"
+            ],
+            "weight": 1.5
+        },
+        "career_opportunity": {
+            "primary_indicators": [
+                "job", "position", "role", "career", "opportunity", "hire", "recruit",
+                "employment", "work", "candidate"
+            ],
+            "secondary_indicators": [
+                "hiring", "recruiting", "talent", "resume", "interview", "salary"
+            ],
+            "weight": 1.5
+        },
+        "healthcare": {
+            "primary_indicators": [
+                "doctor", "physician", "medical", "healthcare", "health", "hospital", "clinic"
+            ],
+            "secondary_indicators": [
+                "specialist", "treatment", "therapy", "diagnosis", "patient", "medicine"
+            ],
+            "weight": 1.8
+        },
+        "education": {
+            "primary_indicators": [
+                "school", "university", "college", "education", "course", "degree"
+            ],
+            "secondary_indicators": [
+                "learning", "training", "teacher", "professor", "student", "academic", "curriculum"
+            ],
+            "weight": 1.5
+        },
+        "news_media": {
+            "primary_indicators": [
+                "news", "media", "journalism", "journalist", "reporter", "political", "politics",
+                "election", "campaign", "government", "trump", "biden"
+            ],
+            "secondary_indicators": [
+                "cnn", "fox news", "msnbc", "bbc", "reuters", "associated press", "ap news", "npr", "pbs",
+                "newspaper", "magazine", "policy", "congress", "senate", "house", "president",
+                "democrat", "republican", "liberal", "conservative", "dictator", "democracy"
+            ],
+            "weight": 1.3
+        }
+    }
+    
+    # Calculate weighted scores for each context
+    context_scores = {}
+    total_words = len(prompt_lower.split())
+    
+    for category, config in context_categories.items():
+        primary_matches = sum(2 for term in config["primary_indicators"] if term in prompt_lower)
+        secondary_matches = sum(1 for term in config["secondary_indicators"] if term in prompt_lower)
+        
+        raw_score = (primary_matches + secondary_matches) * config["weight"]
+        # Normalize by prompt length to handle longer vs shorter queries, but don't over-penalize
+        normalized_score = raw_score / max(total_words * 0.5, 1) if total_words > 0 else 0
+        
+        if raw_score > 0:
+            context_scores[category] = {
+                "raw_score": raw_score,
+                "normalized_score": normalized_score,
+                "primary_matches": primary_matches,
+                "secondary_matches": secondary_matches
+            }
+    
+    # Determine primary context and confidence
+    if context_scores:
+        primary_context = max(context_scores.items(), key=lambda x: x[1]["raw_score"])
+        context_type = primary_context[0]
+        confidence_score = min(1.0, primary_context[1]["raw_score"] / 6.0)  # More generous confidence scoring
+    else:
+        context_type = "general_business"
+        confidence_score = 0.3  # Low confidence for default
+    
+    # Enhanced decision factors based on context type
+    decision_factors_map = {
         "real_estate": [
-            "real estate", "property", "office space", "commercial property", "commercial real estate",
-            "retail space", "industrial space", "warehouse", "lease", "rent", "buy property",
-            "commercial building", "office building", "square feet", "sqft", "location"
+            "location_preference", "property_type", "budget_considerations", "timeline_urgency",
+            "neighborhood_quality", "school_districts", "commute_accessibility", "market_conditions"
+        ],
+        "legal_services": [
+            "expertise_specialization", "experience_track_record", "reputation_reviews", 
+            "case_success_rate", "client_service_quality", "fee_structure", "availability"
         ],
         "personal_purchase": [
-            "new car", "car", "vehicle", "auto", "house", "home", "apartment", 
-            "vacation", "travel", "personal insurance", "personal loan", "mortgage", "credit card",
-            "phone", "personal laptop", "furniture", "appliance"
+            "price_value", "quality_reliability", "features_functionality", "reviews_ratings", 
+            "warranty_support", "personal_fit", "brand_reputation"
         ],
         "career_opportunity": [
-            "job", "position", "role", "career", "opportunity", "hire", "recruit",
-            "employment", "work", "candidate"
+            "compensation_package", "growth_potential", "company_culture", "role_fit", 
+            "location_flexibility", "work_life_balance", "career_advancement"
         ],
         "financial_decision": [
-            "investment", "invest", "stock", "fund", "portfolio", "advisor", "financial planner",
-            "wealth management", "retirement", "401k", "climate", "esg", "sustainable",
-            "green investment", "impact investing", "venture capital", "private equity",
-            "hedge fund", "asset management", "capital", "funding", "finance"
+            "returns_performance", "risk_assessment", "due_diligence", "track_record", 
+            "market_conditions", "fee_structure", "regulatory_compliance"
         ],
         "business_solution": [
-            "crm", "software", "tool", "platform", "system", "solution", "service",
-            "consultant", "agency", "vendor", "provider", "contractor", "freelancer",
-            "marketing automation", "analytics", "business intelligence", "enterprise"
+            "roi_value", "integration_compatibility", "scalability_growth", "support_service", 
+            "pricing_model", "implementation_complexity", "vendor_stability"
         ],
         "healthcare": [
-            "doctor", "physician", "medical", "healthcare", "health", "hospital", "clinic",
-            "specialist", "treatment", "therapy", "diagnosis", "patient", "medicine"
+            "expertise_specialization", "experience_credentials", "availability_scheduling", 
+            "location_accessibility", "insurance_coverage", "patient_reviews"
         ],
         "education": [
-            "school", "university", "college", "education", "course", "degree", "learning",
-            "training", "teacher", "professor", "student", "academic", "curriculum"
+            "quality_reputation", "curriculum_relevance", "cost_value", "location_accessibility", 
+            "career_outcomes", "accreditation_recognition"
         ],
         "news_media": [
-            "news", "media", "journalism", "journalist", "reporter", "cnn", "fox news", "msnbc", 
-            "bbc", "reuters", "associated press", "ap news", "npr", "pbs", "newspaper", "magazine",
-            "political", "politics", "election", "campaign", "government", "policy", "congress",
-            "senate", "house", "president", "trump", "biden", "democrat", "republican", "liberal",
-            "conservative", "dictator", "democracy", "authoritarian", "fascism", "socialism",
-            "breaking news", "current events", "headlines", "editorial", "opinion", "analysis",
-            "investigative", "documentary", "broadcast", "television", "tv news", "radio news"
+            "credibility_trustworthiness", "bias_awareness", "source_diversity", 
+            "fact_checking_accuracy", "perspective_balance", "timeliness_relevance"
+        ],
+        "general_business": [
+            "value_proposition", "quality_reliability", "fit_alignment", "cost_effectiveness"
         ]
     }
     
-    # Determine primary context by checking for indicators
-    context_type = "general_business"  # default
-    context_matches = {}
+    decision_factors = decision_factors_map.get(context_type, decision_factors_map["general_business"])
     
-    # Count matches for each context category
-    for category, indicators in context_categories.items():
-        match_count = sum(1 for term in indicators if term in prompt_lower)
-        if match_count > 0:
-            context_matches[category] = match_count
-    
-    # Select the category with the most matches
-    if context_matches:
-        context_type = max(context_matches.items(), key=lambda x: x[1])[0]
-    
-    # Define decision factors based on context type
-    decision_factors_map = {
-        "legal_services": ["expertise", "experience", "reputation", "case success rate", "client service"],
-        "real_estate": ["location", "price", "size", "amenities", "accessibility", "lease terms"],
-        "personal_purchase": ["price", "quality", "features", "reviews", "warranty", "personal_fit"],
-        "career_opportunity": ["compensation", "growth_potential", "company_culture", "role_fit", "location"],
-        "financial_decision": ["returns", "risk_assessment", "due_diligence", "track_record", "market_conditions"],
-        "business_solution": ["roi", "integration", "scalability", "support", "pricing"],
-        "healthcare": ["expertise", "experience", "availability", "location", "insurance coverage"],
-        "education": ["quality", "reputation", "curriculum", "cost", "location", "career outcomes"],
-        "news_media": ["credibility", "bias_awareness", "source_diversity", "fact_checking", "perspective_balance"]
+    # Define activity templates for each context
+    activity_templates_map = {
+        "real_estate": ["real_estate_research", "location_analysis", "market_comparison", "financial_planning"],
+        "legal_services": ["attorney_research", "case_evaluation", "consultation_scheduling", "legal_comparison"],
+        "personal_purchase": ["product_research", "comparison_shopping", "review_analysis", "decision_factors"],
+        "financial_decision": ["investment_research", "performance_analysis", "risk_evaluation", "advisor_consultation"],
+        "business_solution": ["solution_evaluation", "vendor_comparison", "roi_analysis", "implementation_planning"],
+        "career_opportunity": ["job_research", "company_analysis", "salary_comparison", "career_planning"],
+        "healthcare": ["provider_research", "credential_verification", "appointment_scheduling", "treatment_options"],
+        "education": ["program_research", "institution_comparison", "cost_analysis", "career_outcomes"],
+        "news_media": ["source_verification", "bias_analysis", "fact_checking", "perspective_gathering"],
+        "general_business": ["market_research", "competitive_analysis", "solution_evaluation", "vendor_assessment"]
     }
     
-    decision_factors = decision_factors_map.get(context_type, ["value", "quality", "fit", "reliability"])
+    activity_templates = activity_templates_map.get(context_type, activity_templates_map["general_business"])
     
-    # Create a simplified context result
+    # Enhanced context result with confidence scoring
     return {
         "context_type": context_type,
+        "confidence_score": confidence_score,
         "decision_factors": decision_factors,
-        "is_personal": context_type in ["personal_purchase", "career_opportunity"],
+        "activity_templates": activity_templates,
+        "behavioral_focus": _determine_behavioral_focus(context_type),
+        "is_personal": context_type in ["personal_purchase", "career_opportunity", "real_estate"],
         "is_business": context_type in ["business_solution", "general_business"],
         "is_specialized": context_type in ["legal_services", "real_estate", "healthcare", "education", "financial_decision"],
-        "is_news_media": context_type == "news_media"
+        "is_news_media": context_type == "news_media",
+        "context_scores": context_scores  # For debugging and analysis
     }
+
+def _determine_behavioral_focus(context_type: str) -> str:
+    """Determine the behavioral focus based on context type."""
+    personal_contexts = ["personal_purchase", "career_opportunity", "real_estate", "healthcare", "education"]
+    professional_contexts = ["business_solution", "general_business"]
+    mixed_contexts = ["financial_decision", "legal_services", "news_media"]
+    
+    if context_type in personal_contexts:
+        return "personal"
+    elif context_type in professional_contexts:
+        return "professional"
+    else:
+        return "mixed"
 
 def simulate_personal_research_patterns() -> Dict[str, Any]:
     """Simulate personal research patterns that indicate off-hours engagement."""

@@ -990,6 +990,200 @@ diverse_activity_patterns = {
     ]
 }
 
+# Context-specific behavioral activity templates for different search contexts
+context_specific_activities = {
+    "real_estate": {
+        "research_activities": [
+            "Researched neighborhood demographics and school ratings on GreatSchools.org and Niche.com",
+            "Analyzed property values and market trends on Zillow.com, Redfin.com, and Realtor.com",
+            "Explored mortgage rates and loan options on Bankrate.com, LendingTree.com, and local bank websites",
+            "Investigated property tax rates and municipal services on county assessor websites",
+            "Studied commute times and transportation options using Google Maps and local transit websites",
+            "Researched local amenities and lifestyle factors on Yelp.com and city government websites",
+            "Analyzed crime statistics and safety data on NeighborhoodScout.com and local police websites",
+            "Explored zoning laws and development plans on municipal planning department websites",
+            "Investigated homeowners association rules and fees through HOA websites and documents",
+            "Researched flood zones and environmental factors on FEMA.gov and environmental databases"
+        ],
+        "evaluation_activities": [
+            "Scheduled property viewings through Zillow.com, Realtor.com, and MLS systems",
+            "Attended open houses and private showings coordinated via real estate websites",
+            "Coordinated home inspections with certified inspectors found through Angie's List and HomeAdvisor.com",
+            "Requested property disclosures and HOA documentation from listing agents via email platforms",
+            "Evaluated comparable sales data through Redfin.com, Zillow.com, and agent CRM systems",
+            "Arranged mortgage pre-approval meetings with lenders found through Bankrate.com and LendingTree.com",
+            "Consulted with real estate attorneys found through Avvo.com and state bar association websites",
+            "Engaged with contractors through HomeAdvisor.com and Thumbtack.com for renovation estimates",
+            "Met with insurance agents through Progressive.com, State Farm, and local agency websites",
+            "Coordinated with financial advisors through SmartAsset.com and fee-only advisor networks"
+        ],
+        "comparison_activities": [
+            "Compared property features and pricing across Zillow.com, Redfin.com, and Realtor.com listings",
+            "Analyzed cost of living differences using BestPlaces.net and city comparison websites",
+            "Evaluated investment potential through Rentometer.com and property appreciation calculators",
+            "Compared homeowner insurance quotes through Progressive.com, Geico.com, and local agents",
+            "Assessed renovation costs using HomeAdvisor.com, Angie's List, and contractor estimates",
+            "Contrasted mortgage rates through Bankrate.com, LendingTree.com, and credit union websites",
+            "Evaluated commute times using Google Maps and public transportation authority websites",
+            "Compared utility costs through local utility websites and EnergyStar.gov efficiency ratings",
+            "Analyzed resale potential using Zillow.com price history and neighborhood trend data",
+            "Assessed property management costs through local property management company websites"
+        ]
+    },
+    "legal_services": {
+        "research_activities": [
+            "Researched attorney credentials through state bar websites and Martindale-Hubbell.com",
+            "Analyzed case outcomes through Westlaw.com, LexisNexis.com, and legal precedent databases",
+            "Investigated law firm specializations through firm websites and Avvo.com profiles",
+            "Studied legal fee structures through law firm websites and LegalZoom.com resources",
+            "Explored mediation services through ADR.org and local dispute resolution websites",
+            "Researched attorney disciplinary records through state bar websites and court databases",
+            "Investigated court procedures through local court websites and legal aid organizations",
+            "Analyzed settlement patterns through legal databases and case law research platforms",
+            "Researched legal insurance through ARAG.com and employer benefit websites",
+            "Studied statute requirements through state government websites and legal reference sites"
+        ],
+        "evaluation_activities": [
+            "Scheduled consultations through Avvo.com and law firm websites to discuss case strategy",
+            "Requested case assessments via legal consultation platforms and firm contact forms",
+            "Evaluated attorney communication through initial meetings and Martindale-Hubbell.com profiles",
+            "Reviewed client testimonials on Google Reviews, Yelp.com, and law firm websites",
+            "Assessed law firm capabilities through LinkedIn.com profiles and firm websites",
+            "Attended legal seminars found through CLE.com and local bar association websites",
+            "Consulted with previous clients through referrals and professional networking platforms",
+            "Evaluated attorney availability through scheduling systems and case management platforms",
+            "Assessed law firm technology through virtual consultations and client portal demonstrations",
+            "Reviewed attorney track records through court records and legal database searches"
+        ],
+        "comparison_activities": [
+            "Compared legal fee structures through law firm websites and LegalMatch.com",
+            "Analyzed attorney experience through Avvo.com profiles and state bar directories",
+            "Evaluated firm reputation through Google Reviews, Yelp.com, and Better Business Bureau",
+            "Compared timeline estimates through consultation notes and legal planning websites",
+            "Assessed communication approaches through initial consultations and firm websites",
+            "Contrasted legal strategies through consultation summaries and legal advice platforms",
+            "Evaluated firm resources through LinkedIn.com profiles and law firm websites",
+            "Compared office locations using Google Maps and transportation accessibility tools",
+            "Analyzed success rates through Martindale-Hubbell.com and court record databases",
+            "Assessed responsiveness through initial contact experiences and online reviews"
+        ]
+    },
+    "personal_purchase": {
+        "research_activities": [
+            "Researched product specifications through manufacturer websites and CNET.com comparisons",
+            "Analyzed customer reviews on Amazon.com, Consumer Reports, and Trustpilot.com",
+            "Investigated warranty terms through manufacturer websites and WarrantyWeek.com",
+            "Studied pricing trends on PriceGrabber.com, Shopping.com, and retailer websites",
+            "Explored financing through PayPal Credit, Affirm.com, and retailer payment options",
+            "Researched reliability through Consumer Reports and manufacturer reliability databases",
+            "Investigated recalls through CPSC.gov, NHTSA.gov, and manufacturer safety pages",
+            "Analyzed ownership costs through Edmunds.com, KBB.com, and cost calculator websites",
+            "Researched resale values through KBB.com, Edmunds.com, and depreciation calculators",
+            "Studied environmental impact through EnergyStar.gov and manufacturer sustainability pages"
+        ],
+        "evaluation_activities": [
+            "Visited showrooms found through manufacturer websites and Google Maps location searches",
+            "Scheduled test drives through Autotrader.com, Cars.com, and dealership websites",
+            "Consulted with sales representatives contacted through retailer websites and chat systems",
+            "Arranged home consultations through HomeDepot.com, Lowes.com, and contractor platforms",
+            "Evaluated delivery options through Amazon.com, retailer websites, and shipping calculators",
+            "Tested product functionality in Best Buy, Target, and specialty retailer locations",
+            "Consulted with friends through Facebook.com and sought recommendations on Reddit.com",
+            "Attended product demonstrations at trade shows found through Eventbrite.com",
+            "Evaluated customer service through live chat, phone support, and review platforms",
+            "Assessed compatibility through manufacturer websites and technical specification databases"
+        ],
+        "comparison_activities": [
+            "Compared pricing across Amazon.com, Best Buy, and manufacturer websites for best deals",
+            "Analyzed features through manufacturer websites and comparison sites like CNET.com",
+            "Evaluated warranties through manufacturer websites and WarrantyWeek.com resources",
+            "Compared financing through retailer websites, PayPal Credit, and bank loan platforms",
+            "Assessed delivery through retailer websites and shipping calculator tools",
+            "Contrasted energy efficiency using EnergyStar.gov and manufacturer specification pages",
+            "Evaluated brand reputation through Consumer Reports, Amazon.com reviews, and Trustpilot.com",
+            "Compared maintenance costs through manufacturer websites and owner forum discussions",
+            "Analyzed trade-in values through KBB.com, Gazelle.com, and retailer trade-in programs",
+            "Assessed customization through manufacturer websites and product configuration tools"
+        ]
+    },
+    "business_solution": {
+        "research_activities": [
+            "Analyzed pricing models and feature comparisons on G2.com, Capterra.com, and TrustRadius.com",
+            "Evaluated user reviews and ratings on GetApp.com, Software Advice, and PCMag.com",
+            "Compared implementation timelines through vendor websites and customer case studies",
+            "Researched integration capabilities on Stack Overflow, GitHub.com, and vendor documentation",
+            "Studied ROI calculators and business case templates on vendor websites and analyst reports",
+            "Examined security compliance features on vendor sites and third-party security assessments",
+            "Investigated scalability benchmarks through vendor technical documentation and performance studies",
+            "Reviewed customer success stories on LinkedIn.com, company websites, and industry publications",
+            "Analyzed competitive positioning through Crunchbase.com, Bloomberg.com, and market research reports",
+            "Explored technical specifications on vendor portals and developer documentation sites"
+        ],
+        "evaluation_activities": [
+            "Participated in product demos via Zoom.us, GoToWebinar.com, and vendor demo platforms",
+            "Requested trial access through vendor websites and tested functionality on Salesforce.com",
+            "Engaged with sales representatives via LinkedIn.com, Calendly.com, and direct outreach",
+            "Scheduled live demonstrations through vendor booking systems and HubSpot.com platforms",
+            "Coordinated technical sessions with solution architects via Microsoft Teams and Slack.com",
+            "Participated in user communities on Reddit.com, Discord.com, and vendor forums",
+            "Engaged with customer support through Zendesk.com, Intercom.com, and help portals",
+            "Tested functionality through vendor trial accounts and AWS.amazon.com sandbox environments",
+            "Evaluated data migration tools through vendor testing environments and GitHub.com documentation",
+            "Assessed training resources on Udemy.com, Coursera.org, and vendor learning portals"
+        ],
+        "comparison_activities": [
+            "Built detailed feature comparison matrices using Excel.com and Google Sheets",
+            "Analyzed total cost of ownership calculations on vendor websites and Calculator.net",
+            "Compared user interface design through screenshots on vendor sites and demo galleries",
+            "Evaluated customer support options via vendor websites and Trustpilot.com reviews",
+            "Assessed implementation complexity through vendor documentation and Stack Overflow",
+            "Compared reporting capabilities via vendor demo videos on Vimeo.com and Wistia.com",
+            "Analyzed customization options through vendor configuration guides and help centers",
+            "Evaluated vendor stability via Crunchbase.com, LinkedIn.com, and financial reports",
+            "Compared data security measures on vendor sites and SecurityScorecard.com",
+            "Assessed integration ecosystems through vendor marketplaces and Zapier.com"
+        ]
+    },
+    "financial_decision": {
+        "research_activities": [
+            "Analyzed investment performance and historical returns on Morningstar.com and Yahoo Finance",
+            "Monitored market trends and economic indicators through Bloomberg.com and CNBC.com",
+            "Investigated advisor credentials and regulatory records through FINRA.org and SEC.gov databases",
+            "Compared fee structures and expense ratios across different investment products on fund websites",
+            "Explored tax implications through IRS.gov publications and TurboTax.com advisory resources",
+            "Studied risk assessment methodologies through Vanguard.com and Fidelity.com educational content",
+            "Evaluated ESG investment options through Sustainalytics.com and MSCI.com rating platforms",
+            "Reviewed economic forecasts through Federal Reserve websites and bank research portals",
+            "Examined retirement planning strategies on Social Security Administration and 401k.com",
+            "Investigated insurance products through Insure.com and carrier websites for wealth protection"
+        ],
+        "evaluation_activities": [
+            "Scheduled consultations through SmartAsset.com and wealth management firm websites",
+            "Attended seminars found through Eventbrite.com and financial planning organization websites",
+            "Evaluated platforms through Charles Schwab, Fidelity.com, and Vanguard.com demos",
+            "Consulted with CPAs found through AICPA.org and local accounting firm websites",
+            "Assessed risk tolerance through Vanguard.com questionnaires and advisor meetings",
+            "Reviewed proposals through advisor presentations and financial planning software",
+            "Evaluated insurance through Northwestern Mutual, State Farm, and broker websites",
+            "Attended estate planning consultations with attorneys found through estate planning websites",
+            "Assessed retirement scenarios using Social Security Administration and 401k.com calculators",
+            "Evaluated alternative investments through platforms like YieldStreet.com and advisor networks"
+        ],
+        "comparison_activities": [
+            "Compared performance through Morningstar.com, Yahoo Finance, and fund websites",
+            "Analyzed fees through advisor websites, FINRA.org BrokerCheck, and fee comparison tools",
+            "Evaluated qualifications through CFP.net, advisor websites, and regulatory databases",
+            "Compared platform features through Charles Schwab, E*TRADE.com, and TD Ameritrade websites",
+            "Assessed tax efficiency through fund websites, Morningstar.com, and tax-loss harvesting tools",
+            "Contrasted risk management through advisor presentations and portfolio analysis tools",
+            "Evaluated service quality through online reviews, BBB.org, and client testimonials",
+            "Compared retirement tools through Fidelity.com, Vanguard.com, and Social Security calculators",
+            "Analyzed insurance options through Insure.com, carrier websites, and broker comparisons",
+            "Assessed estate planning through attorney websites and estate planning cost calculators"
+        ]
+    }
+}
+
 def _get_diverse_activity_selection(candidate_index: int, activity_categories: list) -> list:
     """
     Select wildly diverse activities from different categories to avoid repetition.
@@ -1014,13 +1208,181 @@ def _get_diverse_activity_selection(candidate_index: int, activity_categories: l
     
     return selected_activities
 
+def select_contextual_activities(context_analysis: dict, candidate_role: str, candidate_index: int) -> list:
+    """
+    Select behavioral activities that match the search context and candidate profile.
+    
+    Args:
+        context_analysis: Output from analyze_search_context_enhanced()
+        candidate_role: The candidate's professional role/title
+        candidate_index: Index for diversity in activity selection
+        
+    Returns:
+        List of contextually relevant behavioral activities
+    """
+    context_type = context_analysis.get("context_type", "general_business")
+    confidence_score = context_analysis.get("confidence_score", 0.5)
+    
+    # Get context-specific activities if available
+    if context_type in context_specific_activities and confidence_score > 0.6:
+        context_activities = context_specific_activities[context_type]
+        
+        # Select diverse activities from different categories
+        selected_activities = []
+        activity_categories = list(context_activities.keys())
+        
+        # Ensure we have at least 3 different activity types
+        for i in range(min(3, len(activity_categories))):
+            category = activity_categories[i]
+            activities = context_activities[category]
+            
+            # Use candidate index to ensure diversity across candidates
+            activity_index = (candidate_index * 7 + i * 11) % len(activities)
+            selected_activities.append(activities[activity_index])
+        
+        return selected_activities
+    
+    # Fallback to role-based activities with generic professional patterns
+    return _get_role_based_activities(candidate_role, candidate_index)
+
+def _calculate_role_context_relevance(candidate_role: str, context_type: str) -> float:
+    """
+    Calculate relevance score between candidate role and search context.
+    
+    Args:
+        candidate_role: The candidate's job title/role
+        context_type: The detected search context type
+        
+    Returns:
+        Relevance score between 0.0 and 1.0
+    """
+    role_lower = candidate_role.lower()
+    
+    # Define role-context relevance mappings
+    role_context_relevance = {
+        "real_estate": {
+            "high": ["real estate", "property", "broker", "agent", "developer", "construction", "architect"],
+            "medium": ["executive", "ceo", "cfo", "director", "manager", "owner", "founder"],
+            "low": ["developer", "engineer", "analyst", "coordinator", "specialist"]
+        },
+        "legal_services": {
+            "high": ["attorney", "lawyer", "legal", "counsel", "paralegal", "law"],
+            "medium": ["executive", "ceo", "cfo", "director", "manager", "owner", "founder", "compliance"],
+            "low": ["developer", "engineer", "analyst", "coordinator", "specialist"]
+        },
+        "financial_decision": {
+            "high": ["finance", "investment", "portfolio", "wealth", "asset", "fund", "capital", "cfo", "financial"],
+            "medium": ["executive", "ceo", "director", "manager", "owner", "founder", "analyst"],
+            "low": ["developer", "engineer", "coordinator", "specialist", "marketing"]
+        },
+        "business_solution": {
+            "high": ["cto", "cio", "technology", "it", "systems", "operations", "manager", "director"],
+            "medium": ["executive", "ceo", "cfo", "owner", "founder", "analyst", "consultant"],
+            "low": ["coordinator", "specialist", "assistant"]
+        },
+        "personal_purchase": {
+            "high": ["executive", "ceo", "cfo", "director", "manager", "owner", "founder"],
+            "medium": ["analyst", "consultant", "specialist", "coordinator"],
+            "low": []  # Everyone has personal purchase relevance
+        }
+    }
+    
+    if context_type not in role_context_relevance:
+        return 0.7  # Default medium relevance for unknown contexts
+    
+    relevance_map = role_context_relevance[context_type]
+    
+    # Check for high relevance matches
+    if any(term in role_lower for term in relevance_map["high"]):
+        return 0.9
+    
+    # Check for medium relevance matches
+    if any(term in role_lower for term in relevance_map["medium"]):
+        return 0.7
+    
+    # Check for low relevance matches
+    if any(term in role_lower for term in relevance_map["low"]):
+        return 0.4
+    
+    # Default relevance for unmatched roles
+    return 0.5
+
+def _get_role_based_activities(candidate_role: str, candidate_index: int) -> list:
+    """
+    Get role-based activities as fallback when context-specific activities aren't available.
+    
+    Args:
+        candidate_role: The candidate's job title/role
+        candidate_index: Index for diversity in activity selection
+        
+    Returns:
+        List of role-appropriate activities
+    """
+    role_lower = candidate_role.lower()
+    
+    # Select activities based on role with diversity
+    if any(exec_term in role_lower for exec_term in ["ceo", "cfo", "cto", "executive", "director", "vp"]):
+        activity_categories = ["validation_activities", "research_activities", "engagement_activities"]
+    elif any(mgr_term in role_lower for mgr_term in ["manager", "lead", "senior"]):
+        activity_categories = ["evaluation_activities", "comparison_activities", "research_activities"]
+    else:
+        activity_categories = ["research_activities", "evaluation_activities", "comparison_activities"]
+    
+    return _get_diverse_activity_selection(candidate_index, activity_categories)
+
 def _generate_realistic_behavioral_reasons(title: str, user_prompt: str, candidate_index: int) -> list:
     """
-    Generate realistic behavioral reasons with diverse activities that avoid repetitive patterns like 
-    'downloaded a whitepaper' or 'attended webinar'.
+    Generate realistic behavioral reasons with context-aware activity selection.
+    Uses enhanced context analysis to match activities to search intent and candidate role.
     """
-
+    # Import here to avoid circular imports
+    from behavioral_metrics_ai import analyze_search_context
     
+    # Analyze search context for better activity selection
+    context_analysis = analyze_search_context(user_prompt)
+    
+    # Calculate role-context relevance
+    relevance_score = _calculate_role_context_relevance(title, context_analysis.get("context_type", "general_business"))
+    
+    # Select contextual activities based on analysis
+    contextual_activities = select_contextual_activities(context_analysis, title, candidate_index)
+    
+    # If we have high-confidence contextual activities, use them
+    if contextual_activities and context_analysis.get("confidence_score", 0) > 0.6:
+        reasons = []
+        
+        # Add time variations to make activities more realistic
+        time_variations = [
+            "over the past week",
+            "during multiple sessions last month", 
+            "repeatedly over the past two weeks",
+            "in several focused research sessions",
+            "across multiple research sessions",
+            "over the past month"
+        ]
+        
+        for i, activity in enumerate(contextual_activities[:3]):
+            if i == 0:
+                # Add time variation to first activity
+                time_ref = time_variations[candidate_index % len(time_variations)]
+                reasons.append(f"{activity} {time_ref}")
+            else:
+                reasons.append(activity)
+        
+        # Add intensity modifiers for top candidates
+        if candidate_index < 2 and len(reasons) > 1:
+            intensity_modifiers = ["extensively", "thoroughly", "in-depth", "comprehensively"]
+            modifier = intensity_modifiers[candidate_index % len(intensity_modifiers)]
+            
+            # Add intensity to the second reason
+            for verb in ["Researched", "Analyzed", "Compared", "Evaluated", "Reviewed", "Investigated", "Explored"]:
+                if verb in reasons[1]:
+                    reasons[1] = reasons[1].replace(verb, f"{verb} {modifier}")
+                    break
+        
+        return reasons
+    
+    # Fallback to existing logic for low-confidence or unknown contexts
     title_lower = title.lower()
     prompt_lower = user_prompt.lower()
     
