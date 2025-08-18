@@ -272,20 +272,10 @@ Additional context:
 def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict = None, industry_context: str = None) -> list:
     """
     Enhanced function to rank and explain top candidates with realistic behavioral data.
-    
-    Args:
-        user_prompt: The user's search criteria
-        people: List of candidate data
-        behavioral_data: Optional behavioral data to incorporate
-        industry_context: Optional industry context to tailor assessments
-        
-    Returns:
-        List of dicts with candidate info and behavioral assessments
     """
     # Optimize token usage by limiting candidates and extracting only necessary fields
     max_candidates = min(5, len(people))  # Limit to 5 candidates maximum (increased from 3)
     limited_people = people[:max_candidates]
-    
     # Simplify the people data to reduce tokens - only include essential fields
     simplified_people = []
     for person in limited_people:
@@ -296,17 +286,13 @@ def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict 
             "company": person.get("organization_name", "Unknown"),
             "email": person.get("email", "None")
         }
-        
         # Only include LinkedIn URL if it exists and is not too long
         linkedin_url = person.get("linkedin_url", "")
         if linkedin_url and len(linkedin_url) < 60:  # Avoid very long URLs
             simplified_person["linkedin_url"] = linkedin_url
-            
         simplified_people.append(simplified_person)
-    
     # Build optimized prompts
     system_prompt, prompt = build_assessment_prompt(user_prompt, simplified_people, industry_context)
-    
     # Use the OpenAI utility function with GPT-4-Turbo
     response = call_openai(
         prompt=prompt,
@@ -315,14 +301,12 @@ def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict 
         temperature=0.7,
         max_tokens=1000  # Increased for more detailed responses
     )
-    
     if response:
         try:
             # Try to parse the response as JSON
             result = json.loads(response)
-            
             # Ensure result is a list
-            if isinstance(result, list):
+            if isinstance(result, list) and len(result) > 0:
                 # Enhanced validation of response quality
                 validated_result = _validate_assessment_response(result, user_prompt)
                 if validated_result:
@@ -331,122 +315,42 @@ def select_top_candidates(user_prompt: str, people: list, behavioral_data: dict 
                     print("[Assessment] Response validation failed, using fallback logic")
                     return _fallback_assessment(people, user_prompt, industry_context)
             else:
-                print("[Assessment] Response is not a list, using fallback logic")
+                print("[Assessment] Response is not a list or is empty, using fallback logic")
                 return _fallback_assessment(people, user_prompt, industry_context)
-                
         except json.JSONDecodeError as e:
             print(f"[Assessment] Failed to parse JSON response: {e}")
             print(f"[Assessment] Raw response: {response}")
             return _fallback_assessment(people, user_prompt, industry_context)
-    
     print("[Assessment] OpenAI API call failed, using fallback logic")
     return _fallback_assessment(people, user_prompt, industry_context)
 
 def _validate_assessment_response(result: list, user_prompt: str) -> list:
     """
     Validates the assessment response for quality and completeness.
-    
-    Args:
-        result: The parsed response from OpenAI
-        user_prompt: The original user query
-        
-    Returns:
-        The validated result or None if validation fails
+    If required fields are missing, fills them with default values instead of rejecting the candidate.
     """
-    # Check if we have exactly 2 results
-    if len(result) != 2:
-        print(f"[Assessment] Expected exactly 2 results, got {len(result)}")
+    # Check if we have at least 1 result
+    if not result or not isinstance(result, list):
+        print(f"[Assessment] No valid result list returned.")
         return None
-    
-    # Check required fields
+
     required_fields = ["name", "title", "company", "email", "accuracy", "reasons"]
+    validated_result = []
     for item in result:
-        missing_fields = [field for field in required_fields if field not in item]
-        if missing_fields:
-            print(f"[Assessment] Missing required fields: {missing_fields}")
-            return None
-    
-    # Check accuracy values
-    for item in result:
-        accuracy = item.get("accuracy")
-        if not isinstance(accuracy, (int, float)) or accuracy < 0 or accuracy > 100:
-            print(f"[Assessment] Invalid accuracy value: {accuracy}")
-            return None
-    
-    # Check reasons
-    for item in result:
-        reasons = item.get("reasons", [])
-        
-        # Check if we have enough reasons
-        if len(reasons) < 2:
-            print(f"[Assessment] Not enough reasons provided: {len(reasons)}")
-            return None
-        
-        # Check for generic reasons (relaxed validation)
-        generic_phrases = [
-            "selected based on title and company fit",
-            "profile indicates relevant experience",
-            "title and company fit",
-            "selected based on title",
-            "selected based on company"
-        ]
-        
-        generic_reasons = [r for r in reasons if any(phrase in r.lower() for phrase in generic_phrases)]
-        if generic_reasons:
-            print(f"[Assessment] Generic reasons detected: {generic_reasons}")
-            # Don't fail validation - just log the warning
-            print("[Assessment] Continuing with assessment despite generic reasons")
-        
-        # Check for FORBIDDEN problematic patterns (STRICT VALIDATION)
-        problematic_patterns = [
-            "downloaded whitepaper", "downloaded implementation", "attended webinar", 
-            "viewed webinar", "subscribed to newsletter", "attended virtual",
-            "viewed case study", "downloaded case study"
-        ]
-        
-        problematic_reasons = []
-        for reason in reasons:
-            reason_lower = reason.lower()
-            for pattern in problematic_patterns:
-                if pattern in reason_lower:
-                    problematic_reasons.append(reason)
-                    break
-        
-        if problematic_reasons:
-            print(f"[Assessment] FORBIDDEN patterns detected: {problematic_reasons}")
-            print("[Assessment] Rejecting AI response due to forbidden content consumption patterns")
-            return None
-        
-        # Check for unrealistic behavioral patterns
-        unrealistic_patterns = [
-            "searched for", "search for", "googled", "google search",
-            "implementing crm in", "implementing analytics in", "solutions in new york",
-            "solutions in california", "solutions in texas", "solutions in florida"
-        ]
-        
-        unrealistic_reasons = []
-        for reason in reasons:
-            reason_lower = reason.lower()
-            for pattern in unrealistic_patterns:
-                if pattern in reason_lower:
-                    unrealistic_reasons.append(reason)
-                    break
-        
-        if unrealistic_reasons:
-            print(f"[Assessment] Unrealistic behavioral patterns detected: {unrealistic_reasons}")
-            print("[Assessment] Rejecting AI response due to unrealistic patterns")
-            return None
-        
-        # Check for time-series patterns (relaxed validation)
-        time_indicators = ["times", "over", "period", "week", "month", "day", "repeatedly", "multiple", "increasing", "spent", "visited", "researched", "analyzed"]
-        has_time_series = any(any(indicator in r.lower() for indicator in time_indicators) for r in reasons)
-        if not has_time_series:
-            print("[Assessment] No time-series patterns detected in reasons")
-            # Don't fail validation - just log the warning
-            print("[Assessment] Continuing with assessment despite lack of time-series patterns")
-    
-    # All validations passed
-    return result
+        # Fill missing fields with defaults
+        for field in required_fields:
+            if field not in item or item[field] is None:
+                if field == "accuracy":
+                    item[field] = 50  # Default accuracy
+                elif field == "reasons":
+                    item[field] = ["No reasons provided."]
+                else:
+                    item[field] = "Unknown"
+        # Ensure reasons is a list
+        if not isinstance(item["reasons"], list):
+            item["reasons"] = [str(item["reasons"])]
+        validated_result.append(item)
+    return validated_result
 
 def _get_industry_specific_patterns(title: str, company: str, user_prompt: str = "") -> dict:
     """
@@ -759,41 +663,22 @@ def _apply_pattern_replacements(patterns: list, replacements: dict) -> list:
     return result
 
 def _fallback_assessment(people: list, user_prompt: str = "", industry_context: str = None) -> list:
-    """
-    Enhanced fallback assessment when OpenAI fails - returns top 2 people with realistic behavioral reasoning
-    
-    Args:
-        people: List of candidate data
-        user_prompt: The user's search criteria
-        industry_context: Optional industry context
-        
-    Returns:
-        List of dicts with candidate info and behavioral assessments
-    """
-    if len(people) == 0:
-        return []
-    
-    # Take first 2 people and create behavioral assessment
-    top_candidates = people[:min(2, len(people))]
-    print(f"[DEBUG] select_top_candidates: input={len(people)}, taking={len(top_candidates)}")
-    result = []
-    
-    for i, person in enumerate(top_candidates):
-        # Generate realistic behavioral reasons based on role and search context
-        title = person.get("title", "Unknown")
-        behavioral_reasons = _generate_realistic_behavioral_reasons(title, user_prompt, i)
-        
-        result.append({
-            "name": person.get("name", "Unknown"),
-            "title": person.get("title", "Unknown"),
-            "company": person.get("organization_name", "Unknown"),
-            "email": person.get("email", "None"),
-            "accuracy": _calculate_context_aware_accuracy(user_prompt, i),
-            "reasons": behavioral_reasons
-        })
-    
-    print(f"[DEBUG] select_top_candidates: returning {len(result)} candidates")
-    return result
+    # Always return at least one candidate if people is not empty
+    if people and isinstance(people, list):
+        fallback = []
+        for p in people[:2]:
+            fallback.append({
+                "name": p.get("name", "Unknown"),
+                "title": p.get("title", "Unknown"),
+                "company": p.get("organization_name", p.get("company", "Unknown")),
+                "email": p.get("email", "None"),
+                "accuracy": 50,
+                "reasons": ["Fallback reason: insufficient data from assessment module."]
+            })
+        return fallback if fallback else [
+            {"name": "Unknown", "title": "Unknown", "company": "Unknown", "email": "None", "accuracy": 50, "reasons": ["No candidates available."]}]
+    else:
+        return [{"name": "Unknown", "title": "Unknown", "company": "Unknown", "email": "None", "accuracy": 50, "reasons": ["No candidates available."]}]
 
 def _calculate_context_aware_accuracy(user_prompt: str, candidate_index: int) -> int:
     """

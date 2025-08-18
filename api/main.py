@@ -851,214 +851,152 @@ def _get_photo_source(photo_url: str) -> str:
 
 async def process_search(request_id: str, prompt: str, max_candidates: int = 3, include_linkedin: bool = True):
     is_completed = False
-    
+    MAX_ATTEMPTS = 5
     try:
         search_data = get_search_from_database(request_id)
         if not search_data or search_data.get("status") == "completed":
             return
-        
-        # Preprocess prompt to convert generic terms to "executives"
+
         def preprocess_prompt(prompt_text: str) -> str:
-            """Convert generic people terms to 'executives' for better search results."""
-            # Define generic terms that should be converted to "executives"
             generic_terms = [
                 "people", "persons", "person", "anyone", "somebody", "someone",
                 "individuals", "individual", "professionals", "professional",
                 "contacts", "contact", "leads", "lead"
             ]
-            
             processed_prompt = prompt_text
-            
-            # Replace generic terms with "executives"
             for term in generic_terms:
-                # Use word boundaries to avoid partial matches
                 pattern = r'\b' + re.escape(term) + r'\b'
                 if re.search(pattern, processed_prompt, re.IGNORECASE):
                     processed_prompt = re.sub(pattern, 'executives', processed_prompt, flags=re.IGNORECASE)
                     print(f"[Prompt Processing] Converted '{term}' to 'executives' in search query")
-            
             return processed_prompt
-        
-        # Apply prompt preprocessing
+
         preprocessed_prompt = preprocess_prompt(prompt)
-        
-        # Apply smart prompt enhancement with error handling fallback
         try:
             enhanced_prompt, analysis = enhance_prompt(preprocessed_prompt)
-            # Log the enhancement for transparency (could be stored in database later)
             if analysis.reasoning:
                 print(f"Smart prompt enhancement applied: {', '.join(analysis.reasoning)}")
         except Exception as e:
-            # Fall back to preprocessed prompt on any failure
             enhanced_prompt = preprocessed_prompt
             print(f"Smart prompt enhancement failed, using preprocessed prompt: {str(e)}")
-        
+
         filters = parse_prompt_to_internal_database_filters(enhanced_prompt)
-        
-        try:
-            # Get a few extra candidates to account for exclusions, but not too many
-            search_per_page = max_candidates + 6  # Get 6 extra to account for exclusions
-            people = await asyncio.wait_for(
-                search_people_via_internal_database(filters, page=1, per_page=search_per_page),
-                timeout=60
-            )
-        except (asyncio.TimeoutError, Exception) as e:
-            search_data["status"] = "failed"
-            search_data["error"] = str(e)
-            search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-            store_search_to_database(search_data)
-            return
-        
-        if not people:
+
+        attempt = 0
+        page = 1
+        candidates = []
+        while attempt < MAX_ATTEMPTS and len(candidates) < max_candidates:
+            attempt += 1
+            print(f"[RETRY] Attempt {attempt} (page {page}) to find at least {max_candidates} valid candidates.")
+            try:
+                search_per_page = max_candidates + 6
+                people = await asyncio.wait_for(
+                    search_people_via_internal_database(filters, page=page, per_page=search_per_page),
+                    timeout=60
+                )
+            except (asyncio.TimeoutError, Exception) as e:
+                search_data["status"] = "failed"
+                search_data["error"] = str(e)
+                search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+                store_search_to_database(search_data)
+                return
+
+            if not people:
+                print(f"[RETRY] No people found on page {page}.")
+                page += 1
+                continue
+
+            # Filter out non-US locations and known public figures via Wikipedia
+            filtered_people = []
+            for p in people:
+                if not isinstance(p, dict):
+                    continue
+                loc = (p.get("location") or p.get("country") or "").lower()
+                if loc:
+                    non_us_locations = [
+                        "canada", "mexico", "uk", "united kingdom", "england", "scotland", "wales", "ireland",
+                        "france", "germany", "spain", "italy", "netherlands", "belgium", "switzerland",
+                        "austria", "portugal", "sweden", "norway", "denmark", "finland", "poland",
+                        "czech republic", "hungary", "romania", "bulgaria", "greece", "turkey",
+                        "russia", "ukraine", "belarus", "lithuania", "latvia", "estonia",
+                        "australia", "new zealand", "japan", "south korea", "china", "taiwan",
+                        "singapore", "malaysia", "thailand", "vietnam", "philippines", "indonesia",
+                        "india", "pakistan", "bangladesh", "sri lanka", "nepal", "myanmar",
+                        "israel", "saudi arabia", "uae", "qatar", "kuwait", "bahrain", "oman",
+                        "egypt", "south africa", "nigeria", "kenya", "morocco", "tunisia",
+                        "brazil", "argentina", "chile", "colombia", "peru", "venezuela", "ecuador",
+                        "london", "paris", "berlin", "madrid", "rome", "amsterdam", "brussels",
+                        "zurich", "vienna", "stockholm", "oslo", "copenhagen", "helsinki",
+                        "toronto", "vancouver", "montreal", "sydney", "melbourne", "tokyo",
+                        "seoul", "beijing", "shanghai", "hong kong", "mumbai", "delhi", "bangalore"
+                    ]
+                    is_non_us = any(non_us in loc for non_us in non_us_locations)
+                    if is_non_us:
+                        continue
+                name_val = (p.get("name") or "").strip()
+                if name_val and await is_public_figure(name_val):
+                    continue
+                filtered_people.append(p)
+            people = filtered_people
+
+            try:
+                if people:
+                    print(f"[DEBUG] Input people count: {len(people)}")
+                    top_basic = select_top_candidates(prompt, people)
+                    print(f"[DEBUG] select_top_candidates returned: {len(top_basic) if top_basic else 0} candidates")
+                    merged_candidates = []
+                    seen_identifiers = set()
+                    if top_basic and isinstance(top_basic, list):
+                        for basic in top_basic:
+                            identifier = None
+                            if basic.get("linkedin_url"):
+                                identifier = basic.get("linkedin_url")
+                            elif basic.get("email"):
+                                identifier = basic.get("email")
+                            elif basic.get("name"):
+                                identifier = basic.get("name")
+                            if identifier and identifier in seen_identifiers:
+                                continue
+                            match = None
+                            for p in people:
+                                if not isinstance(p, dict):
+                                    continue
+                                if (
+                                    (basic.get("linkedin_url") and basic.get("linkedin_url") == p.get("linkedin_url")) or
+                                    (basic.get("email") and basic.get("email") == p.get("email")) or
+                                    (basic.get("name") and basic.get("name") == p.get("name"))
+                                ):
+                                    match = p
+                                    break
+                            merged = {**basic}
+                            if match:
+                                merged.update(match)
+                            merged_candidates.append(merged)
+                            if identifier:
+                                seen_identifiers.add(identifier)
+                    candidates.extend([c for c in merged_candidates if c not in candidates])
+                    # Only keep up to max_candidates
+                    if len(candidates) >= max_candidates:
+                        candidates = candidates[:max_candidates]
+                        break
+            except Exception as e:
+                print(f"[RETRY] Error during candidate selection/merging: {e}")
+            page += 1
+
+        if not candidates:
+            print(f"[RETRY] No valid candidates found after {MAX_ATTEMPTS} attempts.")
             search_data["status"] = "completed"
             search_data["filters"] = json.dumps(filters)
             search_data["completed_at"] = datetime.now(timezone.utc).isoformat()
             store_search_to_database(search_data)
             return
-        
-        # LinkedIn scraping commented out - using Apollo data instead
-        # if include_linkedin and people:
-        #     try:
-        #         linkedin_urls = [p.get("linkedin_url") for p in people if isinstance(p, dict) and p.get("linkedin_url")]
-        #         
-        #         if linkedin_urls:
-        #             # Use a shorter timeout for LinkedIn scraping to prevent hanging
-        #             linkedin_profiles = await asyncio.wait_for(
-        #                 async_scrape_linkedin_profiles(linkedin_urls),
-        #                 timeout=30  # Reduced from 60 to 30 seconds
-        #             )
-        #             
-        #             if linkedin_profiles:
-        #                 profile_map = {p.get("linkedin_url"): p for p in linkedin_profiles if isinstance(p, dict) and p.get("linkedin_url")}
-        #                 
-        #                 for person in people:
-        #                         if isinstance(person, dict):
-        #                             linkedin_url = person.get("linkedin_url")
-        #                             if linkedin_url and linkedin_url in profile_map:
-        #                                 person["linkedin_profile"] = profile_map[linkedin_url]
-        #     except asyncio.TimeoutError:
-        #         # LinkedIn scraping timed out, continue without LinkedIn data
-        #         pass
-        #     except Exception:
-        #         # Any other error, continue without LinkedIn data
-        #         pass
-        
-        # Filter out non-US locations and known public figures via Wikipedia
-        filtered_people = []
-        for p in people:
-            if not isinstance(p, dict):
-                continue
-            
-            # Location filtering: exclude non-US, allow no location
-            loc = (p.get("location") or p.get("country") or "").lower()
-            
-            if loc:
-                # Comprehensive list of non-US countries/regions to exclude
-                non_us_locations = [
-                    # Major countries
-                    "canada", "mexico", "uk", "united kingdom", "england", "scotland", "wales", "ireland",
-                    "france", "germany", "spain", "italy", "netherlands", "belgium", "switzerland",
-                    "austria", "portugal", "sweden", "norway", "denmark", "finland", "poland",
-                    "czech republic", "hungary", "romania", "bulgaria", "greece", "turkey",
-                    "russia", "ukraine", "belarus", "lithuania", "latvia", "estonia",
-                    "australia", "new zealand", "japan", "south korea", "china", "taiwan",
-                    "singapore", "malaysia", "thailand", "vietnam", "philippines", "indonesia",
-                    "india", "pakistan", "bangladesh", "sri lanka", "nepal", "myanmar",
-                    "israel", "saudi arabia", "uae", "qatar", "kuwait", "bahrain", "oman",
-                    "egypt", "south africa", "nigeria", "kenya", "morocco", "tunisia",
-                    "brazil", "argentina", "chile", "colombia", "peru", "venezuela", "ecuador",
-                    # European cities that are clearly non-US
-                    "london", "paris", "berlin", "madrid", "rome", "amsterdam", "brussels",
-                    "zurich", "vienna", "stockholm", "oslo", "copenhagen", "helsinki",
-                    # Other major non-US cities
-                    "toronto", "vancouver", "montreal", "sydney", "melbourne", "tokyo",
-                    "seoul", "beijing", "shanghai", "hong kong", "mumbai", "delhi", "bangalore"
-                ]
-                
-                # Exclude if location contains any non-US indicator
-                is_non_us = any(non_us in loc for non_us in non_us_locations)
-                if is_non_us:
-                    continue
-            
-            # Exclude well-known public figures
-            name_val = (p.get("name") or "").strip()
-            if name_val and await is_public_figure(name_val):
-                continue
-                
-            filtered_people.append(p)
-        people = filtered_people
-        
-        candidates = []
-        try:
-            if people:
-                # Select top candidates via assessment module
-                print(f"[DEBUG] Input people count: {len(people)}")
-                top_basic = select_top_candidates(prompt, people)
-                print(f"[DEBUG] select_top_candidates returned: {len(top_basic) if top_basic else 0} candidates")
-                
-                # Merge full Apollo details back into the lightweight objects returned
-                candidates = []
-                seen_identifiers = set()  # Track seen candidates to prevent duplicates
-                
-                if top_basic and isinstance(top_basic, list):
-                    for basic in top_basic:
-                        # Create unique identifier for this candidate
-                        identifier = None
-                        if basic.get("linkedin_url"):
-                            identifier = basic.get("linkedin_url")
-                        elif basic.get("email"):
-                            identifier = basic.get("email")
-                        elif basic.get("name"):
-                            identifier = basic.get("name")
-                        
-                        # Skip if we've already seen this candidate
-                        if identifier and identifier in seen_identifiers:
-                            continue
-                        
-                        # Find match in original list by linkedin_url or email or name
-                        match = None
-                        for p in people:
-                            if not isinstance(p, dict):
-                                continue
-                            if (
-                                (basic.get("linkedin_url") and basic.get("linkedin_url") == p.get("linkedin_url")) or
-                                (basic.get("email") and basic.get("email") == p.get("email")) or
-                                (basic.get("name") and basic.get("name") == p.get("name"))
-                            ):
-                                match = p
-                                break
-                        
-                        merged = {**basic}
-                        if match:
-                            merged.update(match)  # keep enriched fields (photo, company, etc.)
-                        
-                        candidates.append(merged)
-                        if identifier:
-                            seen_identifiers.add(identifier)
-                
-                # Fallback if merging failed
-                if not candidates:
-                    print(f"[DEBUG] Merging failed, using fallback: {len(people[:max_candidates])} people")
-                    candidates = people[:max_candidates]
-            
-            if not candidates:
-                print(f"[DEBUG] Still no candidates, using final fallback: {len(people[:max_candidates])} people")
-                candidates = people[:max_candidates]
-        except Exception:
-            candidates = people[:max_candidates] if people else []
-        
+
         # Validate photos for all candidates before processing
         candidates = validate_candidate_photos(candidates)
-        
         for candidate in candidates:
             if isinstance(candidate, dict):
-                # Use Apollo data for profile photo, company, and LinkedIn URL
-                
-                # Set profile photo from Apollo data
                 if candidate.get("profile_pic_url"):
                     candidate["profile_photo_url"] = candidate["profile_pic_url"]
-                
-                # Set company from Apollo organization data
                 if not candidate.get("company") or candidate.get("company") == "Unknown":
                     if "organization" in candidate:
                         org = candidate["organization"]
@@ -1066,83 +1004,55 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                             candidate["company"] = org["name"]
                         elif isinstance(org, str) and org.strip():
                             candidate["company"] = org
-                
-                # Ensure LinkedIn URL is properly formatted
                 linkedin_url = candidate.get("linkedin_url")
                 if linkedin_url and not linkedin_url.startswith("http"):
                     candidate["linkedin_url"] = f"https://{linkedin_url}"
-        
-        # Generate behavioral data for all candidates with enhanced uniqueness validation
         try:
             from behavioral_metrics_ai import enhance_behavioral_data_for_multiple_candidates
-            
-            # Create a set to track used insights across all candidates
             used_insights = set()
             used_patterns = set()
-            
-            # Enhanced call with uniqueness tracking
             candidates = enhance_behavioral_data_for_multiple_candidates(candidates, prompt)
-            
-            # Additional uniqueness check across all candidates
             for i, candidate in enumerate(candidates):
                 if isinstance(candidate, dict) and "behavioral_data" in candidate:
                     insight = candidate["behavioral_data"].get("behavioral_insight", "")
-                    
-                    # If this insight is too similar to one we've seen before, regenerate it
                     from openai_utils import validate_response_uniqueness
                     if insight in used_insights or len(validate_response_uniqueness([insight] + list(used_insights), 0.5)) <= len(used_insights):
                         from behavioral_metrics_ai import generate_diverse_fallback_insight, add_score_variation
                         title = candidate.get('title', 'professional')
-                        
-                        # Generate truly diverse fallback
-                        new_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i + 100)  # Add offset to ensure different pattern
+                        new_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i + 100)
                         candidate["behavioral_data"]["behavioral_insight"] = new_insight
                         used_patterns.add(new_insight)
-                    
-                    # Track this insight for future uniqueness checks
                     used_insights.add(candidate["behavioral_data"].get("behavioral_insight", ""))
-                    
         except Exception as e:
-            # Fallback: generate behavioral data for each candidate individually with diversity
             used_patterns = set()
             for i, candidate in enumerate(candidates):
                 if isinstance(candidate, dict):
                     try:
-                        # Mark first 3 candidates as top leads
                         is_top_candidate = i < 3
                         candidate_behavioral_data = enhance_behavioral_data_ai({}, [candidate], prompt, candidate_index=i, is_top_candidate=is_top_candidate)
                         candidate["behavioral_data"] = candidate_behavioral_data
                     except Exception:
                         from behavioral_metrics_ai import generate_diverse_fallback_insight, generate_top_lead_scores, add_score_variation, generate_fallback_cmi_score, generate_fallback_rbfs_score, generate_fallback_ias_score
                         title = candidate.get('title', 'professional')
-                        
-                        # Generate diverse fallback with variation
                         fallback_insight = generate_diverse_fallback_insight(title, candidate, prompt, used_patterns, i)
                         used_patterns.add(fallback_insight)
-                        
-                        # Generate proper fallback scores
                         base_scores = {
                             "cmi": generate_fallback_cmi_score(title, prompt, i),
                             "rbfs": generate_fallback_rbfs_score(title, prompt, i),
                             "ias": generate_fallback_ias_score(title, prompt, i)
                         }
-                        
-                        # Use top lead scores for first 3 candidates
                         if i < 3:
                             varied_scores = generate_top_lead_scores(base_scores, i, prompt)
                         else:
                             varied_scores = add_score_variation(base_scores, i)
-                        
                         candidate["behavioral_data"] = {
                             "behavioral_insight": fallback_insight,
                             "scores": varied_scores
                         }
-        
         search_db_id = search_data.get("id")
         print(f"[DEBUG] About to store candidates. search_db_id: {search_db_id}, candidates count: {len(candidates) if candidates else 0}")
         if candidates:
             print(f"[DEBUG] Candidates list: {[c.get('name', 'Unknown') for c in candidates if isinstance(c, dict)]}")
-        
         if search_db_id and candidates:
             print(f"[DEBUG] Calling store_people_to_database with {len(candidates)} candidates")
             try:
@@ -1152,11 +1062,8 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 print(f"[DEBUG] Error calling store_people_to_database: {str(e)}")
         else:
             print(f"[DEBUG] Skipping storage - search_db_id: {search_db_id}, candidates: {len(candidates) if candidates else 0}")
-        
-        # Generate estimation for the search
         try:
             estimation = estimate_people_count(prompt)
-            # Store in both formats for compatibility
             search_data["estimated_count"] = estimation["estimated_count"]
             search_data["result_estimation"] = {
                 "estimated_count": estimation["estimated_count"],
@@ -1170,7 +1077,6 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             print(f"[Estimation] Failed to generate estimate: {e}")
             search_data["estimated_count"] = None
             search_data["result_estimation"] = None
-        
         if not is_completed:
             try:
                 search_data["status"] = "completed"
@@ -1188,7 +1094,6 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                     is_completed = True
                 except Exception:
                     pass
-            
     except Exception as e:
         if not is_completed:
             try:
