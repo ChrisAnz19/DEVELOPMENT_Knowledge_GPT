@@ -21,6 +21,13 @@
   - Add fallback logic for unknown contexts to use generic professional activities
   - _Requirements: 1.4, 3.1, 3.2, 3.3_
 
+- [x] 3.1. Fix behavioral metrics context alignment
+  - Modify `generate_top_lead_scores()` function in `behavioral_metrics_ai.py` to use context-aware explanations
+  - Add context-specific CMI, RBFS, and IAS descriptions for real estate, legal services, personal purchases, and financial decisions
+  - Ensure real estate searches show property-related metrics instead of "comparing vendor solutions and requesting demos"
+  - Add comprehensive test coverage with `test_behavioral_metrics_context.py`
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
+
 - [ ] 4. Enhance photo validation and extraction system
   - Modify `extract_profile_photo_url()` function in `api/main.py` to add photo URL validation
   - Implement photo URL accessibility checking before returning URLs

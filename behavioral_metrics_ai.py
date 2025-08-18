@@ -932,6 +932,7 @@ def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int, user_
     
     # Context-aware explanations based on search type
     context_analysis = analyze_search_context(user_prompt)
+    context_type = context_analysis.get("context_type", "general_business")
     
     if context_analysis.get("is_news_media"):
         # Political/news-specific explanations
@@ -958,8 +959,108 @@ def generate_top_lead_scores(scores: Dict[str, Any], candidate_index: int, user_
                 "Shows strong personal interest with focused political analysis"
             ]
         }
+    elif context_type == "real_estate":
+        # Real estate-specific explanations
+        top_lead_explanations = {
+            "cmi": [
+                "Actively researching neighborhoods and property values",
+                "Comparing multiple properties and market conditions",
+                "Evaluating financing options and mortgage rates",
+                "Investigating school districts and local amenities",
+                "Assessing property investment potential and market trends"
+            ],
+            "rbfs": [
+                "Willing to explore different neighborhoods and property types",
+                "Takes calculated approach to property investment decisions",
+                "Focuses on long-term value over immediate concerns",
+                "Comfortable with market timing and property negotiations",
+                "Values potential appreciation over current market volatility"
+            ],
+            "ias": [
+                "Shows strong personal investment in finding the right property",
+                "Demonstrates deep personal interest in the local real estate market",
+                "Exhibits strong personal commitment through extensive property research",
+                "Displays personal priority through weekend property viewings",
+                "Shows strong personal interest in neighborhood analysis"
+            ]
+        }
+    elif context_type == "legal_services":
+        # Legal services-specific explanations
+        top_lead_explanations = {
+            "cmi": [
+                "Actively researching attorney credentials and case histories",
+                "Comparing legal strategies and fee structures",
+                "Evaluating law firm expertise and success rates",
+                "Investigating legal precedents and case outcomes",
+                "Assessing attorney availability and communication style"
+            ],
+            "rbfs": [
+                "Willing to explore different legal approaches and strategies",
+                "Takes measured approach to legal decision-making",
+                "Focuses on case strength over potential complications",
+                "Comfortable with legal complexity and procedural requirements",
+                "Values thorough legal preparation over quick resolutions"
+            ],
+            "ias": [
+                "Shows strong personal investment in legal case preparation",
+                "Demonstrates deep personal interest in legal proceedings",
+                "Exhibits strong personal commitment through detailed case research",
+                "Displays personal priority through after-hours legal consultation",
+                "Shows strong personal interest in legal strategy development"
+            ]
+        }
+    elif context_type == "personal_purchase":
+        # Personal purchase-specific explanations
+        top_lead_explanations = {
+            "cmi": [
+                "Actively comparing product features and pricing options",
+                "Evaluating quality ratings and customer reviews",
+                "Researching warranty terms and support options",
+                "Investigating financing and payment alternatives",
+                "Assessing long-term value and ownership costs"
+            ],
+            "rbfs": [
+                "Willing to try new brands and innovative features",
+                "Takes calculated approach to major purchase decisions",
+                "Focuses on value and quality over price concerns",
+                "Comfortable with new technology and product categories",
+                "Values long-term satisfaction over immediate savings"
+            ],
+            "ias": [
+                "Shows strong personal investment in making the right choice",
+                "Demonstrates deep personal interest in product research",
+                "Exhibits strong personal commitment through extensive comparison shopping",
+                "Displays personal priority through dedicated research time",
+                "Shows strong personal interest in product performance"
+            ]
+        }
+    elif context_type == "financial_decision":
+        # Financial decision-specific explanations
+        top_lead_explanations = {
+            "cmi": [
+                "Actively researching investment options and market performance",
+                "Comparing portfolio strategies and risk assessments",
+                "Evaluating advisor credentials and track records",
+                "Investigating fee structures and investment minimums",
+                "Assessing long-term financial goals and retirement planning"
+            ],
+            "rbfs": [
+                "Willing to explore diversified investment approaches",
+                "Takes calculated approach to portfolio risk management",
+                "Focuses on long-term growth over short-term volatility",
+                "Comfortable with market fluctuations and investment complexity",
+                "Values professional guidance over self-directed investing"
+            ],
+            "ias": [
+                "Shows strong personal investment in financial planning",
+                "Demonstrates deep personal interest in investment performance",
+                "Exhibits strong personal commitment through regular portfolio review",
+                "Displays personal priority through financial education",
+                "Shows strong personal interest in wealth building strategies"
+            ]
+        }
     else:
-        # Business/professional explanations for non-political searches
+        # Business/professional explanations for business solution searches
         top_lead_explanations = {
             "cmi": [
                 "Actively comparing vendor solutions and requesting demos",

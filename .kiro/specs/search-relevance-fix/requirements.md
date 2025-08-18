@@ -49,3 +49,17 @@ This feature addresses critical issues with search result relevance and data acc
 2. WHEN the search context is identified THEN the system SHALL select appropriate behavioral activity templates for that context
 3. WHEN generating behavioral data THEN the system SHALL consider both the prospect's professional role and the search context to create realistic scenarios
 4. WHEN context analysis is uncertain THEN the system SHALL default to generic professional activities rather than potentially irrelevant specific ones
+
+### Requirement 5
+
+**User Story:** As a user viewing candidate behavioral metrics, I want the CMI, RBFS, and IAS descriptions to match the actual search context, so that the behavioral insights are relevant and credible.
+
+#### Acceptance Criteria
+
+1. WHEN generating behavioral metrics for real estate searches THEN the system SHALL use real estate-specific language and activities in metric descriptions (not "comparing vendor solutions")
+2. WHEN generating behavioral metrics for legal services searches THEN the system SHALL use legal-specific language and activities in metric descriptions  
+3. WHEN generating behavioral metrics for business solution searches THEN the system SHALL use business/vendor-specific language and activities in metric descriptions
+4. WHEN the search context is unclear THEN the system SHALL use generic professional language that doesn't reference specific industries or activities
+5. WHEN displaying CMI scores for real estate searches THEN descriptions SHALL reference property research, market analysis, or real estate activities
+6. WHEN displaying RBFS scores for real estate searches THEN descriptions SHALL reference property evaluation, location assessment, or real estate decision-making
+7. WHEN displaying IAS scores for real estate searches THEN descriptions SHALL reference personal investment in property search or real estate research intensity
