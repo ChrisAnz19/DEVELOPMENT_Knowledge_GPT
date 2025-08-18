@@ -747,6 +747,108 @@ def extract_profile_photo_url(candidate_data, linkedin_profile=None):
     except Exception:
         return None
 
+def is_valid_linkedin_photo(photo_url: str) -> bool:
+    """
+    Validate if a LinkedIn photo URL points to an actual profile photo.
+    
+    Args:
+        photo_url: The LinkedIn profile photo URL to validate
+        
+    Returns:
+        bool: True if valid profile photo, False if fallback image
+    """
+    if not photo_url or not isinstance(photo_url, str) or not photo_url.strip():
+        return False
+    
+    # Known LinkedIn fallback image patterns
+    fallback_patterns = [
+        "9c8pery4andzj6ohjkjp54ma2",  # Primary LinkedIn fallback image
+        "static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
+        "static.licdn.com/scds/common/u/images/themes/katy/ghosts",  # Alternative fallback
+        "static.licdn.com/scds/common/u/images/apps/connect/icons/profile_pic_ghost",  # Another fallback
+    ]
+    
+    # Check if URL contains any fallback patterns
+    photo_url_lower = photo_url.lower().strip()
+    for pattern in fallback_patterns:
+        if pattern in photo_url_lower:
+            return False
+    
+    # Additional checks for valid LinkedIn photo URLs
+    if "media.licdn.com" in photo_url_lower and "profile-displayphoto" in photo_url_lower:
+        return True
+    
+    # If it's a LinkedIn URL but doesn't match known patterns, assume it's valid
+    if "licdn.com" in photo_url_lower:
+        return True
+    
+    # Non-LinkedIn URLs are considered valid (could be from other sources)
+    return True
+
+def validate_candidate_photos(candidates: List[Dict]) -> List[Dict]:
+    """
+    Validate photos for a list of candidates and mark photo status.
+    
+    Args:
+        candidates: List of candidate dictionaries with photo URLs
+        
+    Returns:
+        List[Dict]: Candidates with photo validation status added
+    """
+    if not candidates:
+        return candidates
+    
+    validated_candidates = []
+    
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            validated_candidates.append(candidate)
+            continue
+        
+        # Extract photo URL from candidate
+        photo_url = candidate.get("profile_photo_url") or candidate.get("profile_pic_url") or candidate.get("photo_url")
+        
+        # Validate photo
+        is_valid = is_valid_linkedin_photo(photo_url)
+        
+        # Add photo validation status to candidate
+        candidate["photo_validation"] = {
+            "photo_url": photo_url,
+            "is_valid_photo": is_valid,
+            "photo_validation_reason": _get_photo_validation_reason(photo_url, is_valid),
+            "photo_source": _get_photo_source(photo_url)
+        }
+        
+        # Add selection priority (higher for valid photos)
+        candidate["selection_priority"] = 10 if is_valid else 1
+        
+        validated_candidates.append(candidate)
+    
+    return validated_candidates
+
+def _get_photo_validation_reason(photo_url: str, is_valid: bool) -> str:
+    """Get human-readable reason for photo validation result."""
+    if not photo_url:
+        return "no_url"
+    
+    if not is_valid:
+        if "9c8pery4andzj6ohjkjp54ma2" in photo_url.lower():
+            return "fallback_image"
+        else:
+            return "invalid_pattern"
+    
+    return "valid"
+
+def _get_photo_source(photo_url: str) -> str:
+    """Determine the source of the photo URL."""
+    if not photo_url:
+        return "none"
+    
+    if "licdn.com" in photo_url.lower():
+        return "linkedin"
+    
+    return "other"
+
 async def process_search(request_id: str, prompt: str, max_candidates: int = 3, include_linkedin: bool = True):
     is_completed = False
     
@@ -944,6 +1046,9 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 candidates = people[:max_candidates]
         except Exception:
             candidates = people[:max_candidates] if people else []
+        
+        # Validate photos for all candidates before processing
+        candidates = validate_candidate_photos(candidates)
         
         for candidate in candidates:
             if isinstance(candidate, dict):

@@ -28,19 +28,12 @@
   - Add comprehensive test coverage with `test_behavioral_metrics_context.py`
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-- [ ] 4. Enhance photo validation and extraction system
-  - Modify `extract_profile_photo_url()` function in `api/main.py` to add photo URL validation
-  - Implement photo URL accessibility checking before returning URLs
-  - Add photo source tracking (LinkedIn, Apollo, organization, none) in response metadata
-  - Remove fallback to random/generic photos - return null when no valid photo is available
+- [ ] 4. Implement LinkedIn photo validation system (See separate spec: profile-photo-enhancement)
+  - Validate LinkedIn photo URLs to detect fallback images (`9c8pery4andzj6ohjkjp54ma2`)
+  - Skip candidates with LinkedIn fallback images and select different people with valid photos
+  - Prioritize candidates with actual LinkedIn profile photos over those without
+  - Ensure search results maintain 80% photo validation rate
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
-
-- [ ] 5. Update API response structure for enhanced photo metadata
-  - Modify candidate response structure in `api/main.py` to include photo validation metadata
-  - Add fields for photo_source, validation_status, and fallback_reason
-  - Ensure backward compatibility with existing API clients
-  - Update photo processing in the search results endpoint to use enhanced validation
-  - _Requirements: 2.1, 2.4_
 
 - [ ] 6. Implement comprehensive testing for context analysis
   - Create test cases in new file `test_search_context_analysis.py` for various search query types
