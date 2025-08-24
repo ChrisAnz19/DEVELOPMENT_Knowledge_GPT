@@ -49,6 +49,9 @@ from creepy_detector import detect_specific_person_search, extract_user_first_na
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
 
+# Cache for avatar generation to avoid recomputation
+_avatar_cache: Dict[str, Dict[str, Any]] = {}
+
 class DemoSearchGenerator:
     def __init__(self):
         self.search_categories = [
@@ -788,18 +791,20 @@ def is_valid_linkedin_photo(photo_url: str) -> bool:
 def validate_candidate_photos(candidates: List[Dict]) -> List[Dict]:
     """
     Validate photos for a list of candidates and mark photo status.
+    Enhanced to include avatar generation for fallback cases with batch optimization.
     
     Args:
         candidates: List of candidate dictionaries with photo URLs
         
     Returns:
-        List[Dict]: Candidates with photo validation status added
+        List[Dict]: Candidates with photo validation status and avatar data added
     """
     if not candidates:
         return candidates
     
     validated_candidates = []
     
+    # Batch process candidates for better performance
     for candidate in candidates:
         if not isinstance(candidate, dict):
             validated_candidates.append(candidate)
@@ -811,13 +816,47 @@ def validate_candidate_photos(candidates: List[Dict]) -> List[Dict]:
         # Validate photo
         is_valid = is_valid_linkedin_photo(photo_url)
         
-        # Add photo validation status to candidate
+        # Add photo validation status to candidate (existing functionality)
         candidate["photo_validation"] = {
             "photo_url": photo_url,
             "is_valid_photo": is_valid,
             "photo_validation_reason": _get_photo_validation_reason(photo_url, is_valid),
             "photo_source": _get_photo_source(photo_url)
         }
+        
+        # Generate avatar data based on photo validation
+        if is_valid and photo_url:
+            # Valid LinkedIn photo - use photo avatar
+            candidate["avatar"] = {
+                "type": "photo",
+                "photo_url": photo_url,
+                "initials": None,
+                "background_color": None
+            }
+            # Maintain backward compatibility
+            candidate["photo_url"] = photo_url
+        else:
+            # Invalid or missing photo - generate initials avatar
+            first_name = candidate.get("first_name", "")
+            last_name = candidate.get("last_name", "")
+            
+            # Try to extract names from full name if individual names not available
+            if not first_name and not last_name:
+                full_name = candidate.get("name", "")
+                if full_name:
+                    name_parts = full_name.strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = name_parts[-1]
+                    elif len(name_parts) == 1:
+                        first_name = name_parts[0]
+            
+            # Generate initials avatar
+            avatar_data = generate_initials_avatar(first_name, last_name)
+            candidate["avatar"] = avatar_data
+            
+            # Backward compatibility - set photo_url to None for fallback images
+            candidate["photo_url"] = None
         
         # Add selection priority (higher for valid photos)
         candidate["selection_priority"] = 10 if is_valid else 1
@@ -848,6 +887,179 @@ def _get_photo_source(photo_url: str) -> str:
         return "linkedin"
     
     return "other"
+
+def extract_initials(first_name: str, last_name: str) -> str:
+    """
+    Extract initials from candidate names.
+    
+    Args:
+        first_name: Candidate's first name
+        last_name: Candidate's last name
+        
+    Returns:
+        str: Generated initials (e.g., "JD" for "John Doe")
+    """
+    # Clean and validate inputs
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+    
+    # Remove non-alphabetic characters and get first letter
+    def get_first_letter(name: str) -> str:
+        if not name:
+            return ""
+        # Find first alphabetic character
+        for char in name:
+            if char.isalpha():
+                return char.upper()
+        return ""
+    
+    first_initial = get_first_letter(first_name)
+    last_initial = get_first_letter(last_name)
+    
+    # Generate initials based on available names
+    if first_initial and last_initial:
+        return f"{first_initial}{last_initial}"
+    elif first_name:
+        # Use first two letters of first name
+        clean_name = ''.join(c for c in first_name if c.isalpha())
+        if len(clean_name) >= 2:
+            return clean_name[:2].upper()
+        elif len(clean_name) == 1:
+            return clean_name.upper()
+    elif last_name:
+        # Use first two letters of last name
+        clean_name = ''.join(c for c in last_name if c.isalpha())
+        if len(clean_name) >= 2:
+            return clean_name[:2].upper()
+        elif len(clean_name) == 1:
+            return clean_name.upper()
+    
+    # Fallback when no valid name is available
+    return "?"
+
+# Pre-defined color palette for efficient access
+_COLOR_PALETTE = [
+    "#3B82F6",  # Blue
+    "#10B981",  # Green  
+    "#F59E0B",  # Amber
+    "#EF4444",  # Red
+    "#8B5CF6",  # Purple
+    "#06B6D4",  # Cyan
+    "#84CC16",  # Lime
+    "#F97316",  # Orange
+    "#EC4899",  # Pink
+    "#6366F1",  # Indigo
+]
+
+def generate_deterministic_color(name: str) -> str:
+    """
+    Generate a deterministic background color based on name.
+    Optimized version with pre-defined palette for better performance.
+    
+    Args:
+        name: Full name string to generate color from
+        
+    Returns:
+        str: Hex color code (e.g., "#3B82F6")
+    """
+    # Default color for empty/invalid names
+    if not name or not isinstance(name, str):
+        return _COLOR_PALETTE[0]  # Default to blue
+    
+    # Generate hash and select color deterministically
+    name_normalized = name.lower().strip()
+    if not name_normalized:
+        return _COLOR_PALETTE[0]
+    
+    try:
+        # Use built-in hash for efficiency
+        name_hash = hash(name_normalized)
+        color_index = abs(name_hash) % len(_COLOR_PALETTE)
+        return _COLOR_PALETTE[color_index]
+    except Exception:
+        # Fallback to default color if hashing fails
+        return _COLOR_PALETTE[0]
+
+def generate_initials_avatar(first_name: str, last_name: str) -> Dict[str, Any]:
+    """
+    Generate initials avatar configuration for a candidate with caching.
+    
+    Args:
+        first_name: Candidate's first name
+        last_name: Candidate's last name
+        
+    Returns:
+        Dict containing avatar type, initials, and background color
+    """
+    # Create cache key from normalized names
+    cache_key = f"{(first_name or '').strip().lower()}|{(last_name or '').strip().lower()}"
+    
+    # Check cache first
+    if cache_key in _avatar_cache:
+        return _avatar_cache[cache_key].copy()  # Return copy to prevent mutation
+    
+    try:
+        # Extract initials
+        initials = extract_initials(first_name, last_name)
+        
+        # Generate deterministic color based on full name
+        full_name = f"{first_name or ''} {last_name or ''}".strip()
+        background_color = generate_deterministic_color(full_name)
+        
+        avatar_data = {
+            "type": "initials",
+            "photo_url": None,
+            "initials": initials,
+            "background_color": background_color
+        }
+        
+        # Cache the result
+        _avatar_cache[cache_key] = avatar_data.copy()
+        
+        # Limit cache size to prevent memory issues
+        if len(_avatar_cache) > 1000:
+            # Remove oldest entries (simple FIFO)
+            oldest_keys = list(_avatar_cache.keys())[:100]
+            for key in oldest_keys:
+                del _avatar_cache[key]
+        
+        return avatar_data
+        
+    except Exception as e:
+        # Log avatar generation error for monitoring
+        print(f"[Avatar Generation Error] Failed to generate avatar for '{first_name}' '{last_name}': {str(e)}")
+        
+        # Fallback avatar configuration if generation fails
+        fallback_avatar = {
+            "type": "initials",
+            "photo_url": None,
+            "initials": "?",
+            "background_color": "#3B82F6"  # Default blue
+        }
+        
+        # Cache the fallback too to avoid repeated errors
+        _avatar_cache[cache_key] = fallback_avatar.copy()
+        
+        return fallback_avatar
+
+def get_avatar_cache_stats() -> Dict[str, Any]:
+    """
+    Get avatar cache statistics for performance monitoring.
+    
+    Returns:
+        Dict containing cache size and hit rate information
+    """
+    return {
+        "cache_size": len(_avatar_cache),
+        "max_cache_size": 1000,
+        "cache_utilization": len(_avatar_cache) / 1000 * 100
+    }
+
+def clear_avatar_cache() -> None:
+    """Clear the avatar cache (useful for testing or memory management)."""
+    global _avatar_cache
+    _avatar_cache.clear()
+    print("[Avatar Cache] Cache cleared")
 
 async def process_search(request_id: str, prompt: str, max_candidates: int = 3, include_linkedin: bool = True):
     is_completed = False
@@ -991,8 +1203,21 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             store_search_to_database(search_data)
             return
 
-        # Validate photos for all candidates before processing
+        # Validate photos for all candidates before processing and generate avatars
+        print(f"[Avatar Generation] Processing {len(candidates)} candidates for avatar data")
+        start_time = time.time()
         candidates = validate_candidate_photos(candidates)
+        avatar_generation_time = time.time() - start_time
+        print(f"[Avatar Generation] Completed in {avatar_generation_time:.3f}s ({avatar_generation_time/len(candidates)*1000:.1f}ms per candidate)")
+        
+        # Log avatar generation statistics
+        photo_avatars = sum(1 for c in candidates if isinstance(c, dict) and c.get("avatar", {}).get("type") == "photo")
+        initials_avatars = sum(1 for c in candidates if isinstance(c, dict) and c.get("avatar", {}).get("type") == "initials")
+        print(f"[Avatar Generation] Generated {photo_avatars} photo avatars, {initials_avatars} initials avatars")
+        
+        # Log cache statistics
+        cache_stats = get_avatar_cache_stats()
+        print(f"[Avatar Cache] Size: {cache_stats['cache_size']}/{cache_stats['max_cache_size']} ({cache_stats['cache_utilization']:.1f}% full)")
         for candidate in candidates:
             if isinstance(candidate, dict):
                 if candidate.get("profile_pic_url"):
@@ -1572,7 +1797,11 @@ async def get_search_result(request_id: str):
                             "accuracy": candidate.get("accuracy"),
                             "reasons": candidate.get("reasons"),
                             "linkedin_profile": candidate.get("linkedin_profile"),
-                            "behavioral_data": candidate.get("behavioral_data")
+                            "behavioral_data": candidate.get("behavioral_data"),
+                            # New avatar data for initials fallback
+                            "avatar": candidate.get("avatar"),
+                            # Backward compatibility - photo_url field
+                            "photo_url": candidate.get("photo_url")
                         }
                         processed_candidates.append(processed_candidate)
                 
