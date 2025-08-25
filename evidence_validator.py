@@ -477,13 +477,17 @@ class EvidenceValidator:
             return False
         
         # Check for spam patterns
-        spam_patterns = [
-            r'^[A-Z\s!]+$',  # ALL CAPS
+        # Check for ALL CAPS (without IGNORECASE to only catch actual caps)
+        if re.match(r'^[A-Z\s!]+$', title):
+            return False
+            
+        # Check for price mentions and discount patterns (case insensitive)
+        price_discount_patterns = [
             r'.*\$\d+.*',    # Price mentions
             r'.*\d+%.*off.*', # Discount mentions
         ]
         
-        for pattern in spam_patterns:
+        for pattern in price_discount_patterns:
             if re.match(pattern, title, re.IGNORECASE):
                 return False
         
