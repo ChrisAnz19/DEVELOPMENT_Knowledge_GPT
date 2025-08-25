@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from enum import Enum
 from explanation_analyzer import SearchableClaim, ClaimType
 from web_search_engine import SearchResult, URLCandidate
+from improved_relevance_scorer import ImprovedRelevanceScorer
 
 
 class EvidenceType(Enum):
@@ -48,6 +49,17 @@ class EvidenceURL:
 class EvidenceValidator:
     """Validates and ranks URLs by relevance and quality."""
     
+    def __init__(self):
+        """Initialize the evidence validator with improved relevance scoring."""
+        self.improved_scorer = ImprovedRelevanceScorer()
+        
+        # Keep existing domain authority and quality scoring logic
+        self.domain_authority_cache = {}
+        self.quality_indicators = {
+            'high_quality': ['official', 'documentation', 'guide', 'whitepaper'],
+            'medium_quality': ['blog', 'article', 'news', 'review'],
+            'low_quality': ['forum', 'discussion', 'comment', 'social']
+        }
     def __init__(self):
         # Track used URLs globally to ensure uniqueness across candidates
         self.used_urls = set()
@@ -231,7 +243,27 @@ class EvidenceValidator:
     
     def calculate_relevance_score(self, url_candidate: URLCandidate, claim: SearchableClaim) -> float:
         """
-        Calculate how well URL supports the claim.
+        Calculate how well URL supports the claim using improved behavioral context awareness.
+        
+        Args:
+            url_candidate: URL candidate to score
+            claim: Original claim
+            
+        Returns:
+            Enhanced relevance score between 0 and 1
+        """
+        # Use the improved relevance scorer for better behavioral context awareness
+        enhanced_score = self.improved_scorer.calculate_enhanced_relevance_score(url_candidate, claim)
+        
+        # Fallback to legacy scoring if enhanced scorer fails
+        if enhanced_score is None or enhanced_score < 0:
+            return self._calculate_legacy_relevance_score(url_candidate, claim)
+        
+        return enhanced_score
+    
+    def _calculate_legacy_relevance_score(self, url_candidate: URLCandidate, claim: SearchableClaim) -> float:
+        """
+        Legacy relevance calculation method (kept as fallback).
         
         Args:
             url_candidate: URL candidate to score

@@ -256,8 +256,15 @@ class SpecificSearchQueryGenerator:
         name = candidate.get('name', '')
         company = candidate.get('company', '')
         
-        if name and any(term in search_prompt.lower() for term in ['people', 'person', 'executive']):
-            queries.append(f'"{name}" professional profile')
+        # REMOVED: Name-based queries that return irrelevant personal websites
+        # These queries were causing the system to return websites that are just
+        # variations of the prospect's name instead of behavioral evidence.
+        # 
+        # OLD CODE (REMOVED):
+        # if name and any(term in search_prompt.lower() for term in ['people', 'person', 'executive']):
+        #     queries.append(f'"{name}" professional profile')
+        #
+        # NEW APPROACH: Focus only on behavioral evidence, never use prospect names
         
         if company and any(term in search_prompt.lower() for term in ['company', 'business', 'firm']):
             queries.append(f'"{company}" company information')

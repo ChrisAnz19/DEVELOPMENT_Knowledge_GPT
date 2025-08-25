@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Photo Avatar Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .title {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: #718096;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .candidate-card {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .candidate-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .candidate-info {
+            margin-top: 15px;
+        }
+        
+        .candidate-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .candidate-title {
+            font-size: 0.9em;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        
+        .candidate-company {
+            font-size: 0.8em;
+            color: #a0aec0;
+        }
+        
+        .avatar-type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .avatar-type-photo {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .avatar-type-initials {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background 0.2s ease;
+        }
+        
+        .btn:hover {
+            background: #5a67d8;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .avatar-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .demo-container {
+                padding: 20px;
+            }
+            
+            .title {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="title">LinkedIn Photo Avatar System</h1>
+        <p class="subtitle">Demonstrating automatic fallback from LinkedIn photos to personalized initials avatars</p>
+        
+        <div class="controls">
+            <button class="btn" onclick="loadCandidates()">Load Sample Candidates</button>
+            <button class="btn" onclick="simulatePhotoFailures()">Simulate Photo Failures</button>
+            <button class="btn" onclick="refreshAvatars()">Refresh Avatars</button>
+        </div>
+        
+        <div id="candidateGrid" class="avatar-grid">
+            <!-- Candidates will be loaded here -->
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCandidates">0</div>
+                <div class="stat-label">Total Candidates</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="photoAvatars">0</div>
+                <div class="stat-label">Photo Avatars</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="initialsAvatars">0</div>
+                <div class="stat-label">Initials Avatars</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="fallbackRate">0%</div>
+                <div class="stat-label">Fallback Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="avatar_component.js"></script>
+    <script>
+        // Initialize avatar renderer
+        const avatarRenderer = new AvatarRenderer();
+        let currentCandidates = [];
+
+        // Sample candidate data with mixed avatar types
+        const sampleCandidates = [
+            {
+                name: "John Doe",
+                title: "Software Engineer",
+                company: "Tech Corp",
+                avatar: {
+                    type: "photo",
+                    photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
+                    initials: null,
+                    background_color: null
+                }
+            },
+            {
+                name: "Jane Smith",
+                title: "Product Manager", 
+                company: "Innovation Inc",
+                avatar: {
+                    type: "initials",
+                    photo_url: null,
+                    initials: "JS",
+                    background_color: "#3B82F6"
+                }
+            },
+            {
+                name: "Michael Johnson",
+                title: "Marketing Director",
+                company: "Growth Solutions",
+                avatar: {
+                    type: "photo",
+                    photo_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face",
+                    initials: null,
+                    background_color: null
+                }
+            },
+            {
+                name: "Sarah Wilson",
+                title: "UX Designer",
+                company: "Design Studio",
+                avatar: {
+                    type: "initials",
+                    photo_url: null,
+                    initials: "SW",
+                    background_color: "#10B981"
+                }
+            },
+            {
+                name: "David Chen",
+                title: "Data Scientist",
+                company: "Analytics Pro",
+                avatar: {
+                    type: "photo",
+                    photo_url: "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?w=200&h=200&fit=crop&crop=face",
+                    initials: null,
+                    background_color: null
+                }
+            },
+            {
+                name: "Emily Rodriguez",
+                title: "Sales Manager",
+                company: "Revenue Growth",
+                avatar: {
+                    type: "initials",
+                    photo_url: null,
+                    initials: "ER",
+                    background_color: "#F59E0B"
+                }
+            },
+            {
+                name: "Alex Thompson",
+                title: "DevOps Engineer",
+                company: "Cloud Systems",
+                avatar: {
+                    type: "photo",
+                    photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face",
+                    initials: null,
+                    background_color: null
+                }
+            },
+            {
+                name: "Lisa Park",
+                title: "HR Director",
+                company: "People First",
+                avatar: {
+                    type: "initials",
+                    photo_url: null,
+                    initials: "LP",
+                    background_color: "#8B5CF6"
+                }
+            }
+        ];
+
+        function loadCandidates() {
+            currentCandidates = [...sampleCandidates];
+            renderCandidates();
+            updateStats();
+        }
+
+        function renderCandidates() {
+            const grid = document.getElementById('candidateGrid');
+            grid.innerHTML = '';
+
+            currentCandidates.forEach((candidate, index) => {
+                const card = document.createElement('div');
+                card.className = 'candidate-card';
+
+                // Render avatar
+                const avatar = avatarRenderer.renderAvatar(candidate, {
+                    size: 120,
+                    className: 'candidate-avatar',
+                    showTooltip: true,
+                    onClick: (candidate) => {
+                        alert(`Clicked on ${candidate.name}`);
+                    }
+                });
+
+                // Create candidate info
+                const info = document.createElement('div');
+                info.className = 'candidate-info';
+                info.innerHTML = `
+                    <div class="candidate-name">${candidate.name}</div>
+                    <div class="candidate-title">${candidate.title}</div>
+                    <div class="candidate-company">${candidate.company}</div>
+                    <span class="avatar-type-badge avatar-type-${candidate.avatar.type}">
+                        ${candidate.avatar.type === 'photo' ? '📷 Photo' : '🔤 Initials'}
+                    </span>
+                `;
+
+                card.appendChild(avatar);
+                card.appendChild(info);
+                grid.appendChild(card);
+            });
+        }
+
+        function simulatePhotoFailures() {
+            // Randomly convert some photo avatars to initials to simulate failures
+            currentCandidates.forEach(candidate => {
+                if (candidate.avatar.type === 'photo' && Math.random() < 0.5) {
+                    // Simulate photo failure by using a broken URL
+                    candidate.avatar.photo_url = 'https://broken-url-that-will-fail.com/image.jpg';
+                }
+            });
+            
+            renderCandidates();
+            updateStats();
+            
+            // Show message
+            setTimeout(() => {
+                alert('Simulated photo failures! Notice how broken photos automatically fall back to initials.');
+            }, 1000);
+        }
+
+        function refreshAvatars() {
+            // Reset to original data
+            loadCandidates();
+        }
+
+        function updateStats() {
+            const total = currentCandidates.length;
+            const photoCount = currentCandidates.filter(c => c.avatar.type === 'photo').length;
+            const initialsCount = total - photoCount;
+            const fallbackRate = total > 0 ? Math.round((initialsCount / total) * 100) : 0;
+
+            document.getElementById('totalCandidates').textContent = total;
+            document.getElementById('photoAvatars').textContent = photoCount;
+            document.getElementById('initialsAvatars').textContent = initialsCount;
+            document.getElementById('fallbackRate').textContent = `${fallbackRate}%`;
+        }
+
+        // Load initial candidates when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCandidates();
+        });
+
+        // Add some interactive features
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                refreshAvatars();
+            } else if (e.key === 'f' || e.key === 'F') {
+                simulatePhotoFailures();
+            }
+        });
+    </script>
+</body>
+</html>

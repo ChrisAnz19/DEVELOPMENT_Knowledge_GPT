@@ -357,21 +357,39 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 location_query = f"{self.search_context.industry} {company} {self.search_context.activity_type}"
                 queries.append(location_query)
         
-        # Person-specific queries
-        if name and company:
-            person_queries = [
-                f'"{name}" "{company}" LinkedIn',
-                f'"{name}" {company} executive profile',
-                f'"{name}" {company} biography'
-            ]
-            queries.extend(person_queries)
+        # REMOVED: Person-specific queries that return irrelevant name-based websites
+        # These queries were causing the system to return websites that are just
+        # variations of the prospect's name instead of behavioral evidence.
+        #
+        # OLD CODE (REMOVED):
+        # if name and company:
+        #     person_queries = [
+        #         f'"{name}" "{company}" LinkedIn',
+        #         f'"{name}" {company} executive profile', 
+        #         f'"{name}" {company} biography'
+        #     ]
+        #     queries.extend(person_queries)
+        #
+        # NEW APPROACH: Focus ONLY on behavioral evidence, never use prospect names
         
-        # Company-specific queries
+        # Behavioral evidence queries (NO NAMES)
+        if title and company:
+            # Focus on role-based behavioral evidence
+            role_clean = title.lower().replace('chief', '').replace('officer', '').strip()
+            behavioral_queries = [
+                f'{role_clean} executive transitions {company}',
+                f'{role_clean} leadership changes {company}',
+                f'senior {role_clean} hiring trends',
+                f'{role_clean} job market analysis'
+            ]
+            queries.extend(behavioral_queries)
+        
+        # Company-specific behavioral queries (NO NAMES)
         if company:
             company_queries = [
-                f'"{company}" executive team',
-                f'"{company}" leadership',
-                f'"{company}" press releases'
+                f'"{company}" executive departures',
+                f'"{company}" leadership turnover',
+                f'"{company}" talent retention'
             ]
             queries.extend(company_queries)
         
@@ -384,7 +402,17 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
             ]
             queries.extend(industry_queries)
         
-        return queries[:5]  # Limit to 5 most specific queries
+        # Safety check: Remove any queries that might contain names
+        safe_queries = []
+        for query in queries:
+            # Skip queries that might contain personal names
+            if name and (name.lower() in query.lower() or 
+                        any(name_part.lower() in query.lower() for name_part in name.split() if len(name_part) > 2)):
+                print(f"[BLOCKED NAME-BASED QUERY]: {query}")
+                continue
+            safe_queries.append(query)
+        
+        return safe_queries[:5]  # Limit to top 5 safe, behavioral-focused queries
     
     def _build_search_prompt(self) -> str:
         """Build search prompt from current context."""
