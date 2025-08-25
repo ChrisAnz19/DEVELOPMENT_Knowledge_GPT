@@ -21,6 +21,9 @@ class ClaimType(Enum):
     FEATURE_COMPARISON = "feature_comparison"
     VENDOR_EVALUATION = "vendor_evaluation"
     MARKET_RESEARCH = "market_research"
+    REAL_ESTATE_RESEARCH = "real_estate_research"
+    FINANCIAL_SERVICES_RESEARCH = "financial_services_research"
+    INVESTMENT_RESEARCH = "investment_research"
     GENERAL_ACTIVITY = "general_activity"
 
 
@@ -50,9 +53,18 @@ class ExplanationAnalyzer:
         
         # Product/service patterns
         self.product_patterns = [
+            # Tech/Software
             r'\b(CRM|ERP|SaaS|API|SDK|platform|software|tool|solution|service|system)\b',
             r'\b(automation|analytics|dashboard|integration|workflow|pipeline)\b',
             r'\b(marketing|sales|customer|support|finance|HR|accounting)\b',
+            # Real Estate
+            r'\b(real\s+estate|property|properties|listing|listings|home|homes|house|houses|mansion|mansions|estate|residential|luxury\s+home)\b',
+            r'\b(MLS|realtor|realty|brokerage|agent|broker|investment\s+property|rental|commercial\s+real\s+estate)\b',
+            # Financial Services
+            r'\b(mortgage|loan|lending|financing|calculator|rate|rates|banking|financial|investment|portfolio)\b',
+            r'\b(pre-approval|refinancing|credit|debt|wealth\s+management|financial\s+planning)\b',
+            # Investment & Forums
+            r'\b(investment|investing|investor|forum|forums|community|discussion|networking|club)\b',
         ]
         
         # Activity patterns (research behaviors)
@@ -61,6 +73,9 @@ class ExplanationAnalyzer:
             r'\b(visit(?:ed|ing)?|brows(?:ed|ing)?|explor(?:ed|ing)?|check(?:ed|ing)?|look(?:ed|ing)\s+(?:at|into))\b',
             r'\b(read(?:ing)?|stud(?:ied|ying)?|examin(?:ed|ing)?|assess(?:ed|ing)?|consider(?:ed|ing)?)\b',
             r'\b(download(?:ed|ing)?|request(?:ed|ing)?|demo|trial|consultation|meeting)\b',
+            # Real estate specific activities
+            r'\b(saved|favorited|shared|contacted|toured|viewed|scheduled)\b',
+            r'\b(engaged\s+with|interacted\s+with|used|accessed|joined)\b',
         ]
         
         # Pricing/cost patterns
@@ -183,6 +198,33 @@ class ExplanationAnalyzer:
             ClaimType enum value
         """
         claim_lower = claim.lower()
+        
+        # Check for real estate research (highest priority for real estate terms)
+        real_estate_terms = [
+            'real estate', 'property', 'properties', 'listing', 'listings', 
+            'home', 'homes', 'house', 'houses', 'mansion', 'mansions', 
+            'estate', 'residential', 'luxury home', 'greenwich', 'westchester',
+            'mls', 'realtor', 'realty', 'brokerage', 'agent', 'broker'
+        ]
+        if any(term in claim_lower for term in real_estate_terms):
+            return ClaimType.REAL_ESTATE_RESEARCH
+        
+        # Check for financial services research
+        financial_terms = [
+            'mortgage', 'loan', 'lending', 'financing', 'calculator', 
+            'rate', 'rates', 'banking', 'financial', 'pre-approval', 
+            'refinancing', 'credit', 'debt', 'wealth management'
+        ]
+        if any(term in claim_lower for term in financial_terms):
+            return ClaimType.FINANCIAL_SERVICES_RESEARCH
+        
+        # Check for investment research
+        investment_terms = [
+            'investment', 'investing', 'investor', 'forum', 'forums', 
+            'community', 'discussion', 'networking', 'club', 'portfolio'
+        ]
+        if any(term in claim_lower for term in investment_terms):
+            return ClaimType.INVESTMENT_RESEARCH
         
         # Check for pricing research
         if any(re.search(pattern, claim, re.IGNORECASE) for pattern in self.pricing_patterns):
@@ -359,11 +401,13 @@ def test_explanation_analyzer():
     
     # Test explanations
     test_explanations = [
+        "Visited luxury real estate websites for Greenwich, Connecticut multiple times in the past month",
+        "Engaged with financial calculators and mortgage rate comparison tools on real estate platforms",
+        "Joined exclusive real estate investment forums discussing properties in Greenwich",
         "Currently researching Salesforce pricing options for enterprise deployment",
         "Actively comparing CRM solutions including HubSpot and Microsoft Dynamics",
-        "Investigating marketing automation platforms and their integration capabilities",
-        "Visited pricing pages for multiple SaaS vendors",
-        "Analyzing competitor solutions in the customer support space"
+        "Downloaded mortgage pre-approval applications from multiple lenders",
+        "Saved multiple luxury home listings to favorites and shared them with a real estate agent"
     ]
     
     print("Testing Explanation Analyzer:")

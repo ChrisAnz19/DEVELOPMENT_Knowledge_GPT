@@ -118,7 +118,34 @@ class AlternativeSourceManager:
         """
         claim_lower = claim_text.lower()
         
-        # Check products first
+        # Priority check for real estate terms (most specific first)
+        real_estate_terms = [
+            'real estate', 'property', 'properties', 'listing', 'listings',
+            'home', 'homes', 'house', 'houses', 'mansion', 'mansions',
+            'estate', 'residential', 'luxury home', 'greenwich', 'westchester',
+            'mls', 'realtor', 'realty', 'brokerage', 'agent', 'broker'
+        ]
+        if any(term in claim_lower for term in real_estate_terms):
+            return 'real_estate'
+        
+        # Check for financial services
+        financial_terms = [
+            'mortgage', 'loan', 'lending', 'financing', 'calculator',
+            'rate', 'rates', 'banking', 'financial', 'pre-approval',
+            'refinancing', 'credit', 'debt', 'wealth management'
+        ]
+        if any(term in claim_lower for term in financial_terms):
+            return 'financial_services'
+        
+        # Check for investment forums/communities
+        investment_terms = [
+            'investment', 'investing', 'investor', 'forum', 'forums',
+            'community', 'discussion', 'networking', 'club', 'portfolio'
+        ]
+        if any(term in claim_lower for term in investment_terms):
+            return 'investment_forums'
+        
+        # Check products from entities
         products = entities.get('products', [])
         for product in products:
             product_lower = product.lower()
