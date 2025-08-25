@@ -83,11 +83,57 @@ def load_search_config() -> WebSearchConfig:
     return config
 
 
+def load_search_config_safely() -> WebSearchConfig:
+    """Load search configuration with guaranteed valid return type and error handling."""
+    try:
+        config = load_search_config()
+        
+        # Validate that we got a proper WebSearchConfig object
+        if not isinstance(config, WebSearchConfig):
+            print(f"[Web Search Config] Invalid config type: {type(config)}, creating default")
+            return WebSearchConfig()
+        
+        # Validate that required attributes exist
+        if not hasattr(config, 'timeout'):
+            print(f"[Web Search Config] Config missing timeout attribute, creating default")
+            return WebSearchConfig()
+        
+        print(f"[Web Search Config] Successfully loaded valid configuration")
+        return config
+        
+    except Exception as e:
+        print(f"[Web Search Config] Error in safe config loading: {e}, using default")
+        return WebSearchConfig()
+
+
+def validate_config(config: any) -> bool:
+    """Validate that config is a proper WebSearchConfig object."""
+    if not isinstance(config, WebSearchConfig):
+        return False
+    
+    required_attrs = ['timeout', 'max_results_per_query', 'enable_fallback_urls']
+    for attr in required_attrs:
+        if not hasattr(config, attr):
+            return False
+    
+    return True
+
+
 class WebSearchEngine:
     """Executes web searches using real search APIs with fallback URL generation."""
     
     def __init__(self, config: Optional[WebSearchConfig] = None):
-        self.config = config or load_search_config()
+        # Use safe configuration loading with validation
+        if config is None:
+            self.config = load_search_config_safely()
+        else:
+            # Validate provided config
+            if validate_config(config):
+                self.config = config
+            else:
+                print(f"[Web Search Engine] Invalid config provided: {type(config)}, using default")
+                self.config = WebSearchConfig()
+        
         self.client = None  # Will be lazy loaded
         self.request_count = 0
         self.last_request_time = 0

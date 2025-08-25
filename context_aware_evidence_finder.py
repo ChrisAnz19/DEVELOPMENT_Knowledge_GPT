@@ -156,7 +156,11 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         """
         if not self.search_context:
             print("[Context-Aware Evidence] Warning: No search context set. Using generic evidence finding.")
-            return await super().process_candidates_batch(candidates)
+            try:
+                return await super().process_candidates_batch(candidates)
+            except Exception as e:
+                print(f"[Context-Aware Evidence] Error in generic evidence finding: {e}")
+                return candidates  # Return original candidates if everything fails
         
         print(f"[Context-Aware Evidence] Processing {len(candidates)} candidates with context: {self.search_context.industry}")
         
@@ -168,7 +172,12 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 enhanced_candidates.append(enhanced_candidate)
             except Exception as e:
                 print(f"[Context-Aware Evidence] Error processing candidate {candidate.get('name', 'Unknown')}: {e}")
-                enhanced_candidates.append(candidate)
+                # Ensure candidate processing continues even when evidence finding fails
+                candidate_copy = candidate.copy()
+                candidate_copy['evidence_urls'] = []
+                candidate_copy['evidence_summary'] = f"Evidence finding failed: {str(e)}"
+                candidate_copy['evidence_confidence'] = 0.0
+                enhanced_candidates.append(candidate_copy)
         
         return enhanced_candidates
     
@@ -185,29 +194,58 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         print(f"[Context-Aware Evidence] Generated {len(search_queries)} contextual queries for {candidate.get('name', 'Unknown')}")
         
         # Execute searches with new real web search engine
-        from web_search_engine import WebSearchEngine, load_search_config
-        config = load_search_config()
-        web_search = WebSearchEngine(config)
+        from web_search_engine import WebSearchEngine, load_search_config_safely
+        try:
+            config = load_search_config_safely()
+            web_search = WebSearchEngine(config)
+        except Exception as e:
+            print(f"[Context-Aware Evidence] Error initializing web search: {e}")
+            # Use fallback URLs if initialization fails
+            evidence_urls = self._generate_contextual_fallback_urls()
+            print(f"[Context-Aware Evidence] Using {len(evidence_urls)} fallback URLs due to initialization error")
+            
+            if evidence_urls:
+                candidate['evidence_urls'] = [self._format_evidence_url(url) for url in evidence_urls]
+                candidate['evidence_summary'] = f"Found {len(evidence_urls)} fallback evidence URLs"
+                candidate['evidence_confidence'] = 0.3
+            else:
+                candidate['evidence_urls'] = []
+                candidate['evidence_summary'] = "No evidence URLs available due to initialization error"
+                candidate['evidence_confidence'] = 0.0
+            
+            return candidate
         search_results = []
         
         try:
             # Execute search with reasonable timeout - the new search engine is much faster
             search_task = asyncio.create_task(self._execute_searches(web_search, search_queries[:2]))  # Try 2 queries
             search_results = await asyncio.wait_for(search_task, timeout=10.0)  # Longer timeout since real search is reliable
+            print(f"[Context-Aware Evidence] Search completed successfully for {candidate.get('name', 'Unknown')}")
         except asyncio.TimeoutError:
             print(f"[Context-Aware Evidence] Search timed out after 10s, using fallback URLs for {candidate.get('name', 'Unknown')}")
             search_results = []
+        except AttributeError as e:
+            print(f"[Context-Aware Evidence] Configuration error: {e}, using fallback URLs for {candidate.get('name', 'Unknown')}")
+            search_results = []
         except Exception as e:
-            print(f"[Context-Aware Evidence] Search failed: {e}")
+            print(f"[Context-Aware Evidence] Search failed with error: {type(e).__name__}: {e}, using fallback URLs for {candidate.get('name', 'Unknown')}")
             search_results = []
         
         # Filter and validate URLs (skip validation for speed)
-        evidence_urls = await self._extract_and_validate_urls(search_results)
+        try:
+            evidence_urls = await self._extract_and_validate_urls(search_results)
+        except Exception as e:
+            print(f"[Context-Aware Evidence] Error extracting URLs: {e}, using fallback URLs")
+            evidence_urls = []
         
         # If no URLs found from search results, generate contextual fallback URLs
         if not evidence_urls:
-            evidence_urls = self._generate_contextual_fallback_urls()
-            print(f"[Context-Aware Evidence] Using {len(evidence_urls)} contextual fallback URLs for {candidate.get('name', 'Unknown')}")
+            try:
+                evidence_urls = self._generate_contextual_fallback_urls()
+                print(f"[Context-Aware Evidence] Using {len(evidence_urls)} contextual fallback URLs for {candidate.get('name', 'Unknown')}")
+            except Exception as e:
+                print(f"[Context-Aware Evidence] Error generating fallback URLs: {e}")
+                evidence_urls = []
         
         # Create enhanced candidate response
         if evidence_urls:
