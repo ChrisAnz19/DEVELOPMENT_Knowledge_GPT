@@ -11,7 +11,8 @@ from typing import List, Dict, Set, Optional, Tuple
 from dataclasses import dataclass
 
 # Import existing components
-from evidence_validator import EvidenceValidator, EvidenceURL, EvidenceType
+from evidence_validator import EvidenceValidator
+from evidence_models import EvidenceURL, EvidenceType
 from global_url_registry import GlobalURLRegistry, URLAssignment
 from alternative_source_manager import AlternativeSourceManager, SourceTier
 from explanation_analyzer import SearchableClaim
@@ -25,6 +26,30 @@ class EnhancedEvidenceURL(EvidenceURL):
     source_tier: str = "unknown"        # major, mid-tier, niche, alternative
     uniqueness_factor: float = 0.0      # How unique this source is
     rotation_index: int = 0             # For tracking rotation patterns
+    
+    def to_model(self):
+        """Convert to model format (inherit from parent and add diversity fields)."""
+        from evidence_models import EvidenceURLModel, ConfidenceLevel
+        
+        # Convert evidence_type to the correct enum if needed
+        if hasattr(self.evidence_type, 'value'):
+            evidence_type_value = self.evidence_type.value
+        else:
+            evidence_type_value = str(self.evidence_type)
+        
+        # Create the model directly to avoid enum conversion issues
+        return EvidenceURLModel(
+            url=self.url,
+            title=self.title,
+            description=self.description,
+            evidence_type=evidence_type_value,  # Pass the string value directly
+            relevance_score=self.relevance_score,
+            confidence_level=self.confidence_level,
+            supporting_explanation=self.supporting_explanation,
+            domain_authority=self.domain_authority,
+            page_quality_score=self.page_quality_score,
+            last_validated=self.last_validated
+        )
 
 
 class UniquenessAwareEvidenceValidator(EvidenceValidator):

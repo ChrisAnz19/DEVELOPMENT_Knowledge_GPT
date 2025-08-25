@@ -6,6 +6,7 @@ This module provides a streamlined approach to ensuring URL diversity
 while maintaining relevance to actual behavioral claims.
 """
 
+import asyncio
 import time
 from typing import List, Dict, Set, Optional, Any
 from dataclasses import dataclass
@@ -231,6 +232,13 @@ class SimplifiedDiversityOrchestrator:
             explanations.extend(candidate['behavioral_insights'])
         elif 'why_matches' in candidate:
             explanations.extend(candidate['why_matches'])
+        
+        # Check behavioral_data.behavioral_insight (used by main API)
+        behavioral_data = candidate.get('behavioral_data', {})
+        if isinstance(behavioral_data, dict):
+            behavioral_insight = behavioral_data.get('behavioral_insight', '')
+            if behavioral_insight and isinstance(behavioral_insight, str):
+                explanations.append(behavioral_insight)
         
         return [exp for exp in explanations if exp and isinstance(exp, str)]
     

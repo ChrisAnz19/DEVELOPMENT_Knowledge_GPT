@@ -434,7 +434,8 @@ def extract_explanations_from_candidate(candidate: Dict[str, Any]) -> List[str]:
     # Extract from behavioral_data
     behavioral_data = candidate.get('behavioral_data', {})
     if isinstance(behavioral_data, dict):
-        for key in ['explanation', 'activity_explanation', 'research_explanation']:
+        # Include behavioral_insight which is used by the main API
+        for key in ['explanation', 'activity_explanation', 'research_explanation', 'behavioral_insight']:
             if key in behavioral_data and behavioral_data[key]:
                 explanations.append(str(behavioral_data[key]))
     
