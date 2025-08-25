@@ -129,7 +129,8 @@ def store_people_to_database(search_id: int, people: List[Dict[str, Any]]) -> bo
         schema_fields = {
             'search_id', 'name', 'title', 'company', 'email', 'linkedin_url', 
             'profile_photo_url', 'location', 'accuracy', 'reasons', 
-            'linkedin_profile', 'linkedin_posts', 'behavioral_data'
+            'linkedin_profile', 'linkedin_posts', 'behavioral_data',
+            'evidence_urls', 'evidence_summary', 'evidence_confidence'
         }
         
         stored_count = 0
@@ -140,6 +141,8 @@ def store_people_to_database(search_id: int, people: List[Dict[str, Any]]) -> bo
                 for field in schema_fields:
                     if field in person and person[field] is not None:
                         if field in ['linkedin_profile', 'behavioral_data'] and isinstance(person[field], dict):
+                            filtered_person[field] = json.dumps(person[field])
+                        elif field == 'evidence_urls' and isinstance(person[field], list):
                             filtered_person[field] = json.dumps(person[field])
                         else:
                             filtered_person[field] = person[field]
@@ -205,6 +208,13 @@ def get_people_for_search(search_id: int) -> List[Dict[str, Any]]:
                         person['reasons'] = json.loads(person['reasons'])
                     except json.JSONDecodeError:
                         person['reasons'] = []
+                
+                # CRITICAL FIX: Deserialize evidence_urls from JSON string
+                if 'evidence_urls' in person and isinstance(person['evidence_urls'], str):
+                    try:
+                        person['evidence_urls'] = json.loads(person['evidence_urls'])
+                    except json.JSONDecodeError:
+                        person['evidence_urls'] = []
                 
                 people.append(person)
         
