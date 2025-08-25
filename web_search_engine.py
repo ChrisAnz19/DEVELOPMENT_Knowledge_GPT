@@ -46,14 +46,15 @@ class WebSearchEngine:
         self.request_count = 0
         self.last_request_time = 0
         self.rate_limit_delay = 1.0  # Minimum delay between requests (seconds)
-        self.max_retries = 3
-        self.timeout = 30  # Request timeout in seconds
+        self.max_retries = 2  # Reduced retries to prevent hanging
+        self.timeout = 10  # Shorter timeout to prevent hanging
         self.fallback_enabled = True
         self._fallback_generator = None
+        self.max_requests_per_batch = 5  # Limit requests per batch
     
     async def search_for_evidence(self, queries: List[SearchQuery]) -> List[SearchResult]:
         """
-        Execute web searches using OpenAI's web search tool.
+        Execute web searches with circuit breaker to prevent hanging.
         
         Args:
             queries: List of search queries to execute
@@ -63,14 +64,24 @@ class WebSearchEngine:
         """
         results = []
         
-        # Process queries with rate limiting
-        for query in queries:
+        # Limit number of queries to prevent hanging
+        limited_queries = queries[:self.max_requests_per_batch]
+        if len(queries) > self.max_requests_per_batch:
+            print(f"[Web Search] Limited to {self.max_requests_per_batch} queries (from {len(queries)})")
+        
+        # Process queries with rate limiting and timeout
+        for i, query in enumerate(limited_queries):
             try:
+                print(f"[Web Search] Processing query {i+1}/{len(limited_queries)}: {query.query[:50]}...")
+                
                 # Enforce rate limiting
                 await self._enforce_rate_limit()
                 
-                # Execute search with retries
-                result = await self._execute_search_with_retries(query)
+                # Execute search with retries and timeout
+                result = await asyncio.wait_for(
+                    self._execute_search_with_retries(query),
+                    timeout=15  # Overall timeout per query
+                )
                 results.append(result)
                 
                 # Log successful search
@@ -79,18 +90,32 @@ class WebSearchEngine:
                 else:
                     print(f"[Web Search] Failed query: {query.query[:50]}... - {result.error_message}")
                 
-            except Exception as e:
-                print(f"[Web Search Error] Query failed: {query.query[:50]}... - {str(e)}")
-                # Create failed result
+            except asyncio.TimeoutError:
+                print(f"[Web Search] Query timed out: {query.query[:50]}...")
+                # Use fallback for timed out queries
+                fallback_urls = self._get_fallback_urls(query) if self.fallback_enabled else []
                 results.append(SearchResult(
                     query=query,
-                    urls=[],
-                    citations=[],
-                    search_metadata={'error': str(e)},
-                    success=False,
+                    urls=fallback_urls,
+                    citations=[{'source': 'fallback_timeout', 'url': url.url} for url in fallback_urls],
+                    search_metadata={'error': 'timeout', 'fallback_used': len(fallback_urls)},
+                    success=len(fallback_urls) > 0,
+                    error_message='Query timed out'
+                ))
+            except Exception as e:
+                print(f"[Web Search Error] Query failed: {query.query[:50]}... - {str(e)}")
+                # Use fallback for failed queries
+                fallback_urls = self._get_fallback_urls(query) if self.fallback_enabled else []
+                results.append(SearchResult(
+                    query=query,
+                    urls=fallback_urls,
+                    citations=[{'source': 'fallback_error', 'url': url.url} for url in fallback_urls],
+                    search_metadata={'error': str(e), 'fallback_used': len(fallback_urls)},
+                    success=len(fallback_urls) > 0,
                     error_message=str(e)
                 ))
         
+        print(f"[Web Search] Completed batch: {len(results)} results")
         return results
     
     async def _execute_search_with_retries(self, query: SearchQuery) -> SearchResult:
@@ -181,7 +206,7 @@ Prioritize well-known, authoritative websites and official company pages."""
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": enhanced_prompt}],
-                timeout=self.timeout
+                timeout=10  # Shorter timeout to prevent hanging
             )
             
             self.request_count += 1

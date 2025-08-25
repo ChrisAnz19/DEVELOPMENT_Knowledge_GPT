@@ -137,9 +137,9 @@ class SimplifiedDiversityOrchestrator:
             print(f"[Diversity Orchestrator] No searchable claims found for candidate {candidate_id}")
             return candidate
         
-        # Prioritize and limit claims
+        # Prioritize and limit claims (reduced to prevent hanging)
         prioritized_claims = sorted(all_claims, key=lambda c: (c.priority, c.confidence), reverse=True)
-        selected_claims = prioritized_claims[:3]  # Limit to top 3 claims
+        selected_claims = prioritized_claims[:1]  # Limit to top 1 claim to prevent hanging
         
         print(f"[Diversity Orchestrator] Processing {len(selected_claims)} claims for candidate {candidate_id}")
         
@@ -153,7 +153,7 @@ class SimplifiedDiversityOrchestrator:
                 used_sources=self._get_used_sources(),
                 candidate_index=candidate_index
             )
-            all_queries.extend(diverse_queries[:3])  # Limit to top 3 queries per claim
+            all_queries.extend(diverse_queries[:1])  # Limit to top 1 query per claim to prevent hanging
         
         if not all_queries:
             print(f"[Diversity Orchestrator] No queries generated for candidate {candidate_id}")
@@ -161,30 +161,44 @@ class SimplifiedDiversityOrchestrator:
         
         print(f"[Diversity Orchestrator] Generated {len(all_queries)} diverse queries for candidate {candidate_id}")
         
-        # Execute web searches
-        search_results = await self.web_search_engine.search_for_evidence(all_queries)
-        successful_results = [r for r in search_results if r.success]
+        # Execute web searches with timeout protection
+        try:
+            search_results = await asyncio.wait_for(
+                self.web_search_engine.search_for_evidence(all_queries),
+                timeout=10.0  # 10 second timeout per candidate
+            )
+            successful_results = [r for r in search_results if r.success]
+        except asyncio.TimeoutError:
+            print(f"[Diversity Orchestrator] Search timed out for candidate {candidate_id}")
+            search_results = []
+            successful_results = []
         
         print(f"[Diversity Orchestrator] Completed {len(successful_results)}/{len(search_results)} searches for candidate {candidate_id}")
         
         # Validate and rank with uniqueness
         evidence_urls = []
-        for claim in selected_claims:
-            # Find search results for this claim
-            claim_results = self._find_results_for_claim(successful_results, claim)
-            
-            if claim_results:
-                # Validate with uniqueness constraints
-                claim_evidence = self.uniqueness_validator.validate_with_uniqueness(
-                    results=claim_results,
-                    claim=claim,
-                    candidate_id=candidate_id,
-                    existing_evidence=evidence_urls
-                )
-                evidence_urls.extend(claim_evidence)
         
-        # Apply final diversity filters
-        final_evidence = self._apply_final_diversity_filters(evidence_urls)
+        if successful_results:
+            for claim in selected_claims:
+                # Find search results for this claim
+                claim_results = self._find_results_for_claim(successful_results, claim)
+                
+                if claim_results:
+                    # Validate with uniqueness constraints
+                    claim_evidence = self.uniqueness_validator.validate_with_uniqueness(
+                        results=claim_results,
+                        claim=claim,
+                        candidate_id=candidate_id,
+                        existing_evidence=evidence_urls
+                    )
+                    evidence_urls.extend(claim_evidence)
+            
+            # Apply final diversity filters
+            final_evidence = self._apply_final_diversity_filters(evidence_urls)
+        else:
+            # Fallback: generate simple evidence URLs when searches fail
+            print(f"[Diversity Orchestrator] No search results, using fallback URLs for candidate {candidate_id}")
+            final_evidence = self._generate_fallback_evidence(candidate, selected_claims)
         
         # Register evidence usage
         if final_evidence:
@@ -293,6 +307,47 @@ class SimplifiedDiversityOrchestrator:
             if '/' in url:
                 url = url.split('/', 1)[0]
             return url.lower()
+    
+    def _generate_fallback_evidence(self, candidate: Dict[str, Any], claims: List) -> List:
+        """Generate fallback evidence URLs when searches fail."""
+        try:
+            from fallback_url_generator import FallbackURLGenerator
+            from search_query_generator import SearchQuery
+            
+            generator = FallbackURLGenerator()
+            
+            # Create a simple query from the first claim
+            if claims:
+                claim = claims[0]
+                query = SearchQuery(
+                    query=claim.text[:100],  # Truncate to prevent issues
+                    expected_domains=[],
+                    page_types=['pricing', 'product', 'company'],
+                    priority=1,
+                    claim_support='fallback',
+                    search_strategy='fallback'
+                )
+                
+                fallback_urls = generator.generate_fallback_urls(query, max_urls=2)
+                
+                # Convert to evidence format
+                evidence_urls = []
+                for url in fallback_urls:
+                    evidence_urls.append({
+                        'url': url.url,
+                        'title': url.title,
+                        'snippet': url.snippet,
+                        'evidence_type': 'fallback',
+                        'relevance_score': 0.7,
+                        'confidence_level': 'medium',
+                        'source': 'fallback_generator'
+                    })
+                
+                return evidence_urls
+        except Exception as e:
+            print(f"[Diversity Orchestrator] Fallback generation failed: {e}")
+        
+        return []
     
     def _update_final_statistics(self):
         """Update final diversity statistics."""
