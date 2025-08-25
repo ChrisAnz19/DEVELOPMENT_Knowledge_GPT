@@ -196,13 +196,16 @@ class SpecificSearchQueryGenerator:
                     f'"{company}" {location.city} location'
                 ])
         
-        if name and company:
-            # Person at company queries
-            queries.extend([
-                f'"{name}" "{company}" LinkedIn',
-                f'"{name}" {company} biography',
-                f'"{name}" {company} executive'
-            ])
+        # REMOVED: Name-based queries that return irrelevant name variations
+        # These queries were causing the system to return websites that are just
+        # variations of the prospect's name instead of behavioral evidence.
+        #
+        # REMOVED PROBLEMATIC CODE:
+        # - f'"{name}" "{company}" LinkedIn'
+        # - f'"{name}" {company} biography'  
+        # - f'"{name}" {company} executive'
+        #
+        # REPLACEMENT: Focus on company behavioral evidence only
         
         return queries
     
@@ -214,27 +217,35 @@ class SpecificSearchQueryGenerator:
         company = candidate.get('company', '')
         title = candidate.get('title', '')
         
-        if name:
-            # Person-specific queries
+        # CRITICAL FIX: COMPLETELY REMOVED ALL NAME-BASED QUERIES
+        # These queries were causing the system to return irrelevant websites
+        # that are just variations of the prospect's name instead of behavioral evidence.
+        #
+        # REMOVED PROBLEMATIC CODE:
+        # - f'"{name}" LinkedIn profile'
+        # - f'"{name}" professional biography' 
+        # - f'"{name}" executive profile'
+        # - f'"{name}" "{company}"'
+        # - f'"{name}" {company} LinkedIn'
+        # - f'"{name}" {company} executive team'
+        # - f'"{name}" {company} biography'
+        #
+        # REPLACEMENT: Focus ONLY on behavioral evidence without using names
+        
+        if title and company:
+            # Generate behavioral evidence queries (NO NAMES)
+            role_clean = title.lower().replace('chief', '').replace('officer', '').strip()
             queries.extend([
-                f'"{name}" LinkedIn profile',
-                f'"{name}" professional biography',
-                f'"{name}" executive profile'
-            ])
-            
-            if company:
-                queries.extend([
-                    f'"{name}" "{company}"',
-                    f'"{name}" {company} LinkedIn',
-                    f'"{name}" {company} executive team',
-                    f'"{name}" {company} biography'
+                f'{role_clean} executive job market trends',
+                f'{role_clean} leadership transitions {company}',
+                f'senior {role_clean} career opportunities',
+                f'{company} executive departures'
                 ])
-            
-            if title:
-                queries.extend([
-                    f'"{name}" {title}',
-                    f'"{name}" {title} {company}' if company else f'"{name}" {title}'
-                ])
+        
+        # REMOVED MORE NAME-BASED QUERIES:
+        # - f'"{name}" {title}'
+        # - f'"{name}" {title} {company}'
+        # These were also causing name-based search results
         
         return queries
     

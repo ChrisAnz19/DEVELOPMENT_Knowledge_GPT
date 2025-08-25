@@ -769,40 +769,44 @@ def extract_profile_photo_url(candidate_data, linkedin_profile=None):
 
 def is_valid_linkedin_photo(photo_url: str) -> bool:
     """
-    Validate if a LinkedIn photo URL points to an actual profile photo.
+    Simple and strict LinkedIn photo validation.
     
     Args:
         photo_url: The LinkedIn profile photo URL to validate
         
     Returns:
-        bool: True if valid profile photo, False if fallback image
+        bool: True if valid LinkedIn profile photo, False otherwise
     """
     if not photo_url or not isinstance(photo_url, str) or not photo_url.strip():
         return False
     
-    # Known LinkedIn fallback image patterns
+    photo_url_lower = photo_url.lower().strip()
+    
+    # Must be a LinkedIn URL to be considered valid
+    if not photo_url_lower.startswith("https://media.licdn.com"):
+        return False
+    
+    # Known LinkedIn fallback image patterns - immediately reject these
     fallback_patterns = [
         "9c8pery4andzj6ohjkjp54ma2",  # Primary LinkedIn fallback image
         "static.licdn.com/aero-v1/sc/h/9c8pery4andzj6ohjkjp54ma2",
         "static.licdn.com/scds/common/u/images/themes/katy/ghosts",  # Alternative fallback
         "static.licdn.com/scds/common/u/images/apps/connect/icons/profile_pic_ghost",  # Another fallback
+        "ghost",  # Generic ghost pattern
+        "default",  # Default image pattern
+        "placeholder",  # Placeholder pattern
     ]
     
     # Check if URL contains any fallback patterns
-    photo_url_lower = photo_url.lower().strip()
     for pattern in fallback_patterns:
         if pattern in photo_url_lower:
             return False
     
-    # Additional checks for valid LinkedIn photo URLs
-    if "media.licdn.com" in photo_url_lower and "profile-displayphoto" in photo_url_lower:
-        return True
+    # Must contain profile-displayphoto to be a valid LinkedIn profile photo
+    if "profile-displayphoto" not in photo_url_lower:
+        return False
     
-    # If it's a LinkedIn URL but doesn't match known patterns, assume it's valid
-    if "licdn.com" in photo_url_lower:
-        return True
-    
-    # Non-LinkedIn URLs are considered valid (could be from other sources)
+    # If all checks pass, it's a valid LinkedIn profile photo
     return True
 
 def validate_candidate_photos(candidates: List[Dict]) -> List[Dict]:
@@ -888,12 +892,21 @@ def _get_photo_validation_reason(photo_url: str, is_valid: bool) -> str:
         return "no_url"
     
     if not is_valid:
-        if "9c8pery4andzj6ohjkjp54ma2" in photo_url.lower():
-            return "fallback_image"
+        photo_url_lower = photo_url.lower()
+        
+        # Check for specific fallback patterns
+        if "9c8pery4andzj6ohjkjp54ma2" in photo_url_lower:
+            return "linkedin_fallback_image"
+        elif "ghost" in photo_url_lower:
+            return "linkedin_ghost_image"
+        elif not photo_url_lower.startswith("https://media.licdn.com"):
+            return "not_linkedin_url"
+        elif "profile-displayphoto" not in photo_url_lower:
+            return "not_profile_photo"
         else:
             return "invalid_pattern"
     
-    return "valid"
+    return "valid_linkedin_photo"
 
 def _get_photo_source(photo_url: str) -> str:
     """Determine the source of the photo URL."""
@@ -1890,7 +1903,10 @@ async def create_search(request: SearchRequest, background_tasks: BackgroundTask
             "status": "processing",
             "prompt": request.prompt.strip(),
             "created_at": created_at,
-            "completed_at": None
+            "completed_at": None,
+            "processing_complete": False,
+            "processing_status": "processing",
+            "completion_timestamp": None
         }
         
     except HTTPException:
@@ -1983,6 +1999,14 @@ async def get_search_result(request_id: str):
                 search_data["status"] = "completed"
             else:
                 search_data["status"] = "processing"
+        
+        # Add processing completion flags for frontend
+        search_data["processing_complete"] = search_data["status"] in ["completed", "failed"]
+        search_data["processing_status"] = search_data["status"]
+        
+        # Add completion timestamp if processing is complete
+        if search_data["processing_complete"] and not search_data.get("completion_timestamp"):
+            search_data["completion_timestamp"] = search_data.get("completed_at") or datetime.now(timezone.utc).isoformat()
         
         return search_data
         
