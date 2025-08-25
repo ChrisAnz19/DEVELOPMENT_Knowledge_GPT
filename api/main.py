@@ -46,6 +46,16 @@ from smart_prompt_enhancement import enhance_prompt
 from simple_estimation import estimate_people_count
 from creepy_detector import detect_specific_person_search, extract_user_first_name_from_context
 
+# Import enhanced URL evidence finder with diversity support
+try:
+    from enhanced_url_evidence_finder import EnhancedURLEvidenceFinder
+    from enhanced_data_models import DiversityConfig
+    EVIDENCE_INTEGRATION_AVAILABLE = True
+    print("[API] Enhanced URL Evidence Finder loaded successfully")
+except ImportError as e:
+    EVIDENCE_INTEGRATION_AVAILABLE = False
+    print(f"[API] Enhanced URL Evidence Finder not available: {e}")
+
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
 
@@ -1274,6 +1284,51 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                             "behavioral_insight": fallback_insight,
                             "scores": varied_scores
                         }
+        
+        # Enhance candidates with evidence URLs (new diversity-aware system)
+        if EVIDENCE_INTEGRATION_AVAILABLE and candidates:
+            try:
+                print(f"[Evidence Enhancement] Processing {len(candidates)} candidates for diverse evidence URLs")
+                evidence_start_time = time.time()
+                
+                # Initialize enhanced evidence finder with diversity enabled
+                evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
+                
+                # Configure for maximum diversity to avoid CRM URLs for non-CRM behavior
+                evidence_finder.configure_diversity(
+                    ensure_uniqueness=True,
+                    max_same_domain=1,
+                    prioritize_alternatives=True,
+                    diversity_weight=0.4
+                )
+                
+                # Process candidates with diversity-aware evidence finding
+                enhanced_candidates = await evidence_finder.process_candidates_batch(candidates)
+                
+                # Replace candidates with enhanced versions
+                candidates = enhanced_candidates
+                
+                evidence_processing_time = time.time() - evidence_start_time
+                print(f"[Evidence Enhancement] Completed in {evidence_processing_time:.2f}s")
+                
+                # Log evidence statistics
+                evidence_count = sum(len(c.get('evidence_urls', [])) for c in candidates if isinstance(c, dict))
+                candidates_with_evidence = sum(1 for c in candidates if isinstance(c, dict) and c.get('evidence_urls'))
+                
+                print(f"[Evidence Enhancement] Found {evidence_count} total evidence URLs for {candidates_with_evidence}/{len(candidates)} candidates")
+                
+                # Log diversity statistics
+                stats = evidence_finder.get_enhanced_statistics()
+                diversity_stats = stats.get('diversity_details', {})
+                if diversity_stats:
+                    registry_metrics = diversity_stats.get('registry_metrics', {})
+                    print(f"[Evidence Diversity] Unique domains: {registry_metrics.get('total_unique_domains', 0)}, "
+                          f"Diversity index: {registry_metrics.get('diversity_index', 0):.2f}")
+                
+            except Exception as e:
+                print(f"[Evidence Enhancement Error] Failed to enhance candidates with evidence: {str(e)}")
+                # Continue processing without evidence URLs - don't fail the entire search
+        
         search_db_id = search_data.get("id")
         print(f"[DEBUG] About to store candidates. search_db_id: {search_db_id}, candidates count: {len(candidates) if candidates else 0}")
         if candidates:
@@ -1338,6 +1393,30 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0"
     }
+
+@app.get("/api/evidence/stats")
+async def get_evidence_stats():
+    """Get evidence integration statistics and performance metrics."""
+    try:
+        if not EVIDENCE_INTEGRATION_AVAILABLE:
+            return {
+                "enabled": False,
+                "error": "Enhanced URL Evidence Finder not available"
+            }
+        
+        # Create a temporary evidence finder to get stats
+        evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
+        stats = evidence_finder.get_enhanced_statistics()
+        
+        return {
+            "enabled": True,
+            "diversity_enabled": True,
+            "statistics": stats,
+            "message": "Enhanced URL Evidence Finder with diversity support is active"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get evidence stats: {str(e)}")
 
 @app.get("/api/demo/search-example", response_model=DemoSearchResponse)
 async def get_search_example():
