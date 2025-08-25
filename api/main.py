@@ -1332,42 +1332,28 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
             except Exception as e:
                 evidence_processing_time = time.time() - evidence_start_time
                 print(f"[Evidence Enhancement Error] Failed after {evidence_processing_time:.2f}s: {str(e)}")
-                
-                # Add simple demo evidence URLs as fallback
-                print("[Evidence Enhancement] Adding demo evidence URLs as fallback")
-                demo_urls = [
-                    {
-                        "url": "https://www.salesforce.com/products/platform/pricing/",
-                        "title": "Salesforce Pricing & Plans",
-                        "description": "Official Salesforce pricing page showing current plans and costs",
-                        "evidence_type": "pricing_page",
-                        "relevance_score": 0.85,
-                        "confidence_level": "high"
-                    },
-                    {
-                        "url": "https://www.g2.com/categories/crm",
-                        "title": "Best CRM Software Reviews & Comparisons - G2",
-                        "description": "Compare CRM software options with user reviews and ratings",
-                        "evidence_type": "comparison_site",
-                        "relevance_score": 0.80,
-                        "confidence_level": "high"
-                    },
-                    {
-                        "url": "https://www.capterra.com/p/crm-software/",
-                        "title": "CRM Software - Capterra",
-                        "description": "Find and compare CRM software solutions",
-                        "evidence_type": "comparison_site",
-                        "relevance_score": 0.75,
-                        "confidence_level": "medium"
-                    }
-                ]
-                
-                # Add demo URLs to first few candidates
-                for i, candidate in enumerate(candidates[:3]):
-                    if isinstance(candidate, dict):
-                        candidate['evidence_urls'] = demo_urls[:2]  # Add 2 URLs per candidate
-                        candidate['evidence_summary'] = f"Found {len(demo_urls[:2])} supporting URLs"
-                        candidate['evidence_confidence'] = 0.80
+                print("[Evidence Enhancement] No fallback URLs will be added - showing honest results")
+        
+        # Adjust accuracy scores based on evidence URL availability
+        if candidates:
+            for candidate in candidates:
+                if isinstance(candidate, dict):
+                    has_evidence = bool(candidate.get('evidence_urls'))
+                    current_accuracy = candidate.get('accuracy', 85)
+                    
+                    if not has_evidence:
+                        # Reduce accuracy by 15-20 points when no evidence URLs are found
+                        reduced_accuracy = max(50, current_accuracy - 18)
+                        candidate['accuracy'] = reduced_accuracy
+                        candidate['evidence_urls'] = []  # Ensure empty array instead of None
+                        candidate['evidence_summary'] = "No supporting evidence URLs found"
+                        candidate['evidence_confidence'] = 0.0
+                        print(f"[Accuracy Adjustment] Reduced accuracy for {candidate.get('name', 'Unknown')} from {current_accuracy}% to {reduced_accuracy}% (no evidence URLs)")
+                    else:
+                        evidence_count = len(candidate.get('evidence_urls', []))
+                        candidate['evidence_summary'] = f"Found {evidence_count} supporting evidence URLs"
+                        candidate['evidence_confidence'] = min(0.95, 0.6 + (evidence_count * 0.1))  # Scale confidence with URL count
+                        print(f"[Accuracy Adjustment] Maintained accuracy for {candidate.get('name', 'Unknown')} at {current_accuracy}% (has {evidence_count} evidence URLs)")
         
         search_db_id = search_data.get("id")
         print(f"[DEBUG] About to store candidates. search_db_id: {search_db_id}, candidates count: {len(candidates) if candidates else 0}")
