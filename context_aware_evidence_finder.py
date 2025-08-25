@@ -184,31 +184,23 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         
         print(f"[Context-Aware Evidence] Generated {len(search_queries)} contextual queries for {candidate.get('name', 'Unknown')}")
         
-        # Execute searches
+        # Execute searches with timeout
         web_search = WebSearchEngine()
         search_results = []
         
         # Import SearchQuery for proper formatting
         from search_query_generator import SearchQuery
         
-        for query_str in search_queries[:2]:  # Limit to 2 queries to prevent timeout
-            try:
-                print(f"[Context-Aware Evidence] Searching: {query_str}")
-                
-                # Create SearchQuery object
-                search_query = SearchQuery(
-                    query=query_str,
-                    expected_domains=[],  # Let the system find relevant domains
-                    page_types=["article", "news", "research"],
-                    priority=5,  # Medium priority
-                    claim_support="contextual evidence for search relevance",
-                    search_strategy="contextual_evidence"
-                )
-                
-                results = await web_search.search_for_evidence([search_query])
-                search_results.extend(results)
-            except Exception as e:
-                print(f"[Context-Aware Evidence] Search failed for query '{query_str}': {e}")
+        try:
+            # Execute search with timeout to prevent hanging
+            search_task = asyncio.create_task(self._execute_searches(web_search, search_queries[:1]))
+            search_results = await asyncio.wait_for(search_task, timeout=5.0)  # 5 second timeout
+        except asyncio.TimeoutError:
+            print(f"[Context-Aware Evidence] Search timed out, using fallback URLs for {candidate.get('name', 'Unknown')}")
+            search_results = []
+        except Exception as e:
+            print(f"[Context-Aware Evidence] Search failed: {e}")
+            search_results = []
         
         # Filter and validate URLs
         evidence_urls = await self._extract_and_validate_urls(search_results)
@@ -271,6 +263,34 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         
         return queries[:5]  # Limit to 5 queries
     
+    async def _execute_searches(self, web_search, search_queries):
+        """Execute search queries and return results."""
+        search_results = []
+        
+        # Import SearchQuery for proper formatting
+        from search_query_generator import SearchQuery
+        
+        for query_str in search_queries:
+            try:
+                print(f"[Context-Aware Evidence] Searching: {query_str}")
+                
+                # Create SearchQuery object
+                search_query = SearchQuery(
+                    query=query_str,
+                    expected_domains=[],  # Let the system find relevant domains
+                    page_types=["article", "news", "research"],
+                    priority=5,  # Medium priority
+                    claim_support="contextual evidence for search relevance",
+                    search_strategy="contextual_evidence"
+                )
+                
+                results = await web_search.search_for_evidence([search_query])
+                search_results.extend(results)
+            except Exception as e:
+                print(f"[Context-Aware Evidence] Search failed for query '{query_str}': {e}")
+        
+        return search_results
+    
     async def _extract_and_validate_urls(self, search_results: List) -> List[str]:
         """Extract and validate URLs from search results."""
         urls = []
@@ -290,8 +310,8 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         
         if unique_urls:
             try:
-                async with URLValidator(timeout=2.0, max_concurrent=3) as validator:
-                    validation_results = await validator.validate_urls(unique_urls[:5])  # Limit to 5 URLs
+                async with URLValidator(timeout=1.0, max_concurrent=5) as validator:
+                    validation_results = await validator.validate_urls(unique_urls[:3])  # Limit to 3 URLs for speed
                 
                 valid_urls = [result.url for result in validation_results if result.is_valid]
                 print(f"[Context-Aware Evidence] Validated {len(valid_urls)}/{len(unique_urls)} URLs")

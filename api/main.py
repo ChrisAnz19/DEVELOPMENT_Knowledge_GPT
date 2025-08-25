@@ -1337,7 +1337,7 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 # Execute with timeout to prevent hanging
                 enhanced_candidates = await asyncio.wait_for(
                     enhance_with_timeout(),
-                    timeout=15.0  # 15 second timeout to prevent hanging
+                    timeout=20.0  # 20 second timeout for context-aware evidence processing
                 )
                 
                 # Replace candidates with enhanced versions
