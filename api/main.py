@@ -1903,6 +1903,10 @@ async def get_search_result(request_id: str):
                             "reasons": candidate.get("reasons"),
                             "linkedin_profile": candidate.get("linkedin_profile"),
                             "behavioral_data": candidate.get("behavioral_data"),
+                            # Evidence URLs and related data
+                            "evidence_urls": candidate.get("evidence_urls", []),
+                            "evidence_summary": candidate.get("evidence_summary", "No supporting evidence URLs found"),
+                            "evidence_confidence": candidate.get("evidence_confidence", 0.0),
                             # New avatar data for initials fallback
                             "avatar": candidate.get("avatar"),
                             # Backward compatibility - photo_url field
