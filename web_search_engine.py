@@ -42,7 +42,7 @@ class WebSearchEngine:
     """Executes web searches using OpenAI chat completions with fallback URL generation."""
     
     def __init__(self, openai_client: Optional[OpenAI] = None):
-        self.client = openai_client or OpenAI()
+        self.client = openai_client  # Don't initialize if None - will be lazy loaded
         self.request_count = 0
         self.last_request_time = 0
         self.rate_limit_delay = 1.0  # Minimum delay between requests (seconds)
@@ -142,10 +142,13 @@ class WebSearchEngine:
         )
     
     async def _execute_search(self, query: SearchQuery) -> SearchResult:
-        """Execute single search query with OpenAI web search."""
+        """Execute single search query with OpenAI chat completion."""
         start_time = time.time()
         
         try:
+            # Lazy initialize OpenAI client if needed
+            if self.client is None:
+                self.client = OpenAI()
             # Construct the search request
             messages = [
                 {

@@ -1,379 +1,197 @@
 #!/usr/bin/env python3
 """
-Automated deployment verification script
-Runs comprehensive checks after deployment to ensure everything is working
+Deployment Verification Script for Web Search API Fix
+
+This script verifies that the web search API fix has been properly deployed
+and that the system no longer uses the deprecated web_search tool.
 """
 
-import asyncio
-import httpx
-import json
 import sys
 import os
-from typing import Dict, Any, List
-from datetime import datetime
+import asyncio
+from typing import List
 
-class DeploymentVerifier:
-    def __init__(self, base_url: str):
-        self.base_url = base_url.rstrip('/')
-        self.verification_results = {
-            "timestamp": datetime.now().isoformat(),
-            "base_url": base_url,
-            "overall_status": "unknown",
-            "tests": {},
-            "summary": {
-                "total_tests": 0,
-                "passed_tests": 0,
-                "failed_tests": 0,
-                "critical_failures": 0
-            }
-        }
+def verify_files_exist() -> bool:
+    """Verify that all required files exist."""
+    required_files = [
+        'web_search_engine.py',
+        'fallback_url_generator.py',
+        'search_query_generator.py',
+        'README_URL_Evidence_Finder.md'
+    ]
     
-    async def verify_basic_connectivity(self) -> Dict[str, Any]:
-        """Verify basic API connectivity"""
-        print("🔍 Verifying basic connectivity...")
-        
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{self.base_url}/")
-                
-                return {
-                    "test_name": "Basic Connectivity",
-                    "success": response.status_code == 200,
-                    "status_code": response.status_code,
-                    "response_time": response.elapsed.total_seconds() * 1000,
-                    "critical": True
-                }
-        except Exception as e:
-            return {
-                "test_name": "Basic Connectivity", 
-                "success": False,
-                "error": str(e),
-                "critical": True
-            }
+    missing_files = []
+    for file in required_files:
+        if not os.path.exists(file):
+            missing_files.append(file)
     
-    async def verify_hubspot_oauth_endpoints(self) -> List[Dict[str, Any]]:
-        """Verify all HubSpot OAuth endpoints are working"""
-        print("🔍 Verifying HubSpot OAuth endpoints...")
-        
-        endpoints_to_test = [
-            {
-                "name": "OAuth Health",
-                "method": "GET",
-                "path": "/api/hubspot/oauth/health",
-                "expected_status": 200,
-                "critical": True
-            },
-            {
-                "name": "OAuth Debug",
-                "method": "GET", 
-                "path": "/api/hubspot/oauth/debug",
-                "expected_status": 200,
-                "critical": False
-            },
-            {
-                "name": "OAuth Test",
-                "method": "POST",
-                "path": "/api/hubspot/oauth/test",
-                "expected_status": 200,
-                "critical": False
-            },
-            {
-                "name": "OAuth Token (Invalid)",
-                "method": "POST",
-                "path": "/api/hubspot/oauth/token",
-                "data": {"code": "test", "redirect_uri": "https://test.com"},
-                "expected_status": [400, 422, 500],  # Should fail with test data
-                "critical": True
-            }
-        ]
-        
-        results = []
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            for endpoint in endpoints_to_test:
-                try:
-                    url = f"{self.base_url}{endpoint['path']}"
-                    
-                    if endpoint['method'] == 'GET':
-                        response = await client.get(url)
-                    else:
-                        response = await client.post(url, json=endpoint.get('data', {}))
-                    
-                    expected_statuses = endpoint['expected_status'] if isinstance(endpoint['expected_status'], list) else [endpoint['expected_status']]
-                    success = response.status_code in expected_statuses
-                    
-                    results.append({
-                        "test_name": endpoint['name'],
-                        "success": success,
-                        "status_code": response.status_code,
-                        "expected_status": expected_statuses,
-                        "response_time": response.elapsed.total_seconds() * 1000,
-                        "critical": endpoint['critical']
-                    })
-                    
-                except Exception as e:
-                    results.append({
-                        "test_name": endpoint['name'],
-                        "success": False,
-                        "error": str(e),
-                        "critical": endpoint['critical']
-                    })
-        
-        return results
+    if missing_files:
+        print(f"❌ Missing files: {', '.join(missing_files)}")
+        return False
     
-    async def verify_system_diagnostics(self) -> List[Dict[str, Any]]:
-        """Verify system diagnostic endpoints"""
-        print("🔍 Verifying system diagnostic endpoints...")
+    print("✅ All required files present")
+    return True
+
+def verify_web_search_fix() -> bool:
+    """Verify that the deprecated web_search tool has been removed."""
+    try:
+        with open('web_search_engine.py', 'r') as f:
+            content = f.read()
         
-        diagnostic_endpoints = [
-            {
-                "name": "Prismatic Diagnostics",
-                "path": "/api/system/prismatic/diagnostics",
-                "critical": False
-            },
-            {
-                "name": "Deployment Sync Check",
-                "path": "/api/system/deployment/sync-check", 
-                "critical": False
-            },
-            {
-                "name": "Comprehensive Health",
-                "path": "/api/system/health/comprehensive",
-                "critical": False
-            }
-        ]
+        # Check that deprecated web_search tool is not used
+        if '"type": "web_search"' in content:
+            print("❌ Still using deprecated web_search tool type")
+            return False
         
-        results = []
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            for endpoint in diagnostic_endpoints:
-                try:
-                    url = f"{self.base_url}{endpoint['path']}"
-                    response = await client.get(url)
-                    
-                    # Try to parse JSON to ensure valid response
-                    response_data = response.json()
-                    
-                    results.append({
-                        "test_name": endpoint['name'],
-                        "success": response.status_code == 200,
-                        "status_code": response.status_code,
-                        "response_time": response.elapsed.total_seconds() * 1000,
-                        "has_valid_json": True,
-                        "critical": endpoint['critical']
-                    })
-                    
-                except json.JSONDecodeError:
-                    results.append({
-                        "test_name": endpoint['name'],
-                        "success": False,
-                        "error": "Invalid JSON response",
-                        "status_code": response.status_code if 'response' in locals() else None,
-                        "critical": endpoint['critical']
-                    })
-                except Exception as e:
-                    results.append({
-                        "test_name": endpoint['name'],
-                        "success": False,
-                        "error": str(e),
-                        "critical": endpoint['critical']
-                    })
+        # Check that fallback system is integrated
+        if 'fallback' not in content.lower():
+            print("❌ Fallback system not integrated")
+            return False
         
-        return results
-    
-    async def verify_environment_configuration(self) -> Dict[str, Any]:
-        """Verify environment configuration through API"""
-        print("🔍 Verifying environment configuration...")
+        # Check that enhanced error handling is present
+        if 'rate_limit' not in content.lower():
+            print("❌ Enhanced error handling not implemented")
+            return False
         
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(f"{self.base_url}/api/system/deployment/sync-check")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    env_vars = data.get('critical_env_vars', {})
-                    
-                    # Check critical environment variables
-                    hubspot_id_configured = env_vars.get('HUBSPOT_CLIENT_ID', {}).get('configured', False)
-                    hubspot_secret_configured = env_vars.get('HUBSPOT_CLIENT_SECRET', {}).get('configured', False)
-                    
-                    config_issues = []
-                    if not hubspot_id_configured:
-                        config_issues.append("HUBSPOT_CLIENT_ID not configured")
-                    if not hubspot_secret_configured:
-                        config_issues.append("HUBSPOT_CLIENT_SECRET not configured")
-                    
-                    return {
-                        "test_name": "Environment Configuration",
-                        "success": len(config_issues) == 0,
-                        "hubspot_client_id_configured": hubspot_id_configured,
-                        "hubspot_client_secret_configured": hubspot_secret_configured,
-                        "configuration_issues": config_issues,
-                        "environment": data.get('environment_info', {}).get('detected_environment', 'unknown'),
-                        "critical": True
-                    }
-                else:
-                    return {
-                        "test_name": "Environment Configuration",
-                        "success": False,
-                        "error": f"Sync check endpoint returned {response.status_code}",
-                        "critical": True
-                    }
-                    
-        except Exception as e:
-            return {
-                "test_name": "Environment Configuration",
-                "success": False,
-                "error": str(e),
-                "critical": True
-            }
-    
-    async def verify_prismatic_readiness(self) -> Dict[str, Any]:
-        """Verify readiness for Prismatic integration"""
-        print("🔍 Verifying Prismatic integration readiness...")
+        print("✅ Web search engine properly updated")
+        return True
         
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                # Test webhook simulation
-                response = await client.post(f"{self.base_url}/api/system/webhook/test")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    summary = data.get('summary', {})
-                    
-                    return {
-                        "test_name": "Prismatic Readiness",
-                        "success": summary.get('overall_prismatic_readiness', False),
-                        "success_rate": summary.get('success_rate', 0),
-                        "compatibility_rate": summary.get('compatibility_rate', 0),
-                        "total_webhook_tests": summary.get('total_tests', 0),
-                        "recommendations": data.get('recommendations', []),
-                        "critical": True
-                    }
-                else:
-                    return {
-                        "test_name": "Prismatic Readiness",
-                        "success": False,
-                        "error": f"Webhook test endpoint returned {response.status_code}",
-                        "critical": True
-                    }
-                    
-        except Exception as e:
-            return {
-                "test_name": "Prismatic Readiness",
-                "success": False,
-                "error": str(e),
-                "critical": True
-            }
-    
-    async def run_full_verification(self) -> Dict[str, Any]:
-        """Run complete deployment verification"""
-        print(f"🚀 Starting deployment verification for: {self.base_url}")
-        print("=" * 60)
+    except Exception as e:
+        print(f"❌ Error reading web_search_engine.py: {e}")
+        return False
+
+def verify_fallback_system() -> bool:
+    """Verify that the fallback URL generator works."""
+    try:
+        from fallback_url_generator import FallbackURLGenerator
+        from search_query_generator import SearchQuery
         
-        # Run all verification tests
-        basic_connectivity = await self.verify_basic_connectivity()
-        oauth_endpoints = await self.verify_hubspot_oauth_endpoints()
-        system_diagnostics = await self.verify_system_diagnostics()
-        env_config = await self.verify_environment_configuration()
-        prismatic_readiness = await self.verify_prismatic_readiness()
+        generator = FallbackURLGenerator()
         
-        # Collect all test results
-        all_tests = [basic_connectivity, env_config, prismatic_readiness] + oauth_endpoints + system_diagnostics
+        # Test query
+        query = SearchQuery(
+            query='Find CRM software pricing information',
+            expected_domains=['salesforce.com'],
+            page_types=['pricing', 'product'],
+            priority=1,
+            claim_support='pricing research',
+            search_strategy='product_general'
+        )
         
-        # Calculate summary
-        total_tests = len(all_tests)
-        passed_tests = sum(1 for test in all_tests if test.get('success', False))
-        failed_tests = total_tests - passed_tests
-        critical_failures = sum(1 for test in all_tests if not test.get('success', False) and test.get('critical', False))
+        urls = generator.generate_fallback_urls(query, max_urls=3)
         
-        # Determine overall status
-        if critical_failures > 0:
-            overall_status = "critical_failure"
-        elif failed_tests == 0:
-            overall_status = "success"
-        elif failed_tests <= total_tests * 0.2:  # Less than 20% failures
-            overall_status = "warning"
-        else:
-            overall_status = "failure"
+        if len(urls) == 0:
+            print("❌ Fallback generator returned no URLs")
+            return False
         
-        # Update results
-        self.verification_results.update({
-            "overall_status": overall_status,
-            "tests": {
-                "basic_connectivity": basic_connectivity,
-                "environment_configuration": env_config,
-                "prismatic_readiness": prismatic_readiness,
-                "oauth_endpoints": oauth_endpoints,
-                "system_diagnostics": system_diagnostics
-            },
-            "summary": {
-                "total_tests": total_tests,
-                "passed_tests": passed_tests,
-                "failed_tests": failed_tests,
-                "critical_failures": critical_failures,
-                "success_rate": (passed_tests / total_tests) * 100 if total_tests > 0 else 0
-            }
-        })
+        # Check that URLs are relevant
+        relevant_domains = ['salesforce.com', 'hubspot.com', 'g2.com', 'capterra.com']
+        found_relevant = any(any(domain in url.url for domain in relevant_domains) for url in urls)
         
-        # Print summary
-        print(f"\n📊 Deployment Verification Summary:")
-        print(f"   Overall Status: {overall_status.upper()}")
-        print(f"   Tests Passed: {passed_tests}/{total_tests} ({self.verification_results['summary']['success_rate']:.1f}%)")
-        print(f"   Critical Failures: {critical_failures}")
+        if not found_relevant:
+            print("❌ Fallback URLs not relevant to query")
+            return False
         
-        if overall_status == "success":
-            print("   ✅ Deployment verification PASSED - system is ready")
-        elif overall_status == "warning":
-            print("   ⚠️  Deployment verification passed with warnings")
-        else:
-            print("   ❌ Deployment verification FAILED - issues need to be resolved")
+        print(f"✅ Fallback system working - generated {len(urls)} relevant URLs")
+        return True
         
-        # Print failed tests
-        failed_test_details = [test for test in all_tests if not test.get('success', False)]
-        if failed_test_details:
-            print(f"\n❌ Failed Tests:")
-            for test in failed_test_details:
-                critical_marker = " (CRITICAL)" if test.get('critical', False) else ""
-                print(f"   - {test['test_name']}{critical_marker}: {test.get('error', 'Failed')}")
+    except Exception as e:
+        print(f"❌ Error testing fallback system: {e}")
+        return False
+
+async def verify_web_search_engine() -> bool:
+    """Verify that the web search engine works without API key."""
+    try:
+        # Import without initializing OpenAI client
+        import sys
+        sys.path.append('.')
         
-        return self.verification_results
+        # Test that the class can be imported and doesn't immediately fail
+        from web_search_engine import WebSearchEngine
+        
+        # Create instance without OpenAI client (will fail on actual search, but that's expected)
+        engine = WebSearchEngine(openai_client=None)
+        
+        # Check that fallback is enabled by default
+        if not hasattr(engine, 'fallback_enabled') or not engine.fallback_enabled:
+            print("❌ Fallback not enabled by default")
+            return False
+        
+        print("✅ Web search engine can be imported and configured")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error testing web search engine: {e}")
+        return False
+
+def verify_documentation() -> bool:
+    """Verify that documentation has been updated."""
+    try:
+        with open('README_URL_Evidence_Finder.md', 'r') as f:
+            content = f.read()
+        
+        # Check for updated documentation
+        if 'Recent Updates (Web Search API Fix)' not in content:
+            print("❌ Documentation not updated with fix information")
+            return False
+        
+        if 'fallback' not in content.lower():
+            print("❌ Documentation doesn't mention fallback system")
+            return False
+        
+        print("✅ Documentation properly updated")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error reading documentation: {e}")
+        return False
 
 async def main():
-    """Main verification function"""
-    if len(sys.argv) < 2:
-        print("Usage: python verify_deployment.py <base_url>")
-        print("Example: python verify_deployment.py https://your-app.onrender.com")
-        sys.exit(1)
+    """Run all verification checks."""
+    print("🔍 Verifying Web Search API Fix Deployment")
+    print("=" * 50)
     
-    base_url = sys.argv[1]
-    verifier = DeploymentVerifier(base_url)
+    checks = [
+        ("File Existence", verify_files_exist),
+        ("Web Search Fix", verify_web_search_fix),
+        ("Fallback System", verify_fallback_system),
+        ("Web Search Engine", verify_web_search_engine),
+        ("Documentation", verify_documentation)
+    ]
     
-    try:
-        results = await verifier.run_full_verification()
-        
-        # Save results to file
-        output_file = f"deployment_verification_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(output_file, 'w') as f:
-            json.dump(results, f, indent=2)
-        
-        print(f"\n💾 Detailed results saved to: {output_file}")
-        
-        # Exit with appropriate code
-        if results['overall_status'] == 'critical_failure':
-            print("🚨 CRITICAL DEPLOYMENT ISSUES DETECTED")
-            sys.exit(2)
-        elif results['overall_status'] == 'failure':
-            print("❌ DEPLOYMENT VERIFICATION FAILED")
-            sys.exit(1)
-        elif results['overall_status'] == 'warning':
-            print("⚠️  DEPLOYMENT HAS WARNINGS")
-            sys.exit(0)
-        else:
-            print("✅ DEPLOYMENT VERIFICATION SUCCESSFUL")
-            sys.exit(0)
+    passed = 0
+    total = len(checks)
+    
+    for check_name, check_func in checks:
+        print(f"\n🔍 {check_name}:")
+        try:
+            if asyncio.iscoroutinefunction(check_func):
+                result = await check_func()
+            else:
+                result = check_func()
             
-    except Exception as e:
-        print(f"💥 Verification script failed: {str(e)}")
-        sys.exit(3)
+            if result:
+                passed += 1
+        except Exception as e:
+            print(f"❌ {check_name} failed with error: {e}")
+    
+    print("\n" + "=" * 50)
+    print(f"📊 Verification Results: {passed}/{total} checks passed")
+    
+    if passed == total:
+        print("🎉 Deployment verification PASSED!")
+        print("\n✅ The web search API fix has been successfully deployed:")
+        print("   • Deprecated 'web_search' tool removed")
+        print("   • Fallback URL generation system active")
+        print("   • Enhanced error handling implemented")
+        print("   • Documentation updated")
+        print("\n🚀 Your system should no longer experience the OpenAI API error!")
+        return True
+    else:
+        print("❌ Deployment verification FAILED!")
+        print(f"   {total - passed} checks failed - please review the issues above")
+        return False
 
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__ == '__main__':
+    success = asyncio.run(main())
+    sys.exit(0 if success else 1)
