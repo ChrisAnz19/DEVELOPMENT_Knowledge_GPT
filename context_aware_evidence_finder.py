@@ -154,6 +154,9 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         Returns:
             List of enhanced candidates with contextually relevant evidence URLs
         """
+        import time
+        batch_start_time = time.time()
+        
         if not self.search_context:
             print("[Context-Aware Evidence] Warning: No search context set. Using generic evidence finding.")
             try:
@@ -165,11 +168,20 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         print(f"[Context-Aware Evidence] Processing {len(candidates)} candidates with context: {self.search_context.industry}")
         
         enhanced_candidates = []
+        successful_count = 0
+        failed_count = 0
         
         for candidate in candidates:
             try:
                 enhanced_candidate = await self._process_candidate_with_context(candidate)
                 enhanced_candidates.append(enhanced_candidate)
+                
+                # Track success/failure
+                if enhanced_candidate.get('evidence_status') in ['completed', 'completed_with_fallback']:
+                    successful_count += 1
+                else:
+                    failed_count += 1
+                    
             except Exception as e:
                 print(f"[Context-Aware Evidence] Error processing candidate {candidate.get('name', 'Unknown')}: {e}")
                 # Ensure candidate processing continues even when evidence finding fails
@@ -177,12 +189,38 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 candidate_copy['evidence_urls'] = []
                 candidate_copy['evidence_summary'] = f"Evidence finding failed: {str(e)}"
                 candidate_copy['evidence_confidence'] = 0.0
+                candidate_copy['evidence_status'] = 'failed_processing'
+                candidate_copy['evidence_error_message'] = str(e)
+                candidate_copy['evidence_completion_timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S')
                 enhanced_candidates.append(candidate_copy)
+                failed_count += 1
+        
+        # Add batch processing summary
+        batch_processing_time = time.time() - batch_start_time
+        print(f"[Context-Aware Evidence] Batch completed in {batch_processing_time:.2f}s: {successful_count} successful, {failed_count} failed")
+        
+        # Add batch metadata to first candidate (for frontend reference)
+        if enhanced_candidates:
+            enhanced_candidates[0]['batch_evidence_summary'] = {
+                'total_candidates': len(candidates),
+                'successful_count': successful_count,
+                'failed_count': failed_count,
+                'batch_processing_time': round(batch_processing_time, 2),
+                'batch_completion_timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+            }
         
         return enhanced_candidates
     
     async def _process_candidate_with_context(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
         """Process a single candidate with context awareness."""
+        import time
+        
+        # Track processing start time for status reporting
+        self._processing_start_time = time.time()
+        
+        # Add initial processing status
+        candidate['evidence_status'] = 'processing'
+        candidate['evidence_processing_start'] = time.strftime('%Y-%m-%d %H:%M:%S')
         
         # Generate context-aware search queries
         search_queries = self._generate_contextual_queries(candidate)
@@ -204,14 +242,24 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
             evidence_urls = self._generate_contextual_fallback_urls()
             print(f"[Context-Aware Evidence] Using {len(evidence_urls)} fallback URLs due to initialization error")
             
+            # Add error status information
+            import time
+            processing_time = time.time() - getattr(self, '_processing_start_time', time.time())
+            
             if evidence_urls:
                 candidate['evidence_urls'] = [self._format_evidence_url(url) for url in evidence_urls]
-                candidate['evidence_summary'] = f"Found {len(evidence_urls)} fallback evidence URLs"
+                candidate['evidence_summary'] = f"Found {len(evidence_urls)} fallback evidence URLs (initialization error)"
                 candidate['evidence_confidence'] = 0.3
+                candidate['evidence_status'] = 'completed_with_fallback'
             else:
                 candidate['evidence_urls'] = []
                 candidate['evidence_summary'] = "No evidence URLs available due to initialization error"
                 candidate['evidence_confidence'] = 0.0
+                candidate['evidence_status'] = 'failed_initialization'
+            
+            candidate['evidence_processing_time'] = round(processing_time, 2)
+            candidate['evidence_completion_timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S')
+            candidate['evidence_error_message'] = str(e)
             
             return candidate
         search_results = []
@@ -247,22 +295,47 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 print(f"[Context-Aware Evidence] Error generating fallback URLs: {e}")
                 evidence_urls = []
         
-        # Create enhanced candidate response
+        # Create enhanced candidate response with comprehensive status information
+        import time
+        processing_end_time = time.time()
+        processing_time = processing_end_time - getattr(self, '_processing_start_time', processing_end_time)
+        
         if evidence_urls:
             candidate['evidence_urls'] = [self._format_evidence_url(url) for url in evidence_urls]
             candidate['evidence_summary'] = f"Found {len(evidence_urls)} contextually relevant evidence URLs"
             candidate['evidence_confidence'] = min(0.95, 0.6 + (len(evidence_urls) * 0.1))
+            candidate['evidence_status'] = 'completed'
+            candidate['evidence_processing_time'] = round(processing_time, 2)
+            candidate['evidence_completion_timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S')
             print(f"[Context-Aware Evidence] Found {len(evidence_urls)} relevant URLs for {candidate.get('name', 'Unknown')}")
         else:
             candidate['evidence_urls'] = []
             candidate['evidence_summary'] = "No contextually relevant evidence URLs found"
             candidate['evidence_confidence'] = 0.0
+            candidate['evidence_status'] = 'completed_no_results'
+            candidate['evidence_processing_time'] = round(processing_time, 2)
+            candidate['evidence_completion_timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S')
             print(f"[Context-Aware Evidence] No relevant URLs found for {candidate.get('name', 'Unknown')}")
         
         return candidate
     
     def _generate_contextual_queries(self, candidate: Dict[str, Any]) -> List[str]:
-        """Generate search queries based on context and candidate info."""
+        """Generate highly specific search queries based on context and candidate info."""
+        from specific_search_query_generator import SpecificSearchQueryGenerator
+        
+        # Use enhanced query generator for specificity
+        specific_generator = SpecificSearchQueryGenerator()
+        
+        # Create search prompt from context
+        search_prompt = self._build_search_prompt()
+        
+        # Generate location-specific and context-aware queries
+        specific_queries = specific_generator.generate_location_specific_queries(search_prompt, candidate)
+        
+        if specific_queries:
+            return specific_queries
+        
+        # Fallback to original logic if specific generator doesn't produce results
         queries = []
         
         name = candidate.get('name', '')
@@ -273,32 +346,63 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         behavioral_data = candidate.get('behavioral_data', {})
         insight = behavioral_data.get('behavioral_insight', '') if isinstance(behavioral_data, dict) else ''
         
-        # Base query with context
+        # Enhanced specific queries instead of generic ones
         if self.search_context.industry and self.search_context.activity_type:
-            base_query = f"{self.search_context.industry} {self.search_context.activity_type}"
+            # More specific industry + activity queries
+            base_query = f"{self.search_context.industry} {self.search_context.activity_type} 2024"
             queries.append(base_query)
+            
+            # Add location context if available
+            if company and any(location in company.lower() for location in ['greenwich', 'new york', 'boston', 'chicago']):
+                location_query = f"{self.search_context.industry} {company} {self.search_context.activity_type}"
+                queries.append(location_query)
         
-        # Role-specific query
-        if self.search_context.role_type:
-            role_query = f"{self.search_context.role_type} best practices"
-            queries.append(role_query)
+        # Person-specific queries
+        if name and company:
+            person_queries = [
+                f'"{name}" "{company}" LinkedIn',
+                f'"{name}" {company} executive profile',
+                f'"{name}" {company} biography'
+            ]
+            queries.extend(person_queries)
         
-        # Industry trends query
+        # Company-specific queries
+        if company:
+            company_queries = [
+                f'"{company}" executive team',
+                f'"{company}" leadership',
+                f'"{company}" press releases'
+            ]
+            queries.extend(company_queries)
+        
+        # Industry-specific queries with current context
         if self.search_context.industry:
-            trends_query = f"{self.search_context.industry} industry trends 2024"
-            queries.append(trends_query)
+            industry_queries = [
+                f"{self.search_context.industry} industry trends 2024",
+                f"{self.search_context.industry} market analysis current",
+                f"{self.search_context.industry} companies news"
+            ]
+            queries.extend(industry_queries)
         
-        # Activity-specific query
-        if self.search_context.activity_type and self.search_context.industry:
-            activity_query = f"companies {self.search_context.activity_type} {self.search_context.industry}"
-            queries.append(activity_query)
+        return queries[:5]  # Limit to 5 most specific queries
+    
+    def _build_search_prompt(self) -> str:
+        """Build search prompt from current context."""
+        prompt_parts = []
         
-        # Key terms query
+        if self.search_context.industry:
+            prompt_parts.append(self.search_context.industry)
+        
+        if self.search_context.activity_type:
+            prompt_parts.append(self.search_context.activity_type)
+        
+        if self.search_context.role_type:
+            prompt_parts.append(self.search_context.role_type)
+        
         if self.search_context.key_terms:
-            key_terms_query = " ".join(self.search_context.key_terms[:3])
-            queries.append(key_terms_query)
+            prompt_parts.extend(self.search_context.key_terms[:3])
         
-        return queries[:5]  # Limit to 5 queries
+        return " ".join(prompt_parts) if prompt_parts else "business search"
     
     async def _execute_searches(self, web_search, search_queries):
         """Execute search queries and return results."""
@@ -329,24 +433,60 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         return search_results
     
     async def _extract_and_validate_urls(self, search_results: List) -> List[str]:
-        """Extract URLs from search results (no validation needed - real search results are reliable)."""
-        urls = []
+        """Extract URLs from search results with quality filtering for specificity."""
+        from specific_search_query_generator import SpecificSearchQueryGenerator
+        
+        url_candidates = []
+        quality_generator = SpecificSearchQueryGenerator()
         
         for result in search_results:
             # Process URLs from real search results
             if hasattr(result, 'urls') and result.urls:
-                for url_candidate in result.urls[:5]:  # Get more URLs since they're real
+                for url_candidate in result.urls:
                     if hasattr(url_candidate, 'url') and url_candidate.url:
-                        urls.append(url_candidate.url)
+                        # Create result dict for quality scoring
+                        result_dict = {
+                            'url': url_candidate.url,
+                            'title': getattr(url_candidate, 'title', ''),
+                            'snippet': getattr(url_candidate, 'snippet', '')
+                        }
+                        
+                        # Score result specificity
+                        specificity_score = quality_generator.score_result_specificity(result_dict)
+                        
+                        url_candidates.append({
+                            'url': url_candidate.url,
+                            'title': result_dict['title'],
+                            'snippet': result_dict['snippet'],
+                            'specificity_score': specificity_score
+                        })
         
-        # Remove duplicates and return top results
-        unique_urls = list(dict.fromkeys(urls))
+        # Filter out low-quality generic results
+        high_quality_urls = [
+            candidate for candidate in url_candidates 
+            if candidate['specificity_score'] >= 0.4  # Minimum quality threshold
+        ]
+        
+        # Sort by specificity score (highest first)
+        high_quality_urls.sort(key=lambda x: x['specificity_score'], reverse=True)
+        
+        # Extract just the URLs
+        filtered_urls = [candidate['url'] for candidate in high_quality_urls]
+        
+        # Remove duplicates while preserving order
+        unique_urls = list(dict.fromkeys(filtered_urls))
         
         if unique_urls:
-            print(f"[Context-Aware Evidence] Found {len(unique_urls[:5])} real search URLs")
-            return unique_urls[:5]  # Return more URLs since they're from real search
-        
-        return []
+            print(f"[Context-Aware Evidence] Found {len(unique_urls[:5])} high-quality specific URLs")
+            if high_quality_urls:
+                avg_score = sum(c['specificity_score'] for c in high_quality_urls[:5]) / min(5, len(high_quality_urls))
+                print(f"[Context-Aware Evidence] Average specificity score: {avg_score:.2f}")
+            return unique_urls[:5]
+        else:
+            # If no high-quality results, return original results but log the issue
+            print(f"[Context-Aware Evidence] No high-quality specific results found, using all results")
+            fallback_urls = [candidate['url'] for candidate in url_candidates]
+            return list(dict.fromkeys(fallback_urls))[:5]
     
     def _format_evidence_url(self, url: str) -> Dict[str, Any]:
         """Format URL for frontend consumption."""
