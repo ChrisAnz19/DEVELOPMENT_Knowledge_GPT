@@ -326,14 +326,20 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         # Use enhanced query generator for specificity
         specific_generator = SpecificSearchQueryGenerator()
         
-        # Create search prompt from context
-        search_prompt = self._build_search_prompt()
+        # CRITICAL FIX: Use the original search prompt instead of reconstructed one
+        # The original prompt maintains important context and word order
+        search_prompt = self.search_context.search_prompt if self.search_context else self._build_search_prompt()
+        
+        print(f"[Context-Aware Evidence] Using search prompt for query generation: {search_prompt}")
         
         # Generate location-specific and context-aware queries
         specific_queries = specific_generator.generate_location_specific_queries(search_prompt, candidate)
         
         if specific_queries:
+            print(f"[Context-Aware Evidence] Generated {len(specific_queries)} specific queries: {specific_queries}")
             return specific_queries
+        else:
+            print(f"[Context-Aware Evidence] No specific queries generated, using fallback logic")
         
         # Fallback to original logic if specific generator doesn't produce results
         queries = []
@@ -346,8 +352,50 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         behavioral_data = candidate.get('behavioral_data', {})
         insight = behavioral_data.get('behavioral_insight', '') if isinstance(behavioral_data, dict) else ''
         
-        # Enhanced specific queries instead of generic ones
-        if self.search_context.industry and self.search_context.activity_type:
+        # SPECIAL HANDLING FOR REAL ESTATE QUERIES
+        if self.search_context.industry == 'real_estate':
+            print(f"[Context-Aware Evidence] Detected real estate query, generating location-specific queries")
+            
+            # Extract location from original search prompt
+            import re
+            original_prompt = self.search_context.search_prompt
+            
+            # Look for location patterns in the original prompt
+            location_patterns = [
+                r'\b(Greenwich|New York|Los Angeles|Chicago|Boston|Miami|Seattle|Austin|Denver)\b',
+                r'\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b',  # "in CityName"
+                r'\b([A-Z][a-z]+)\s+(?:Connecticut|CT|New York|NY|California|CA)\b'  # "City State"
+            ]
+            
+            location = None
+            for pattern in location_patterns:
+                match = re.search(pattern, original_prompt, re.IGNORECASE)
+                if match:
+                    location = match.group(1) if match.lastindex else match.group(0)
+                    break
+            
+            if location:
+                # Generate real estate specific queries
+                real_estate_queries = [
+                    f"{location} homes for sale",
+                    f"{location} real estate listings",
+                    f"{location} luxury homes market",
+                    f"{location} property market trends",
+                    f"buy house {location}",
+                    f"{location} real estate agents"
+                ]
+                queries.extend(real_estate_queries)
+                print(f"[Context-Aware Evidence] Generated {len(real_estate_queries)} real estate queries for {location}")
+            else:
+                # Generic real estate queries if no location found
+                queries.extend([
+                    "luxury home buying trends",
+                    "executive home purchasing patterns",
+                    "high-end real estate market"
+                ])
+        
+        # Enhanced specific queries for other industries
+        elif self.search_context.industry and self.search_context.activity_type:
             # More specific industry + activity queries
             base_query = f"{self.search_context.industry} {self.search_context.activity_type} 2024"
             queries.append(base_query)
