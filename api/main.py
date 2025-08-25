@@ -46,15 +46,22 @@ from smart_prompt_enhancement import enhance_prompt
 from simple_estimation import estimate_people_count
 from creepy_detector import detect_specific_person_search, extract_user_first_name_from_context
 
-# Import enhanced URL evidence finder with diversity support
+# Import context-aware evidence finder with diversity support
 try:
-    from enhanced_url_evidence_finder import EnhancedURLEvidenceFinder
+    from context_aware_evidence_finder import ContextAwareEvidenceFinder
     from enhanced_data_models import DiversityConfig
     EVIDENCE_INTEGRATION_AVAILABLE = True
-    print("[API] Enhanced URL Evidence Finder loaded successfully")
+    print("[API] Context-Aware Evidence Finder loaded successfully")
 except ImportError as e:
-    EVIDENCE_INTEGRATION_AVAILABLE = False
-    print(f"[API] Enhanced URL Evidence Finder not available: {e}")
+    # Fallback to enhanced evidence finder
+    try:
+        from enhanced_url_evidence_finder import EnhancedURLEvidenceFinder
+        from enhanced_data_models import DiversityConfig
+        EVIDENCE_INTEGRATION_AVAILABLE = True
+        print("[API] Enhanced URL Evidence Finder loaded as fallback")
+    except ImportError as e2:
+        EVIDENCE_INTEGRATION_AVAILABLE = False
+        print(f"[API] No evidence finder available: {e}, {e2}")
 
 # Cache for public figure checks to avoid repeated requests
 _public_figure_cache: Dict[str, bool] = {}
@@ -1293,18 +1300,38 @@ async def process_search(request_id: str, prompt: str, max_candidates: int = 3, 
                 
                 # Add timeout protection to prevent hanging
                 async def enhance_with_timeout():
-                    # Initialize enhanced evidence finder with diversity enabled
-                    evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
+                    # Initialize context-aware evidence finder with diversity enabled
+                    try:
+                        evidence_finder = ContextAwareEvidenceFinder(enable_diversity=True)
+                        
+                        # Set search context from the original prompt
+                        evidence_finder.set_search_context(prompt)
+                        
+                        # Configure for maximum diversity to avoid CRM URLs for non-CRM behavior
+                        evidence_finder.configure_diversity(
+                            ensure_uniqueness=True,
+                            max_same_domain=1,
+                            prioritize_alternatives=True,
+                            diversity_weight=0.4
+                        )
+                        
+                        print(f"[Context-Aware Evidence] Using context-aware evidence finder with prompt: {prompt[:100]}...")
+                        
+                    except NameError:
+                        # Fallback to enhanced evidence finder if context-aware not available
+                        from enhanced_url_evidence_finder import EnhancedURLEvidenceFinder
+                        evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
+                        
+                        evidence_finder.configure_diversity(
+                            ensure_uniqueness=True,
+                            max_same_domain=1,
+                            prioritize_alternatives=True,
+                            diversity_weight=0.4
+                        )
+                        
+                        print(f"[Evidence Enhancement] Using fallback enhanced evidence finder")
                     
-                    # Configure for maximum diversity to avoid CRM URLs for non-CRM behavior
-                    evidence_finder.configure_diversity(
-                        ensure_uniqueness=True,
-                        max_same_domain=1,
-                        prioritize_alternatives=True,
-                        diversity_weight=0.4
-                    )
-                    
-                    # Process candidates with diversity-aware evidence finding
+                    # Process candidates with evidence finding
                     return await evidence_finder.process_candidates_batch(candidates)
                 
                 # Execute with timeout to prevent hanging
@@ -1431,14 +1458,23 @@ async def get_evidence_stats():
             }
         
         # Create a temporary evidence finder to get stats
-        evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
-        stats = evidence_finder.get_enhanced_statistics()
+        try:
+            evidence_finder = ContextAwareEvidenceFinder(enable_diversity=True)
+            stats = evidence_finder.get_enhanced_statistics()
+            message = "Context-Aware Evidence Finder with diversity support is active"
+        except NameError:
+            # Fallback to enhanced evidence finder
+            from enhanced_url_evidence_finder import EnhancedURLEvidenceFinder
+            evidence_finder = EnhancedURLEvidenceFinder(enable_diversity=True)
+            stats = evidence_finder.get_enhanced_statistics()
+            message = "Enhanced URL Evidence Finder with diversity support is active (fallback)"
         
         return {
             "enabled": True,
             "diversity_enabled": True,
+            "context_aware": True,
             "statistics": stats,
-            "message": "Enhanced URL Evidence Finder with diversity support is active"
+            "message": message
         }
         
     except Exception as e:

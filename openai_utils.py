@@ -203,7 +203,8 @@ def call_openai_for_json(
     json_prompt = f"{prompt}\n\nRespond with valid JSON only. No additional text or explanation."
     if expected_keys:
         json_prompt += f"\nRequired JSON keys: {', '.join(expected_keys)}"
-        json_prompt += f"\nExample format: {{{', '.join([f'\\"{key}\\": \\\"value\\\"' for key in expected_keys])}}}"
+        example_format = ', '.join([f'"{key}": "value"' for key in expected_keys])
+        json_prompt += f"\nExample format: {{{example_format}}}"
     
     response = call_openai_with_retry(json_prompt, **kwargs)
     if response:
