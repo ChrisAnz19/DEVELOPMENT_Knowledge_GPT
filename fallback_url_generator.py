@@ -195,6 +195,23 @@ class FallbackURLGenerator:
     
     def _pattern_matches_query(self, pattern: URLPattern, query: str, key_terms: List[str]) -> bool:
         """Check if a URL pattern matches the search query."""
+        # First check for domain-specific indicators
+        real_estate_indicators = ["real estate", "property", "house", "home", "mansion", "luxury", "greenwich", "westchester", "residential"]
+        crm_indicators = ["crm", "customer relationship", "sales software", "lead management"]
+        
+        # If query contains real estate indicators, only match real estate patterns
+        if any(indicator in query for indicator in real_estate_indicators):
+            if pattern.page_type in ["product"] and any(domain in ["realtor.com", "zillow.com", "redfin.com", "trulia.com"] for domain in pattern.domains):
+                return True
+            return False
+        
+        # If query contains CRM indicators, only match CRM patterns  
+        if any(indicator in query for indicator in crm_indicators):
+            if "crm" in pattern.keywords:
+                return True
+            return False
+        
+        # Default matching logic for other cases
         # Check if any pattern keywords appear in query or key terms
         for keyword in pattern.keywords:
             if keyword in query or keyword in key_terms:

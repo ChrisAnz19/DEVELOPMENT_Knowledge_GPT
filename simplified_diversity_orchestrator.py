@@ -180,9 +180,11 @@ class SimplifiedDiversityOrchestrator:
         evidence_urls = []
         
         if successful_results:
-            for claim in selected_claims:
+            print(f"[Diversity Orchestrator] Processing {len(successful_results)} successful results for {len(selected_claims)} claims")
+            for i, claim in enumerate(selected_claims):
                 # Find search results for this claim
                 claim_results = self._find_results_for_claim(successful_results, claim)
+                print(f"[Diversity Orchestrator] Claim {i+1}: Found {len(claim_results)} matching results")
                 
                 if claim_results:
                     # Validate with uniqueness constraints
@@ -192,7 +194,10 @@ class SimplifiedDiversityOrchestrator:
                         candidate_id=candidate_id,
                         existing_evidence=evidence_urls
                     )
+                    print(f"[Diversity Orchestrator] Claim {i+1}: Validation returned {len(claim_evidence)} evidence URLs")
                     evidence_urls.extend(claim_evidence)
+                else:
+                    print(f"[Diversity Orchestrator] Claim {i+1}: No matching results found")
             
             # Apply final diversity filters
             final_evidence = self._apply_final_diversity_filters(evidence_urls)
@@ -254,15 +259,12 @@ class SimplifiedDiversityOrchestrator:
     
     def _find_results_for_claim(self, search_results: List, claim: SearchableClaim) -> List:
         """Find search results relevant to a specific claim."""
+        # Since we're processing one claim at a time and generating queries specifically for that claim,
+        # all successful search results should be considered relevant to the claim
         relevant_results = []
         
         for result in search_results:
-            # Check if result query matches claim terms
-            query_lower = result.query.query.lower()
-            claim_terms = [term.lower() for term in claim.search_terms]
-            
-            # If any claim term appears in the query, consider it relevant
-            if any(term in query_lower for term in claim_terms):
+            if result.success:
                 relevant_results.append(result)
         
         return relevant_results

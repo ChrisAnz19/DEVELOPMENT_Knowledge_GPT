@@ -107,25 +107,39 @@ class UniquenessAwareEvidenceValidator(EvidenceValidator):
         all_candidates = []
         
         # Collect all URL candidates from search results
+        print(f"[Uniqueness Validator] Processing {len(results)} search results")
         for result in results:
             if result.success:
+                print(f"[Uniqueness Validator] Processing successful result with {len(result.urls)} URLs")
                 for url_candidate in result.urls:
+                    print(f"[Uniqueness Validator] Checking URL: {url_candidate.url}")
+                    
                     # Skip if URL already used globally
                     if not self.global_registry.is_url_available(url_candidate.url):
+                        print(f"[Uniqueness Validator] Skipped (already used): {url_candidate.url}")
                         continue
                     
                     # Skip if domain already overused
                     domain = self._extract_domain(url_candidate.url)
                     if self.global_registry.is_domain_overused(domain, threshold=3):
+                        print(f"[Uniqueness Validator] Skipped (domain overused): {domain}")
                         continue
                     
                     # Validate URL quality (from parent class)
                     if self.validate_url_quality(url_candidate):
+                        print(f"[Uniqueness Validator] URL passed quality check: {url_candidate.url}")
                         enhanced_url = self._create_enhanced_evidence_url(
                             url_candidate, claim, result, existing_evidence
                         )
                         if enhanced_url:
+                            print(f"[Uniqueness Validator] Created enhanced URL: {enhanced_url.url}")
                             all_candidates.append(enhanced_url)
+                        else:
+                            print(f"[Uniqueness Validator] Failed to create enhanced URL for: {url_candidate.url}")
+                    else:
+                        print(f"[Uniqueness Validator] URL failed quality check: {url_candidate.url}")
+            else:
+                print(f"[Uniqueness Validator] Skipped unsuccessful result")
         
         # Remove duplicates and apply uniqueness constraints
         unique_candidates = self._enforce_uniqueness_constraints(all_candidates)
@@ -340,7 +354,9 @@ class UniquenessAwareEvidenceValidator(EvidenceValidator):
         
         for candidate in candidates:
             # Base quality thresholds (from parent class)
-            if candidate.relevance_score < 0.25:  # Slightly lower for diversity
+            # Use lower threshold if high diversity score compensates for low relevance
+            relevance_threshold = 0.10 if candidate.diversity_score > 0.8 else 0.25
+            if candidate.relevance_score < relevance_threshold:
                 continue
             
             if candidate.page_quality_score < 0.35:  # Slightly lower for diversity
