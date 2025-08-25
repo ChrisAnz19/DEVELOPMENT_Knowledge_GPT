@@ -187,8 +187,8 @@ class SimplifiedDiversityOrchestrator:
                 print(f"[Diversity Orchestrator] Claim {i+1}: Found {len(claim_results)} matching results")
                 
                 if claim_results:
-                    # Validate with uniqueness constraints
-                    claim_evidence = self.uniqueness_validator.validate_with_uniqueness(
+                    # Validate with uniqueness constraints (now includes URL accessibility check)
+                    claim_evidence = await self.uniqueness_validator.validate_with_uniqueness(
                         results=claim_results,
                         claim=claim,
                         candidate_id=candidate_id,

@@ -7,6 +7,7 @@ checking and diversity scoring capabilities.
 """
 
 import time
+import asyncio
 from typing import List, Dict, Set, Optional, Tuple
 from dataclasses import dataclass
 
@@ -17,6 +18,7 @@ from global_url_registry import GlobalURLRegistry, URLAssignment
 from alternative_source_manager import AlternativeSourceManager, SourceTier
 from explanation_analyzer import SearchableClaim
 from web_search_engine import SearchResult, URLCandidate
+from url_validator import URLValidator, validate_evidence_urls
 
 
 @dataclass
@@ -84,7 +86,7 @@ class UniquenessAwareEvidenceValidator(EvidenceValidator):
             SourceTier.MAJOR: 0.3
         }
     
-    def validate_with_uniqueness(
+    async def validate_with_uniqueness(
         self,
         results: List[SearchResult],
         claim: SearchableClaim,
@@ -141,8 +143,13 @@ class UniquenessAwareEvidenceValidator(EvidenceValidator):
             else:
                 print(f"[Uniqueness Validator] Skipped unsuccessful result")
         
+        # Validate URLs are accessible (filter out 404s, timeouts, etc.)
+        print(f"[Uniqueness Validator] Validating {len(all_candidates)} URLs for accessibility...")
+        validated_candidates = await self._validate_url_accessibility(all_candidates)
+        print(f"[Uniqueness Validator] {len(validated_candidates)}/{len(all_candidates)} URLs passed accessibility check")
+        
         # Remove duplicates and apply uniqueness constraints
-        unique_candidates = self._enforce_uniqueness_constraints(all_candidates)
+        unique_candidates = self._enforce_uniqueness_constraints(validated_candidates)
         
         # Calculate diversity scores
         scored_candidates = self._calculate_diversity_scores(unique_candidates, existing_evidence)
@@ -586,6 +593,45 @@ class UniquenessAwareEvidenceValidator(EvidenceValidator):
                 return url.lower()
             except:
                 return url.lower()
+    
+    async def _validate_url_accessibility(self, candidates: List[EnhancedEvidenceURL]) -> List[EnhancedEvidenceURL]:
+        """
+        Validate that URLs are accessible and filter out broken ones.
+        
+        Args:
+            candidates: List of evidence URL candidates
+            
+        Returns:
+            List of candidates with only accessible URLs
+        """
+        if not candidates:
+            return []
+        
+        # Extract URLs for validation
+        urls_to_validate = [candidate.url for candidate in candidates]
+        
+        # Validate URLs using the URL validator
+        async with URLValidator(timeout=3.0, max_concurrent=5) as validator:
+            validation_results = await validator.validate_urls(urls_to_validate)
+        
+        # Filter candidates based on validation results
+        valid_candidates = []
+        invalid_count = 0
+        
+        for candidate in candidates:
+            # Find validation result for this candidate's URL
+            validation_result = next((r for r in validation_results if r.url == candidate.url), None)
+            
+            if validation_result and validation_result.is_valid:
+                valid_candidates.append(candidate)
+            else:
+                invalid_count += 1
+                error_msg = validation_result.error_message if validation_result else "No validation result"
+                print(f"[Uniqueness Validator] Filtered out inaccessible URL: {candidate.url} ({error_msg})")
+        
+        print(f"[Uniqueness Validator] URL accessibility check: {len(valid_candidates)}/{len(candidates)} URLs accessible ({invalid_count} filtered out)")
+        
+        return valid_candidates
 
 
 def test_uniqueness_aware_evidence_validator():
