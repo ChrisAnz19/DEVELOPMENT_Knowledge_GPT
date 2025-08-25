@@ -42,7 +42,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Fortune 500'],
                 'industries': ['startup']
             },
-            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity']
+            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity'],
+            priority=8,
+            confidence=0.9
         )
         
         # Calculate relevance score
@@ -76,7 +78,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Fortune 500', 'Salesforce'],
                 'industries': ['startup']
             },
-            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity']
+            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity'],
+            priority=8,
+            confidence=0.9
         )
         
         # Calculate relevance score
@@ -110,7 +114,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Fortune 500'],
                 'industries': ['startup']
             },
-            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity']
+            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity'],
+            priority=8,
+            confidence=0.9
         )
         
         # Calculate relevance score
@@ -176,7 +182,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Fortune 500'],
                 'industries': ['startup']
             },
-            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity']
+            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity'],
+            priority=8,
+            confidence=0.9
         )
         
         for test_case in test_cases:
@@ -215,7 +223,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Salesforce'],
                 'industries': ['CRM', 'SaaS']
             },
-            search_terms=['CMO', 'Salesforce', 'opportunities']
+            search_terms=['CMO', 'Salesforce', 'opportunities'],
+            priority=8,
+            confidence=0.9
         )
         
         # Calculate relevance score
@@ -278,7 +288,9 @@ class TestImprovedRelevanceIntegration(unittest.TestCase):
                 'companies': ['Fortune 500'],
                 'industries': ['startup']
             },
-            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity']
+            search_terms=['CMO', 'Fortune 500', 'startup', 'leave', 'opportunity'],
+            priority=8,
+            confidence=0.9
         )
         
         # Calculate scores

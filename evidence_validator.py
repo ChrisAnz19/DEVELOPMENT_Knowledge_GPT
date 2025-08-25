@@ -60,7 +60,6 @@ class EvidenceValidator:
             'medium_quality': ['blog', 'article', 'news', 'review'],
             'low_quality': ['forum', 'discussion', 'comment', 'social']
         }
-    def __init__(self):
         # Track used URLs globally to ensure uniqueness across candidates
         self.used_urls = set()
         self.used_domains_per_candidate = {}

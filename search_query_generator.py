@@ -416,47 +416,6 @@ class SearchQueryGenerator:
         
         return queries
 
-
-def test_search_query_generator():
-    """Test function for the search query generator."""
-    from explanation_analyzer import ExplanationAnalyzer
-    
-    analyzer = ExplanationAnalyzer()
-    generator = SearchQueryGenerator()
-    
-    # Test explanations
-    test_explanations = [
-        "Currently researching Salesforce pricing options for enterprise deployment",
-        "Actively comparing CRM solutions including HubSpot and Microsoft Dynamics",
-        "Investigating marketing automation platforms and their integration capabilities"
-    ]
-    
-    print("Testing Search Query Generator:")
-    print("=" * 60)
-    
-    for i, explanation in enumerate(test_explanations, 1):
-        print(f"\n{i}. Explanation: {explanation}")
-        claims = analyzer.extract_claims(explanation)
-        
-        for j, claim in enumerate(claims, 1):
-            print(f"\n   Claim {j}: {claim.text}")
-            print(f"   Type: {claim.claim_type.value}")
-            
-            queries = generator.generate_queries(claim)
-            print(f"   Generated {len(queries)} search queries:")
-            
-            for k, query in enumerate(queries, 1):
-                print(f"     {k}. Query: {query.query}")
-                print(f"        Strategy: {query.search_strategy}")
-                print(f"        Priority: {query.priority}")
-                print(f"        Expected domains: {query.expected_domains}")
-                print(f"        Page types: {query.page_types}")
-                print(f"        Support: {query.claim_support}")
-
-
-if __name__ == '__main__':
-    test_search_query_generator()  
-  
     def _create_diverse_company_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
         """Create queries targeting diverse/alternative companies for variety."""
         queries = []
@@ -725,3 +684,44 @@ if __name__ == '__main__':
             ))
         
         return enhanced_queries
+
+
+def test_search_query_generator():
+    """Test function for the search query generator."""
+    from explanation_analyzer import ExplanationAnalyzer
+    
+    analyzer = ExplanationAnalyzer()
+    generator = SearchQueryGenerator()
+    
+    # Test explanations
+    test_explanations = [
+        "Currently researching Salesforce pricing options for enterprise deployment",
+        "Actively comparing CRM solutions including HubSpot and Microsoft Dynamics",
+        "Investigating marketing automation platforms and their integration capabilities"
+    ]
+    
+    print("Testing Search Query Generator:")
+    print("=" * 60)
+    
+    for i, explanation in enumerate(test_explanations, 1):
+        print(f"\n{i}. Explanation: {explanation}")
+        claims = analyzer.extract_claims(explanation)
+        
+        for j, claim in enumerate(claims, 1):
+            print(f"\n   Claim {j}: {claim.text}")
+            print(f"   Type: {claim.claim_type.value}")
+            
+            queries = generator.generate_queries(claim)
+            print(f"   Generated {len(queries)} search queries:")
+            
+            for k, query in enumerate(queries, 1):
+                print(f"     {k}. Query: {query.query}")
+                print(f"        Strategy: {query.search_strategy}")
+                print(f"        Priority: {query.priority}")
+                print(f"        Expected domains: {query.expected_domains}")
+                print(f"        Page types: {query.page_types}")
+                print(f"        Support: {query.claim_support}")
+
+
+if __name__ == '__main__':
+    test_search_query_generator()

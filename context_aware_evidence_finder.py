@@ -45,7 +45,10 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
             search_prompt: The original search query that generated these candidates
         """
         self.search_context = self._analyze_search_context(search_prompt)
-        print(f"[Context-Aware Evidence] Search context: {self.search_context.industry} | {self.search_context.role_type} | {self.search_context.activity_type}")
+        if self.search_context:
+            print(f"[Context-Aware Evidence] Search context: {self.search_context.industry} | {self.search_context.role_type} | {self.search_context.activity_type}")
+        else:
+            print("[Context-Aware Evidence] No search context provided")
     
     def _analyze_search_context(self, search_prompt: str) -> SearchContext:
         """
@@ -405,41 +408,47 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 location_query = f"{self.search_context.industry} {company} {self.search_context.activity_type}"
                 queries.append(location_query)
         
-        # REMOVED: Person-specific queries that return irrelevant name-based websites
-        # These queries were causing the system to return websites that are just
-        # variations of the prospect's name instead of behavioral evidence.
-        #
-        # OLD CODE (REMOVED):
-        # if name and company:
-        #     person_queries = [
-        #         f'"{name}" "{company}" LinkedIn',
-        #         f'"{name}" {company} executive profile', 
-        #         f'"{name}" {company} biography'
-        #     ]
-        #     queries.extend(person_queries)
-        #
-        # NEW APPROACH: Focus ONLY on behavioral evidence, never use prospect names
+        # CRITICAL FIX: Use name-free search generator for all queries
+        # This completely eliminates the risk of using prospect names in searches
         
-        # Behavioral evidence queries (NO NAMES)
-        if title and company:
-            # Focus on role-based behavioral evidence
-            role_clean = title.lower().replace('chief', '').replace('officer', '').strip()
-            behavioral_queries = [
-                f'{role_clean} executive transitions {company}',
-                f'{role_clean} leadership changes {company}',
-                f'senior {role_clean} hiring trends',
-                f'{role_clean} job market analysis'
-            ]
-            queries.extend(behavioral_queries)
+        from name_free_search_generator import NameFreeSearchGenerator
         
-        # Company-specific behavioral queries (NO NAMES)
+        # Create a mock claim from the candidate data for the name-free generator
+        mock_claim_entities = {}
+        
+        if title:
+            # Extract role information
+            mock_claim_entities['roles'] = [title]
+        
         if company:
-            company_queries = [
-                f'"{company}" executive departures',
-                f'"{company}" leadership turnover',
-                f'"{company}" talent retention'
-            ]
-            queries.extend(company_queries)
+            # Extract company information
+            mock_claim_entities['companies'] = [company]
+        
+        # Add industry context if available
+        if (self.search_context and 
+            hasattr(self.search_context, 'industry') and 
+            self.search_context.industry):
+            mock_claim_entities['industries'] = [self.search_context.industry]
+        
+        # Create mock claim for name-free generator
+        from explanation_analyzer import SearchableClaim, ClaimType
+        
+        mock_claim = SearchableClaim(
+            text=f"Professional in {title} role at {company}" if title and company else "Professional seeking opportunities",
+            claim_type=ClaimType.GENERAL_ACTIVITY,
+            entities=mock_claim_entities,
+            search_terms=[term for term in [title, company] if term],
+            priority=8,
+            confidence=0.9
+        )
+        
+        # Generate name-free queries
+        name_free_generator = NameFreeSearchGenerator()
+        name_free_queries = name_free_generator.generate_queries(mock_claim)
+        
+        # Convert to simple query strings
+        for query_obj in name_free_queries:
+            queries.append(query_obj.query)
         
         # Industry-specific queries with current context
         if self.search_context.industry:
@@ -466,16 +475,16 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         """Build search prompt from current context."""
         prompt_parts = []
         
-        if self.search_context.industry:
+        if self.search_context and self.search_context.industry:
             prompt_parts.append(self.search_context.industry)
         
-        if self.search_context.activity_type:
+        if self.search_context and self.search_context.activity_type:
             prompt_parts.append(self.search_context.activity_type)
         
-        if self.search_context.role_type:
+        if self.search_context and self.search_context.role_type:
             prompt_parts.append(self.search_context.role_type)
         
-        if self.search_context.key_terms:
+        if self.search_context and self.search_context.key_terms:
             prompt_parts.extend(self.search_context.key_terms[:3])
         
         return " ".join(prompt_parts) if prompt_parts else "business search"
@@ -601,7 +610,7 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
             ])
         
         # Role-specific URLs
-        if self.search_context.role_type == 'executive':
+        if self.search_context and self.search_context.role_type == 'executive':
             fallback_urls.extend([
                 "https://hbr.org/",
                 "https://www.mckinsey.com/",
@@ -624,11 +633,11 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         try:
             domain = url.split('/')[2].replace('www.', '')
             if 'forbes' in domain:
-                return f"Forbes - {self.search_context.industry or 'Business'} Insights"
+                return f"Forbes - {self.search_context.industry if self.search_context else 'Business'} Insights"
             elif 'harvard' in domain or 'hbr' in domain:
-                return f"Harvard Business Review - {self.search_context.role_type or 'Leadership'}"
+                return f"Harvard Business Review - {self.search_context.role_type if self.search_context else 'Leadership'}"
             elif 'mckinsey' in domain:
-                return f"McKinsey - {self.search_context.industry or 'Strategy'} Analysis"
+                return f"McKinsey - {self.search_context.industry if self.search_context else 'Strategy'} Analysis"
             elif 'nar.realtor' in domain:
                 return "National Association of Realtors - Market Data"
             elif 'bisnow' in domain:

@@ -14,7 +14,7 @@ from openai import OpenAI
 
 # Import our modules
 from explanation_analyzer import ExplanationAnalyzer
-from search_query_generator import SearchQueryGenerator
+from name_free_search_generator import NameFreeSearchGenerator
 from web_search_engine import WebSearchEngine
 from evidence_validator import EvidenceValidator
 from evidence_models import (
@@ -32,7 +32,7 @@ class URLEvidenceFinder:
     def __init__(self, openai_client: Optional[OpenAI] = None):
         # Initialize components
         self.explanation_analyzer = ExplanationAnalyzer()
-        self.query_generator = SearchQueryGenerator()
+        self.query_generator = NameFreeSearchGenerator()
         self.web_search_engine = WebSearchEngine(openai_client)
         self.evidence_validator = EvidenceValidator()
         
