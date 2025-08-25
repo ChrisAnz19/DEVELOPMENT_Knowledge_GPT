@@ -9,7 +9,8 @@ The URL Evidence Finder transforms vague behavioral insights like "researching S
 ### Key Features
 
 - **Intelligent Claim Analysis**: Extracts searchable claims from behavioral explanations
-- **Targeted Web Search**: Uses OpenAI's web search API with optimized queries
+- **AI-Powered URL Generation**: Uses OpenAI chat completions with intelligent prompting
+- **Fallback URL Generation**: Pattern-based URL generation when AI search fails
 - **Quality Validation**: Filters and ranks URLs by relevance and authority
 - **Evidence Categorization**: Classifies evidence by type (pricing, product info, etc.)
 - **Performance Optimization**: Includes caching, batch processing, and rate limiting
@@ -97,9 +98,10 @@ for url in evidence_urls:
 - Prioritizes company-specific and authoritative sources
 
 ### 3. Web Search Engine (`web_search_engine.py`)
-- Integrates with OpenAI's web search API
-- Handles rate limiting and error recovery
-- Parses search results and extracts URLs with metadata
+- Uses OpenAI chat completions for URL suggestions
+- Implements comprehensive error handling and retry logic
+- Automatic fallback to pattern-based URL generation when AI fails
+- Handles rate limiting and graceful degradation
 
 ### 4. Evidence Validator (`evidence_validator.py`)
 - Validates URL quality and relevance
@@ -436,3 +438,55 @@ For issues, questions, or contributions:
 ---
 
 **Built with ❤️ for better candidate intelligence and evidence-based insights.**
+## 
+🔧 Recent Updates (Web Search API Fix)
+
+### What Changed
+
+The system has been updated to resolve issues with OpenAI's deprecated `web_search` tool type:
+
+- **Removed Deprecated API**: No longer uses the unsupported `"web_search"` tool type
+- **Enhanced AI Prompting**: Uses structured prompts with OpenAI chat completions
+- **Fallback System**: Automatic pattern-based URL generation when AI fails
+- **Improved Error Handling**: Comprehensive retry logic with exponential backoff
+- **Better Reliability**: System continues working even when AI search fails
+
+### New Components
+
+- **`fallback_url_generator.py`**: Pattern-based URL generation for common business domains
+- **Enhanced Error Handling**: Improved retry logic and graceful degradation
+- **Fallback Integration**: Seamless integration with existing web search engine
+
+### Configuration
+
+No configuration changes required - the system automatically uses fallback URLs when needed:
+
+```python
+# Fallback is enabled by default
+web_search_engine = WebSearchEngine()
+web_search_engine.fallback_enabled = True  # Default: True
+```
+
+### Fallback URL Patterns
+
+The system includes pre-configured patterns for:
+- **CRM Software**: Salesforce, HubSpot, Pipedrive, Zoho
+- **Software Reviews**: G2, Capterra, TrustRadius, Software Advice  
+- **Real Estate**: Realtor.com, Zillow, Redfin, BiggerPockets
+- **Technology**: TechCrunch, VentureBeat, Wired
+- **Business**: Bloomberg, Reuters, WSJ, Forbes
+- **Startups**: Crunchbase, AngelList, Product Hunt
+
+### Monitoring
+
+The system now tracks fallback usage in monitoring metrics:
+
+```json
+{
+  "search_metadata": {
+    "fallback_used": 2,
+    "execution_time": 1.5,
+    "model_used": "gpt-4o-mini"
+  }
+}
+```

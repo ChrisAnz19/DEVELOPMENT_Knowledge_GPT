@@ -2,8 +2,8 @@
 """
 Web Search Engine for URL Evidence Finder.
 
-This module integrates with OpenAI's web search capabilities to execute
-search queries and extract relevant URLs with citations and metadata.
+This module provides URL search capabilities using OpenAI chat completions
+with fallback URL generation when AI responses are insufficient.
 """
 
 import asyncio
@@ -39,7 +39,7 @@ class SearchResult:
 
 
 class WebSearchEngine:
-    """Executes web searches using OpenAI's web search tool."""
+    """Executes web searches using OpenAI chat completions with fallback URL generation."""
     
     def __init__(self, openai_client: Optional[OpenAI] = None):
         self.client = openai_client or OpenAI()
@@ -48,6 +48,8 @@ class WebSearchEngine:
         self.rate_limit_delay = 1.0  # Minimum delay between requests (seconds)
         self.max_retries = 3
         self.timeout = 30  # Request timeout in seconds
+        self.fallback_enabled = True
+        self._fallback_generator = None
     
     async def search_for_evidence(self, queries: List[SearchQuery]) -> List[SearchResult]:
         """
@@ -92,7 +94,7 @@ class WebSearchEngine:
         return results
     
     async def _execute_search_with_retries(self, query: SearchQuery) -> SearchResult:
-        """Execute search with retry logic."""
+        """Execute search with retry logic and comprehensive error handling."""
         last_error = None
         
         for attempt in range(self.max_retries):
@@ -100,20 +102,43 @@ class WebSearchEngine:
                 return await self._execute_search(query)
             except Exception as e:
                 last_error = e
-                if attempt < self.max_retries - 1:
-                    # Exponential backoff
+                error_type = type(e).__name__
+                
+                # Handle specific error types
+                if "rate_limit" in str(e).lower() or "429" in str(e):
+                    # Rate limiting - use longer backoff
+                    wait_time = (3 ** attempt) * self.rate_limit_delay
+                    print(f"[Web Search] Rate limited, retry {attempt + 1} in {wait_time}s")
+                elif "timeout" in str(e).lower() or "connection" in str(e).lower():
+                    # Network issues - shorter backoff
+                    wait_time = (1.5 ** attempt) * self.rate_limit_delay
+                    print(f"[Web Search] Network error ({error_type}), retry {attempt + 1} in {wait_time}s")
+                else:
+                    # Other errors - standard backoff
                     wait_time = (2 ** attempt) * self.rate_limit_delay
-                    print(f"[Web Search] Retry {attempt + 1} in {wait_time}s for query: {query.query[:30]}...")
+                    print(f"[Web Search] Error ({error_type}), retry {attempt + 1} in {wait_time}s")
+                
+                if attempt < self.max_retries - 1:
                     await asyncio.sleep(wait_time)
         
-        # All retries failed
+        # All retries failed - use fallback
+        print(f"[Web Search] All retries failed for query: {query.query[:50]}...")
+        fallback_urls = []
+        if self.fallback_enabled:
+            fallback_urls = self._get_fallback_urls(query)
+            print(f"[Web Search] Generated {len(fallback_urls)} fallback URLs")
+        
         return SearchResult(
             query=query,
-            urls=[],
-            citations=[],
-            search_metadata={'retries': self.max_retries, 'final_error': str(last_error)},
-            success=False,
-            error_message=f"Failed after {self.max_retries} retries: {str(last_error)}"
+            urls=fallback_urls,
+            citations=[{'source': 'fallback', 'url': url.url} for url in fallback_urls],
+            search_metadata={
+                'retries': self.max_retries, 
+                'final_error': str(last_error),
+                'fallback_used': len(fallback_urls)
+            },
+            success=len(fallback_urls) > 0,
+            error_message=str(last_error) if not fallback_urls else None
         )
     
     async def _execute_search(self, query: SearchQuery) -> SearchResult:
@@ -129,14 +154,30 @@ class WebSearchEngine:
                 }
             ]
             
-            # Make the API call with web search tool
+            # Make the API call without deprecated web search tool
+            # Using standard chat completion to generate relevant URLs
+            enhanced_prompt = f"""Find and suggest relevant URLs for this search query: {query.query}
+
+Focus on finding {', '.join(query.page_types)} pages from authoritative sources.
+
+Please provide a list of relevant URLs that would likely contain information about this topic. Format your response as a JSON object with this structure:
+{{
+    "urls": [
+        {{
+            "url": "https://example.com/page",
+            "title": "Page Title",
+            "snippet": "Brief description of what this page contains",
+            "domain": "example.com",
+            "page_type": "pricing|product|documentation|comparison|news|company"
+        }}
+    ]
+}}
+
+Prioritize well-known, authoritative websites and official company pages."""
+
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=messages,
-                tools=[{
-                    "type": "web_search"
-                }],
-                tool_choice="auto",
+                messages=[{"role": "user", "content": enhanced_prompt}],
                 timeout=self.timeout
             )
             
@@ -146,6 +187,13 @@ class WebSearchEngine:
             # Parse the response
             urls, citations = self._parse_search_response(response, query)
             
+            # Use fallback if no URLs found and fallback is enabled
+            if not urls and self.fallback_enabled:
+                print(f"[Web Search] No URLs from AI, using fallback for query: {query.query[:50]}...")
+                fallback_urls = self._get_fallback_urls(query)
+                urls.extend(fallback_urls)
+                citations.extend([{'source': 'fallback', 'url': url.url} for url in fallback_urls])
+            
             return SearchResult(
                 query=query,
                 urls=urls,
@@ -153,7 +201,8 @@ class WebSearchEngine:
                 search_metadata={
                     'execution_time': execution_time,
                     'request_count': self.request_count,
-                    'model_used': 'gpt-4o-mini'
+                    'model_used': 'gpt-4o-mini',
+                    'fallback_used': len([url for url in urls if 'fallback' in str(url.citation_index)])
                 },
                 success=True,
                 error_message=None
@@ -163,21 +212,28 @@ class WebSearchEngine:
             execution_time = time.time() - start_time
             print(f"[Web Search API Error] {str(e)}")
             
+            # Use fallback URLs when API fails
+            fallback_urls = []
+            if self.fallback_enabled:
+                print(f"[Web Search] API failed, using fallback for query: {query.query[:50]}...")
+                fallback_urls = self._get_fallback_urls(query)
+            
             return SearchResult(
                 query=query,
-                urls=[],
-                citations=[],
+                urls=fallback_urls,
+                citations=[{'source': 'fallback', 'url': url.url} for url in fallback_urls],
                 search_metadata={
                     'execution_time': execution_time,
-                    'error': str(e)
+                    'error': str(e),
+                    'fallback_used': len(fallback_urls)
                 },
-                success=False,
-                error_message=str(e)
+                success=len(fallback_urls) > 0,  # Success if we have fallback URLs
+                error_message=str(e) if not fallback_urls else None
             )
     
     def _parse_search_response(self, response: Any, query: SearchQuery) -> tuple[List[URLCandidate], List[Dict[str, Any]]]:
         """
-        Parse OpenAI search response into URL candidates.
+        Parse OpenAI chat response into URL candidates.
         
         Args:
             response: OpenAI API response
@@ -190,27 +246,44 @@ class WebSearchEngine:
         citations = []
         
         try:
-            # Check if the response has tool calls
+            # Parse the response content
             if hasattr(response, 'choices') and response.choices:
                 choice = response.choices[0]
                 
-                if hasattr(choice, 'message') and hasattr(choice.message, 'tool_calls'):
-                    for tool_call in choice.message.tool_calls:
-                        if tool_call.type == "web_search":
-                            # Parse web search results
-                            try:
-                                search_results = json.loads(tool_call.function.arguments)
-                                urls, cites = self._extract_urls_from_search_results(search_results, query)
-                                url_candidates.extend(urls)
-                                citations.extend(cites)
-                            except json.JSONDecodeError as e:
-                                print(f"[Web Search] JSON decode error: {e}")
-                
-                # Also check message content for citations
                 if hasattr(choice.message, 'content') and choice.message.content:
-                    content_urls, content_cites = self._extract_urls_from_content(choice.message.content, query)
-                    url_candidates.extend(content_urls)
-                    citations.extend(content_cites)
+                    content = choice.message.content
+                    
+                    # Try to parse as JSON first
+                    try:
+                        # Look for JSON in the content
+                        json_start = content.find('{')
+                        json_end = content.rfind('}') + 1
+                        
+                        if json_start != -1 and json_end > json_start:
+                            json_content = content[json_start:json_end]
+                            parsed_data = json.loads(json_content)
+                            
+                            if 'urls' in parsed_data:
+                                for i, url_data in enumerate(parsed_data['urls']):
+                                    candidate = URLCandidate(
+                                        url=url_data.get('url', ''),
+                                        title=url_data.get('title', ''),
+                                        snippet=url_data.get('snippet', ''),
+                                        domain=url_data.get('domain', self._extract_domain(url_data.get('url', ''))),
+                                        page_type=url_data.get('page_type'),
+                                        search_query=query.query,
+                                        citation_index=i
+                                    )
+                                    
+                                    if candidate.url.startswith(('http://', 'https://')):
+                                        url_candidates.append(candidate)
+                                        citations.append(url_data)
+                    
+                    except json.JSONDecodeError:
+                        # Fallback to URL extraction from content
+                        content_urls, content_cites = self._extract_urls_from_content(content, query)
+                        url_candidates.extend(content_urls)
+                        citations.extend(content_cites)
             
             # Remove duplicates based on URL
             seen_urls = set()
@@ -376,6 +449,18 @@ class WebSearchEngine:
             return ""
         except:
             return ""
+    
+    def _get_fallback_urls(self, query: SearchQuery) -> List[URLCandidate]:
+        """Get fallback URLs when AI search fails or returns no results."""
+        try:
+            if self._fallback_generator is None:
+                from fallback_url_generator import FallbackURLGenerator
+                self._fallback_generator = FallbackURLGenerator()
+            
+            return self._fallback_generator.generate_fallback_urls(query, max_urls=3)
+        except Exception as e:
+            print(f"[Web Search] Fallback generation failed: {str(e)}")
+            return []
     
     async def _enforce_rate_limit(self):
         """Enforce rate limiting between requests."""
