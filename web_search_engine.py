@@ -9,6 +9,7 @@ with fallback URL generation when AI responses are insufficient.
 import asyncio
 import time
 import json
+import os
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from openai import OpenAI
@@ -38,19 +39,165 @@ class SearchResult:
     error_message: Optional[str] # Error message if failed
 
 
-class WebSearchEngine:
-    """Executes web searches using OpenAI chat completions with fallback URL generation."""
+@dataclass
+class WebSearchConfig:
+    """Configuration for web search engine."""
+    serpapi_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    max_results_per_query: int = 5
+    timeout: int = 5  # Reasonable timeout
+    enable_fallback_urls: bool = True
+
+
+def load_search_config() -> WebSearchConfig:
+    """Load search configuration from secrets.json and environment variables."""
+    config = WebSearchConfig()
     
-    def __init__(self, openai_client: Optional[OpenAI] = None):
-        self.client = openai_client  # Don't initialize if None - will be lazy loaded
+    # Try to load from secrets.json first
+    try:
+        secrets_path = os.path.join(os.path.dirname(__file__), 'api', 'secrets.json')
+        if not os.path.exists(secrets_path):
+            # Try alternative path
+            secrets_path = os.path.join(os.path.dirname(__file__), '..', 'api', 'secrets.json')
+        
+        if os.path.exists(secrets_path):
+            with open(secrets_path, 'r') as f:
+                secrets = json.load(f)
+                config.serpapi_key = secrets.get('SERP_API_KEY')
+                config.openai_api_key = secrets.get('OPENAI_API_KEY')
+                print(f"[Web Search Config] Loaded API keys from secrets.json")
+        else:
+            print(f"[Web Search Config] secrets.json not found at {secrets_path}")
+    except Exception as e:
+        print(f"[Web Search Config] Error loading secrets.json: {e}")
+    
+    # Override with environment variables if available
+    if os.getenv('SERP_API_KEY'):
+        config.serpapi_key = os.getenv('SERP_API_KEY')
+        print(f"[Web Search Config] Using SERP_API_KEY from environment")
+    
+    if os.getenv('OPENAI_API_KEY'):
+        config.openai_api_key = os.getenv('OPENAI_API_KEY')
+        print(f"[Web Search Config] Using OPENAI_API_KEY from environment")
+    
+    return config
+
+
+class WebSearchEngine:
+    """Executes web searches using real search APIs with fallback URL generation."""
+    
+    def __init__(self, config: Optional[WebSearchConfig] = None):
+        self.config = config or load_search_config()
+        self.client = None  # Will be lazy loaded
         self.request_count = 0
         self.last_request_time = 0
-        self.rate_limit_delay = 1.0  # Minimum delay between requests (seconds)
-        self.max_retries = 2  # Reduced retries to prevent hanging
-        self.timeout = 10  # Shorter timeout to prevent hanging
+        self.rate_limit_delay = 0.1  # Short delay for speed
+        self.max_retries = 0  # No retries for maximum speed
+        self.timeout = self.config.timeout
         self.fallback_enabled = True
         self._fallback_generator = None
         self.max_requests_per_batch = 5  # Limit requests per batch
+    
+    async def _search_with_serpapi(self, query: SearchQuery) -> SearchResult:
+        """
+        Execute search using SerpAPI (Google Search API).
+        
+        Args:
+            query: Search query to execute
+            
+        Returns:
+            SearchResult with URLs from SerpAPI
+        """
+        start_time = time.time()
+        
+        if not self.config.serpapi_key:
+            return SearchResult(
+                query=query,
+                urls=[],
+                citations=[],
+                search_metadata={'error': 'No SerpAPI key available'},
+                success=False,
+                error_message='No SerpAPI key configured'
+            )
+        
+        try:
+            import requests
+            
+            # Use SerpAPI REST endpoint directly
+            search_params = {
+                "q": query.query,
+                "api_key": self.config.serpapi_key,
+                "num": self.config.max_results_per_query,
+                "hl": "en",
+                "gl": "us",
+                "engine": "google"
+            }
+            
+            response = requests.get("https://serpapi.com/search", params=search_params, timeout=self.timeout)
+            response.raise_for_status()
+            results = response.json()
+            
+            # Parse results into URLCandidate objects
+            url_candidates = []
+            citations = []
+            
+            # Process organic results
+            organic_results = results.get('organic_results', [])
+            for i, result in enumerate(organic_results):
+                url = result.get('link', '')
+                title = result.get('title', '')
+                snippet = result.get('snippet', '')
+                
+                if url and url.startswith(('http://', 'https://')):
+                    domain = self._extract_domain(url)
+                    page_type = self._detect_page_type(url, title)
+                    
+                    candidate = URLCandidate(
+                        url=url,
+                        title=title,
+                        snippet=snippet,
+                        domain=domain,
+                        page_type=page_type,
+                        search_query=query.query,
+                        citation_index=i
+                    )
+                    
+                    url_candidates.append(candidate)
+                    citations.append(result)
+            
+            execution_time = time.time() - start_time
+            
+            return SearchResult(
+                query=query,
+                urls=url_candidates,
+                citations=citations,
+                search_metadata={
+                    'execution_time': execution_time,
+                    'source': 'serpapi',
+                    'total_results': len(organic_results)
+                },
+                success=True,
+                error_message=None
+            )
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            print(f"[Web Search SerpAPI Error] {str(e)}")
+            
+            return SearchResult(
+                query=query,
+                urls=[],
+                citations=[],
+                search_metadata={
+                    'execution_time': execution_time,
+                    'error': str(e),
+                    'source': 'serpapi'
+                },
+                success=False,
+                error_message=str(e)
+            )
+    
+
     
     async def search_for_evidence(self, queries: List[SearchQuery]) -> List[SearchResult]:
         """
@@ -77,10 +224,10 @@ class WebSearchEngine:
                 # Enforce rate limiting
                 await self._enforce_rate_limit()
                 
-                # Execute search with retries and timeout
+                # Execute search with simple timeout
                 result = await asyncio.wait_for(
-                    self._execute_search_with_retries(query),
-                    timeout=15  # Overall timeout per query
+                    self._execute_search(query),
+                    timeout=self.timeout  # Use configured timeout
                 )
                 results.append(result)
                 
@@ -118,290 +265,50 @@ class WebSearchEngine:
         print(f"[Web Search] Completed batch: {len(results)} results")
         return results
     
-    async def _execute_search_with_retries(self, query: SearchQuery) -> SearchResult:
-        """Execute search with retry logic and comprehensive error handling."""
-        last_error = None
-        
-        for attempt in range(self.max_retries):
-            try:
-                return await self._execute_search(query)
-            except Exception as e:
-                last_error = e
-                error_type = type(e).__name__
-                
-                # Handle specific error types
-                if "rate_limit" in str(e).lower() or "429" in str(e):
-                    # Rate limiting - use longer backoff
-                    wait_time = (3 ** attempt) * self.rate_limit_delay
-                    print(f"[Web Search] Rate limited, retry {attempt + 1} in {wait_time}s")
-                elif "timeout" in str(e).lower() or "connection" in str(e).lower():
-                    # Network issues - shorter backoff
-                    wait_time = (1.5 ** attempt) * self.rate_limit_delay
-                    print(f"[Web Search] Network error ({error_type}), retry {attempt + 1} in {wait_time}s")
-                else:
-                    # Other errors - standard backoff
-                    wait_time = (2 ** attempt) * self.rate_limit_delay
-                    print(f"[Web Search] Error ({error_type}), retry {attempt + 1} in {wait_time}s")
-                
-                if attempt < self.max_retries - 1:
-                    await asyncio.sleep(wait_time)
-        
-        # All retries failed - use fallback
-        print(f"[Web Search] All retries failed for query: {query.query[:50]}...")
-        fallback_urls = []
-        if self.fallback_enabled:
-            fallback_urls = self._get_fallback_urls(query)
-            print(f"[Web Search] Generated {len(fallback_urls)} fallback URLs")
-        
-        return SearchResult(
-            query=query,
-            urls=fallback_urls,
-            citations=[{'source': 'fallback', 'url': url.url} for url in fallback_urls],
-            search_metadata={
-                'retries': self.max_retries, 
-                'final_error': str(last_error),
-                'fallback_used': len(fallback_urls)
-            },
-            success=len(fallback_urls) > 0,
-            error_message=str(last_error) if not fallback_urls else None
-        )
+
     
     async def _execute_search(self, query: SearchQuery) -> SearchResult:
-        """Execute single search query with OpenAI chat completion."""
-        start_time = time.time()
+        """Execute single search query using real web search APIs."""
+        print(f"[Web Search] Executing real search for: {query.query[:50]}...")
         
-        try:
-            # Lazy initialize OpenAI client if needed
-            if self.client is None:
-                self.client = OpenAI()
-            # Construct the search request
-            messages = [
-                {
-                    "role": "user",
-                    "content": f"Find URLs that support this search query: {query.query}. Focus on finding {', '.join(query.page_types)} pages from authoritative sources."
-                }
-            ]
-            
-            # Make the API call without deprecated web search tool
-            # Using standard chat completion to generate relevant URLs
-            enhanced_prompt = f"""Find and suggest relevant URLs for this search query: {query.query}
-
-Focus on finding {', '.join(query.page_types)} pages from authoritative sources.
-
-Please provide a list of relevant URLs that would likely contain information about this topic. Format your response as a JSON object with this structure:
-{{
-    "urls": [
-        {{
-            "url": "https://example.com/page",
-            "title": "Page Title",
-            "snippet": "Brief description of what this page contains",
-            "domain": "example.com",
-            "page_type": "pricing|product|documentation|comparison|news|company"
-        }}
-    ]
-}}
-
-Prioritize well-known, authoritative websites and official company pages."""
-
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": enhanced_prompt}],
-                timeout=10  # Shorter timeout to prevent hanging
-            )
-            
-            self.request_count += 1
-            execution_time = time.time() - start_time
-            
-            # Parse the response
-            urls, citations = self._parse_search_response(response, query)
-            
-            # Use fallback if no URLs found and fallback is enabled
-            if not urls and self.fallback_enabled:
-                print(f"[Web Search] No URLs from AI, using fallback for query: {query.query[:50]}...")
-                fallback_urls = self._get_fallback_urls(query)
-                urls.extend(fallback_urls)
-                citations.extend([{'source': 'fallback', 'url': url.url} for url in fallback_urls])
-            
-            return SearchResult(
-                query=query,
-                urls=urls,
-                citations=citations,
-                search_metadata={
-                    'execution_time': execution_time,
-                    'request_count': self.request_count,
-                    'model_used': 'gpt-4o-mini',
-                    'fallback_used': len([url for url in urls if 'fallback' in str(url.citation_index)])
-                },
-                success=True,
-                error_message=None
-            )
-            
-        except Exception as e:
-            execution_time = time.time() - start_time
-            print(f"[Web Search API Error] {str(e)}")
-            
-            # Use fallback URLs when API fails
-            fallback_urls = []
-            if self.fallback_enabled:
-                print(f"[Web Search] API failed, using fallback for query: {query.query[:50]}...")
-                fallback_urls = self._get_fallback_urls(query)
+        # Strategy 1: Try SerpAPI first (if API key available)
+        if self.config.serpapi_key:
+            print(f"[Web Search] Trying SerpAPI for: {query.query[:30]}...")
+            result = await self._search_with_serpapi(query)
+            if result.success and result.urls:
+                print(f"[Web Search] SerpAPI found {len(result.urls)} URLs")
+                return result
+            else:
+                print(f"[Web Search] SerpAPI failed: {result.error_message}")
+        
+        # Strategy 2: Final fallback to contextual URL generation
+        if self.config.enable_fallback_urls:
+            print(f"[Web Search] Using fallback URL generation for: {query.query[:30]}...")
+            fallback_urls = self._get_fallback_urls(query)
             
             return SearchResult(
                 query=query,
                 urls=fallback_urls,
                 citations=[{'source': 'fallback', 'url': url.url} for url in fallback_urls],
                 search_metadata={
-                    'execution_time': execution_time,
-                    'error': str(e),
+                    'source': 'fallback',
                     'fallback_used': len(fallback_urls)
                 },
-                success=len(fallback_urls) > 0,  # Success if we have fallback URLs
-                error_message=str(e) if not fallback_urls else None
+                success=len(fallback_urls) > 0,
+                error_message=None if fallback_urls else "All search methods failed"
             )
+        
+        # Complete failure
+        return SearchResult(
+            query=query,
+            urls=[],
+            citations=[],
+            search_metadata={'error': 'All search methods failed'},
+            success=False,
+            error_message="No search methods available or all failed"
+        )
     
-    def _parse_search_response(self, response: Any, query: SearchQuery) -> tuple[List[URLCandidate], List[Dict[str, Any]]]:
-        """
-        Parse OpenAI chat response into URL candidates.
-        
-        Args:
-            response: OpenAI API response
-            query: Original search query
-            
-        Returns:
-            Tuple of (URL candidates, raw citations)
-        """
-        url_candidates = []
-        citations = []
-        
-        try:
-            # Parse the response content
-            if hasattr(response, 'choices') and response.choices:
-                choice = response.choices[0]
-                
-                if hasattr(choice.message, 'content') and choice.message.content:
-                    content = choice.message.content
-                    
-                    # Try to parse as JSON first
-                    try:
-                        # Look for JSON in the content
-                        json_start = content.find('{')
-                        json_end = content.rfind('}') + 1
-                        
-                        if json_start != -1 and json_end > json_start:
-                            json_content = content[json_start:json_end]
-                            parsed_data = json.loads(json_content)
-                            
-                            if 'urls' in parsed_data:
-                                for i, url_data in enumerate(parsed_data['urls']):
-                                    candidate = URLCandidate(
-                                        url=url_data.get('url', ''),
-                                        title=url_data.get('title', ''),
-                                        snippet=url_data.get('snippet', ''),
-                                        domain=url_data.get('domain', self._extract_domain(url_data.get('url', ''))),
-                                        page_type=url_data.get('page_type'),
-                                        search_query=query.query,
-                                        citation_index=i
-                                    )
-                                    
-                                    if candidate.url.startswith(('http://', 'https://')):
-                                        url_candidates.append(candidate)
-                                        citations.append(url_data)
-                    
-                    except json.JSONDecodeError:
-                        # Fallback to URL extraction from content
-                        content_urls, content_cites = self._extract_urls_from_content(content, query)
-                        url_candidates.extend(content_urls)
-                        citations.extend(content_cites)
-            
-            # Remove duplicates based on URL
-            seen_urls = set()
-            unique_candidates = []
-            for candidate in url_candidates:
-                if candidate.url not in seen_urls:
-                    seen_urls.add(candidate.url)
-                    unique_candidates.append(candidate)
-            
-            return unique_candidates, citations
-            
-        except Exception as e:
-            print(f"[Web Search Parse Error] Failed to parse response: {str(e)}")
-            return [], []
-    
-    def _extract_urls_from_search_results(self, search_results: Dict[str, Any], query: SearchQuery) -> tuple[List[URLCandidate], List[Dict[str, Any]]]:
-        """Extract URLs from structured search results."""
-        url_candidates = []
-        citations = []
-        
-        try:
-            # Handle different possible search result formats
-            results = search_results.get('results', [])
-            if not results:
-                results = search_results.get('web_results', [])
-            if not results:
-                results = search_results.get('items', [])
-            
-            for i, result in enumerate(results):
-                url = result.get('url', result.get('link', ''))
-                title = result.get('title', result.get('name', ''))
-                snippet = result.get('snippet', result.get('description', ''))
-                
-                if url and url.startswith(('http://', 'https://')):
-                    domain = self._extract_domain(url)
-                    page_type = self._detect_page_type(url, title)
-                    
-                    candidate = URLCandidate(
-                        url=url,
-                        title=title,
-                        snippet=snippet,
-                        domain=domain,
-                        page_type=page_type,
-                        search_query=query.query,
-                        citation_index=i
-                    )
-                    
-                    url_candidates.append(candidate)
-                    citations.append(result)
-            
-        except Exception as e:
-            print(f"[Web Search] Error extracting from search results: {e}")
-        
-        return url_candidates, citations
-    
-    def _extract_urls_from_content(self, content: str, query: SearchQuery) -> tuple[List[URLCandidate], List[Dict[str, Any]]]:
-        """Extract URLs from message content (fallback method)."""
-        url_candidates = []
-        citations = []
-        
-        try:
-            import re
-            
-            # Simple URL extraction from content
-            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+[^\s<>"{}|\\^`\[\].,;:!?]'
-            urls = re.findall(url_pattern, content)
-            
-            for i, url in enumerate(urls):
-                domain = self._extract_domain(url)
-                
-                # Try to extract title from surrounding context
-                title = self._extract_title_from_context(content, url)
-                
-                candidate = URLCandidate(
-                    url=url,
-                    title=title,
-                    snippet="",
-                    domain=domain,
-                    page_type=self._detect_page_type(url, title),
-                    search_query=query.query,
-                    citation_index=i
-                )
-                
-                url_candidates.append(candidate)
-                citations.append({'url': url, 'title': title, 'source': 'content_extraction'})
-        
-        except Exception as e:
-            print(f"[Web Search] Error extracting from content: {e}")
-        
-        return url_candidates, citations
+
     
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""

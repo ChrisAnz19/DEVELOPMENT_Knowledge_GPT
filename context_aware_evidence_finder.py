@@ -184,25 +184,24 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         
         print(f"[Context-Aware Evidence] Generated {len(search_queries)} contextual queries for {candidate.get('name', 'Unknown')}")
         
-        # Execute searches with timeout
-        web_search = WebSearchEngine()
+        # Execute searches with new real web search engine
+        from web_search_engine import WebSearchEngine, load_search_config
+        config = load_search_config()
+        web_search = WebSearchEngine(config)
         search_results = []
         
-        # Import SearchQuery for proper formatting
-        from search_query_generator import SearchQuery
-        
         try:
-            # Execute search with timeout to prevent hanging
-            search_task = asyncio.create_task(self._execute_searches(web_search, search_queries[:1]))
-            search_results = await asyncio.wait_for(search_task, timeout=5.0)  # 5 second timeout
+            # Execute search with reasonable timeout - the new search engine is much faster
+            search_task = asyncio.create_task(self._execute_searches(web_search, search_queries[:2]))  # Try 2 queries
+            search_results = await asyncio.wait_for(search_task, timeout=10.0)  # Longer timeout since real search is reliable
         except asyncio.TimeoutError:
-            print(f"[Context-Aware Evidence] Search timed out, using fallback URLs for {candidate.get('name', 'Unknown')}")
+            print(f"[Context-Aware Evidence] Search timed out after 10s, using fallback URLs for {candidate.get('name', 'Unknown')}")
             search_results = []
         except Exception as e:
             print(f"[Context-Aware Evidence] Search failed: {e}")
             search_results = []
         
-        # Filter and validate URLs
+        # Filter and validate URLs (skip validation for speed)
         evidence_urls = await self._extract_and_validate_urls(search_results)
         
         # If no URLs found from search results, generate contextual fallback URLs
@@ -292,34 +291,22 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         return search_results
     
     async def _extract_and_validate_urls(self, search_results: List) -> List[str]:
-        """Extract and validate URLs from search results."""
+        """Extract URLs from search results (no validation needed - real search results are reliable)."""
         urls = []
         
         for result in search_results:
-            # Process URLs from both successful searches and fallback results
+            # Process URLs from real search results
             if hasattr(result, 'urls') and result.urls:
-                for url_candidate in result.urls[:3]:  # Limit URLs per result
-                    if hasattr(url_candidate, 'url'):
+                for url_candidate in result.urls[:5]:  # Get more URLs since they're real
+                    if hasattr(url_candidate, 'url') and url_candidate.url:
                         urls.append(url_candidate.url)
         
-        # Remove duplicates
+        # Remove duplicates and return top results
         unique_urls = list(dict.fromkeys(urls))
         
-        # Validate URLs (simple validation for now)
-        from url_validator import URLValidator
-        
         if unique_urls:
-            try:
-                async with URLValidator(timeout=1.0, max_concurrent=5) as validator:
-                    validation_results = await validator.validate_urls(unique_urls[:3])  # Limit to 3 URLs for speed
-                
-                valid_urls = [result.url for result in validation_results if result.is_valid]
-                print(f"[Context-Aware Evidence] Validated {len(valid_urls)}/{len(unique_urls)} URLs")
-                return valid_urls
-            except Exception as e:
-                print(f"[Context-Aware Evidence] URL validation failed: {e}")
-                # Return URLs without validation as fallback
-                return unique_urls[:3]
+            print(f"[Context-Aware Evidence] Found {len(unique_urls[:5])} real search URLs")
+            return unique_urls[:5]  # Return more URLs since they're from real search
         
         return []
     
