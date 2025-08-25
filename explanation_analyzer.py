@@ -282,7 +282,14 @@ class ExplanationAnalyzer:
         # Should be substantial enough (more than 5 words)
         has_substance = len(sentence.split()) > 5
         
-        return has_activity and has_entity and has_substance
+        # FALLBACK: If we have strong entity matches (company + product), allow without explicit activity
+        # This handles cases like "Luke is a CRM expert with Salesforce experience"
+        has_strong_entities = (
+            any(re.search(pattern, sentence, re.IGNORECASE) for pattern in self.company_patterns) and
+            any(re.search(pattern, sentence, re.IGNORECASE) for pattern in self.product_patterns)
+        )
+        
+        return (has_activity and has_entity and has_substance) or (has_strong_entities and has_substance)
     
     def _create_searchable_claim(self, claim_text: str, full_explanation: str) -> Optional[SearchableClaim]:
         """Create a SearchableClaim object from claim text."""
