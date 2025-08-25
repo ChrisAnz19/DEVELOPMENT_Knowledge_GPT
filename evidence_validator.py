@@ -49,6 +49,11 @@ class EvidenceValidator:
     """Validates and ranks URLs by relevance and quality."""
     
     def __init__(self):
+        # Track used URLs globally to ensure uniqueness across candidates
+        self.used_urls = set()
+        self.used_domains_per_candidate = {}
+        self.candidate_url_history = {}
+        
         # Domain authority scores (0-1, 1 being highest authority)
         self.domain_authority_scores = {
             # Major SaaS companies
@@ -140,16 +145,17 @@ class EvidenceValidator:
             'affiliate', 'sponsored', 'advertisement', 'promo'
         ]
     
-    def validate_and_rank(self, results: List[SearchResult], claim: SearchableClaim) -> List[EvidenceURL]:
+    def validate_and_rank(self, results: List[SearchResult], claim: SearchableClaim, candidate_id: str = None) -> List[EvidenceURL]:
         """
-        Validate and rank URLs by relevance and quality.
+        Validate and rank URLs by relevance and quality with uniqueness enforcement.
         
         Args:
             results: Raw search results
             claim: Original claim being supported
+            candidate_id: Unique identifier for candidate to ensure URL uniqueness
             
         Returns:
-            Ranked list of evidence URLs
+            Ranked list of evidence URLs (unique across all candidates)
         """
         all_candidates = []
         
@@ -157,6 +163,10 @@ class EvidenceValidator:
         for result in results:
             if result.success:
                 for url_candidate in result.urls:
+                    # Skip if URL already used globally
+                    if url_candidate.url in self.used_urls:
+                        continue
+                    
                     # Validate URL quality
                     if self.validate_url_quality(url_candidate):
                         evidence_url = self._create_evidence_url(url_candidate, claim, result)
@@ -165,6 +175,9 @@ class EvidenceValidator:
         
         # Remove duplicates based on URL
         unique_candidates = self._remove_duplicates(all_candidates)
+        
+        # Apply uniqueness filters
+        unique_candidates = self._enforce_url_uniqueness(unique_candidates, candidate_id)
         
         # Rank by combined score
         ranked_candidates = sorted(
@@ -178,6 +191,10 @@ class EvidenceValidator:
         
         # Limit to top results and ensure diversity
         final_candidates = self._select_diverse_results(filtered_candidates, max_count=5)
+        
+        # Track used URLs
+        if candidate_id:
+            self._track_used_urls(final_candidates, candidate_id)
         
         return final_candidates
     
@@ -686,4 +703,82 @@ def test_evidence_validator():
 
 
 if __name__ == '__main__':
-    test_evidence_validator()
+    test_evidence_validator()    
+
+    def _enforce_url_uniqueness(self, candidates: List[EvidenceURL], candidate_id: str = None) -> List[EvidenceURL]:
+        """Enforce URL uniqueness across all candidates."""
+        unique_candidates = []
+        
+        for candidate in candidates:
+            # Skip if URL already used
+            if candidate.url in self.used_urls:
+                continue
+            
+            # Skip if domain already used too many times for this candidate
+            domain = self._extract_domain_from_url(candidate.url)
+            if candidate_id:
+                used_domains = self.used_domains_per_candidate.get(candidate_id, set())
+                if domain in used_domains:
+                    continue  # Avoid domain repetition within same candidate
+            
+            unique_candidates.append(candidate)
+        
+        return unique_candidates
+    
+    def _track_used_urls(self, evidence_urls: List[EvidenceURL], candidate_id: str):
+        """Track used URLs and domains for uniqueness enforcement."""
+        for evidence_url in evidence_urls:
+            # Track globally used URLs
+            self.used_urls.add(evidence_url.url)
+            
+            # Track domains per candidate
+            domain = self._extract_domain_from_url(evidence_url.url)
+            if candidate_id not in self.used_domains_per_candidate:
+                self.used_domains_per_candidate[candidate_id] = set()
+            self.used_domains_per_candidate[candidate_id].add(domain)
+            
+            # Track candidate URL history
+            if candidate_id not in self.candidate_url_history:
+                self.candidate_url_history[candidate_id] = []
+            self.candidate_url_history[candidate_id].append({
+                'url': evidence_url.url,
+                'domain': domain,
+                'evidence_type': evidence_url.evidence_type,
+                'timestamp': evidence_url.last_validated
+            })
+    
+    def _extract_domain_from_url(self, url: str) -> str:
+        """Extract domain from URL for tracking purposes."""
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            return parsed.netloc.lower()
+        except:
+            # Fallback to simple extraction
+            try:
+                return url.split('/')[2].lower()
+            except:
+                return url.lower()
+    
+    def get_uniqueness_stats(self) -> Dict[str, Any]:
+        """Get statistics about URL uniqueness and usage."""
+        return {
+            'total_unique_urls_used': len(self.used_urls),
+            'candidates_processed': len(self.candidate_url_history),
+            'average_urls_per_candidate': (
+                sum(len(urls) for urls in self.candidate_url_history.values()) / 
+                len(self.candidate_url_history) if self.candidate_url_history else 0
+            ),
+            'domain_diversity': len(set(
+                self._extract_domain_from_url(url) for url in self.used_urls
+            )),
+            'candidates_with_urls': len([
+                cid for cid, urls in self.candidate_url_history.items() if urls
+            ])
+        }
+    
+    def reset_uniqueness_tracking(self):
+        """Reset uniqueness tracking (useful for testing or new batches)."""
+        self.used_urls.clear()
+        self.used_domains_per_candidate.clear()
+        self.candidate_url_history.clear()

@@ -59,6 +59,25 @@ class SearchQueryGenerator:
             'notion': 'notion.so'
         }
         
+        # Alternative/lesser-known companies by category for diversity
+        self.alternative_companies = {
+            'crm': ['pipedrive', 'freshworks', 'zoho', 'insightly', 'copper', 'airtable', 'monday.com', 'clickup', 'basecamp'],
+            'marketing_automation': ['mailchimp', 'constant_contact', 'sendinblue', 'activecampaign', 'drip', 'convertkit', 'getresponse'],
+            'project_management': ['smartsheet', 'wrike', 'teamwork', 'proofhub', 'clarizen', 'workfront', 'liquidplanner'],
+            'communication': ['discord', 'mattermost', 'rocket.chat', 'flock', 'chanty', 'ryver', 'twist'],
+            'analytics': ['mixpanel', 'amplitude', 'heap', 'fullstory', 'hotjar', 'crazy_egg', 'kissmetrics'],
+            'ecommerce': ['bigcommerce', 'woocommerce', 'magento', 'prestashop', 'opencart', 'volusion'],
+            'hr': ['bamboohr', 'namely', 'gusto', 'rippling', 'justworks', 'paychex', 'adp'],
+            'accounting': ['xero', 'freshbooks', 'wave', 'zoho_books', 'sage', 'netsuite'],
+            'cybersecurity': ['crowdstrike', 'sentinelone', 'cylance', 'carbon_black', 'sophos', 'bitdefender'],
+            'cloud_storage': ['pcloud', 'sync.com', 'icedrive', 'tresorit', 'spideroak', 'mega']
+        }
+        
+        # Track used URLs to ensure uniqueness across candidates
+        self.used_urls = set()
+        self.used_domains = set()
+        self.candidate_counter = 0
+        
         # Authoritative domains for different types of content
         self.authoritative_domains = {
             'comparison': ['g2.com', 'capterra.com', 'trustradius.com', 'softwareadvice.com'],
@@ -67,45 +86,55 @@ class SearchQueryGenerator:
             'reviews': ['g2.com', 'trustpilot.com', 'glassdoor.com']
         }
     
-    def generate_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
+    def generate_queries(self, claim: SearchableClaim, candidate_id: str = None) -> List[SearchQuery]:
         """
-        Generate targeted search queries for a claim.
+        Generate targeted search queries for a claim with diversity and uniqueness.
         
         Args:
             claim: Searchable claim with entities and context
+            candidate_id: Unique identifier for candidate to ensure URL diversity
             
         Returns:
             List of optimized search queries
         """
+        # Increment counter for diversity
+        self.candidate_counter += 1
+        
         queries = []
         
-        # Strategy 1: Direct company searches (highest priority)
+        # Strategy 1: Alternative/diverse company searches (prioritize variety)
+        queries.extend(self._create_diverse_company_queries(claim))
+        
+        # Strategy 2: Direct company searches (lower priority to avoid repetition)
         if claim.entities.get('companies'):
             queries.extend(self._create_company_queries(claim))
         
-        # Strategy 2: Product-specific searches
+        # Strategy 3: Product-specific searches with alternatives
         if claim.entities.get('products') or claim.claim_type in [ClaimType.PRODUCT_EVALUATION, ClaimType.FEATURE_COMPARISON]:
-            queries.extend(self._create_product_queries(claim))
+            queries.extend(self._create_diverse_product_queries(claim))
         
-        # Strategy 3: Pricing-specific searches
+        # Strategy 4: Pricing-specific searches with variety
         if claim.entities.get('pricing_terms') or claim.claim_type == ClaimType.PRICING_RESEARCH:
-            queries.extend(self._create_pricing_queries(claim))
+            queries.extend(self._create_diverse_pricing_queries(claim))
         
-        # Strategy 4: Comparison searches
+        # Strategy 5: Comparison searches with lesser-known alternatives
         if claim.claim_type in [ClaimType.FEATURE_COMPARISON, ClaimType.VENDOR_EVALUATION]:
-            queries.extend(self._create_comparison_queries(claim))
+            queries.extend(self._create_diverse_comparison_queries(claim))
         
-        # Strategy 5: Market research searches
+        # Strategy 6: Market research searches
         if claim.claim_type == ClaimType.MARKET_RESEARCH:
             queries.extend(self._create_market_research_queries(claim))
         
-        # Strategy 6: General activity searches (fallback)
+        # Strategy 7: General activity searches (fallback)
         if not queries or claim.claim_type == ClaimType.GENERAL_ACTIVITY:
             queries.extend(self._create_general_activity_queries(claim))
         
+        # Add randomization and diversity
+        queries = self._add_query_diversity(queries, claim)
+        
         # Sort by priority and limit results
         queries.sort(key=lambda q: q.priority, reverse=True)
-        return queries[:5]  # Limit to top 5 queries per claim
+        return queries[:7]  # Increased to 7 queries for more variety
     
     def _create_company_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
         """Create queries targeting specific company pages."""
@@ -426,4 +455,273 @@ def test_search_query_generator():
 
 
 if __name__ == '__main__':
-    test_search_query_generator()
+    test_search_query_generator()  
+  
+    def _create_diverse_company_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
+        """Create queries targeting diverse/alternative companies for variety."""
+        queries = []
+        
+        # Identify product category from claim
+        products = claim.entities.get('products', [])
+        category = self._identify_product_category(claim.text, products)
+        
+        if category and category in self.alternative_companies:
+            # Get alternative companies for this category
+            alternatives = self.alternative_companies[category]
+            
+            # Use candidate counter to select different alternatives for each candidate
+            selected_alternatives = self._select_diverse_alternatives(alternatives, 2)
+            
+            for alt_company in selected_alternatives:
+                if claim.entities.get('pricing_terms'):
+                    query = f'"{alt_company}" pricing plans cost features'
+                    queries.append(SearchQuery(
+                        query=query,
+                        expected_domains=[f"{alt_company}.com"],
+                        page_types=['pricing'],
+                        priority=9,  # High priority for diversity
+                        claim_support=f"Alternative {category} solution pricing information",
+                        search_strategy="diverse_company_pricing"
+                    ))
+                else:
+                    query = f'"{alt_company}" features review comparison'
+                    queries.append(SearchQuery(
+                        query=query,
+                        expected_domains=[f"{alt_company}.com"],
+                        page_types=['product', 'features'],
+                        priority=8,
+                        claim_support=f"Alternative {category} solution information",
+                        search_strategy="diverse_company_product"
+                    ))
+        
+        return queries
+    
+    def _create_diverse_product_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
+        """Create product queries with emphasis on lesser-known alternatives."""
+        queries = []
+        
+        products = claim.entities.get('products', [])
+        
+        for product in products:
+            # Add variety terms to find different solutions
+            variety_terms = [
+                "alternative", "competitor", "similar", "open source", 
+                "startup", "emerging", "new", "innovative"
+            ]
+            
+            # Select different variety term based on candidate counter
+            variety_term = variety_terms[self.candidate_counter % len(variety_terms)]
+            
+            query = f"{product} {variety_term} solutions comparison 2024"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=self.authoritative_domains.get('comparison', []),
+                page_types=['comparison', 'alternatives'],
+                priority=8,
+                claim_support=f"Alternative {product} solutions and comparisons",
+                search_strategy="diverse_product_alternatives"
+            ))
+            
+            # Add specific niche search
+            niche_terms = ["boutique", "specialized", "niche", "enterprise", "SMB", "startup-friendly"]
+            niche_term = niche_terms[self.candidate_counter % len(niche_terms)]
+            
+            query = f"{niche_term} {product} tools review"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=[],
+                page_types=['review', 'comparison'],
+                priority=7,
+                claim_support=f"Specialized {product} tool reviews",
+                search_strategy="niche_product_search"
+            ))
+        
+        return queries
+    
+    def _create_diverse_pricing_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
+        """Create pricing queries with variety in sources and approaches."""
+        queries = []
+        
+        # Different pricing research approaches
+        pricing_approaches = [
+            "budget-friendly", "enterprise", "small business", "startup", 
+            "cost-effective", "premium", "mid-market", "affordable"
+        ]
+        
+        products = claim.entities.get('products', [])
+        companies = claim.entities.get('companies', [])
+        
+        if products:
+            product_terms = ' '.join(products[:2])
+            
+            # Select different approach based on candidate
+            approach = pricing_approaches[self.candidate_counter % len(pricing_approaches)]
+            
+            query = f"{approach} {product_terms} pricing comparison 2024"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=self.authoritative_domains.get('comparison', []),
+                page_types=['pricing', 'comparison'],
+                priority=8,
+                claim_support=f"Pricing comparison for {approach} {product_terms} solutions",
+                search_strategy="diverse_pricing_approach"
+            ))
+            
+            # Add cost analysis from different perspectives
+            perspectives = ["ROI analysis", "TCO comparison", "cost breakdown", "pricing tiers"]
+            perspective = perspectives[self.candidate_counter % len(perspectives)]
+            
+            query = f"{product_terms} {perspective} study report"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=[],
+                page_types=['analysis', 'report'],
+                priority=7,
+                claim_support=f"Cost analysis and {perspective} for {product_terms}",
+                search_strategy="pricing_analysis_diverse"
+            ))
+        
+        return queries
+    
+    def _create_diverse_comparison_queries(self, claim: SearchableClaim) -> List[SearchQuery]:
+        """Create comparison queries focusing on lesser-known alternatives."""
+        queries = []
+        
+        products = claim.entities.get('products', [])
+        
+        if products:
+            product_terms = ' '.join(products[:2])
+            
+            # Different comparison angles
+            comparison_angles = [
+                "vs lesser known alternatives", "hidden gems", "underrated options",
+                "emerging competitors", "open source alternatives", "indie solutions",
+                "bootstrap-friendly", "developer-favorite", "community-driven"
+            ]
+            
+            angle = comparison_angles[self.candidate_counter % len(comparison_angles)]
+            
+            query = f"{product_terms} {angle} 2024"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=[],
+                page_types=['comparison', 'alternatives'],
+                priority=8,
+                claim_support=f"Alternative and emerging {product_terms} solutions",
+                search_strategy="diverse_alternatives_focus"
+            ))
+            
+            # Add specific alternative discovery
+            discovery_terms = [
+                "ProductHunt", "AlternativeTo", "Slant", "StackShare", 
+                "GitHub awesome lists", "indie hackers", "bootstrapped"
+            ]
+            
+            discovery_source = discovery_terms[self.candidate_counter % len(discovery_terms)]
+            
+            query = f"{product_terms} alternatives {discovery_source}"
+            queries.append(SearchQuery(
+                query=query,
+                expected_domains=[],
+                page_types=['alternatives', 'directory'],
+                priority=7,
+                claim_support=f"Alternative {product_terms} discovery from {discovery_source}",
+                search_strategy="alternative_discovery"
+            ))
+        
+        return queries
+    
+    def _identify_product_category(self, claim_text: str, products: List[str]) -> Optional[str]:
+        """Identify the product category from claim text and products."""
+        claim_lower = claim_text.lower()
+        
+        # Category keywords mapping
+        category_keywords = {
+            'crm': ['crm', 'customer relationship', 'sales management', 'lead management'],
+            'marketing_automation': ['marketing automation', 'email marketing', 'campaign', 'nurturing'],
+            'project_management': ['project management', 'task management', 'collaboration', 'workflow'],
+            'communication': ['communication', 'chat', 'messaging', 'team communication'],
+            'analytics': ['analytics', 'tracking', 'metrics', 'data analysis'],
+            'ecommerce': ['ecommerce', 'online store', 'shopping cart', 'e-commerce'],
+            'hr': ['hr', 'human resources', 'payroll', 'employee management'],
+            'accounting': ['accounting', 'bookkeeping', 'financial', 'invoicing'],
+            'cybersecurity': ['security', 'cybersecurity', 'antivirus', 'protection'],
+            'cloud_storage': ['storage', 'file sharing', 'backup', 'cloud storage']
+        }
+        
+        # Check products first
+        for product in products:
+            product_lower = product.lower()
+            for category, keywords in category_keywords.items():
+                if any(keyword in product_lower for keyword in keywords):
+                    return category
+        
+        # Check claim text
+        for category, keywords in category_keywords.items():
+            if any(keyword in claim_lower for keyword in keywords):
+                return category
+        
+        return None
+    
+    def _select_diverse_alternatives(self, alternatives: List[str], count: int) -> List[str]:
+        """Select diverse alternatives based on candidate counter to ensure variety."""
+        if len(alternatives) <= count:
+            return alternatives
+        
+        # Use candidate counter to select different starting points
+        start_index = self.candidate_counter % len(alternatives)
+        selected = []
+        
+        for i in range(count):
+            index = (start_index + i) % len(alternatives)
+            selected.append(alternatives[index])
+        
+        return selected
+    
+    def _add_query_diversity(self, queries: List[SearchQuery], claim: SearchableClaim) -> List[SearchQuery]:
+        """Add additional diversity to queries to avoid repetition."""
+        # Add randomization terms
+        randomization_terms = [
+            "2024", "latest", "new", "updated", "recent", "current", 
+            "best", "top", "leading", "popular", "trending", "emerging"
+        ]
+        
+        # Add geographic diversity
+        geo_terms = [
+            "US", "North America", "global", "international", 
+            "enterprise", "SMB", "startup", "mid-market"
+        ]
+        
+        # Add source diversity
+        source_terms = [
+            "review", "comparison", "analysis", "guide", "report", 
+            "study", "survey", "benchmark", "evaluation"
+        ]
+        
+        enhanced_queries = []
+        
+        for i, query in enumerate(queries):
+            # Add variety terms based on position and candidate counter
+            rand_term = randomization_terms[(self.candidate_counter + i) % len(randomization_terms)]
+            geo_term = geo_terms[(self.candidate_counter + i) % len(geo_terms)]
+            source_term = source_terms[(self.candidate_counter + i) % len(source_terms)]
+            
+            # Enhance query with diversity terms
+            if i % 3 == 0:  # Every third query gets randomization
+                enhanced_query = f"{query.query} {rand_term}"
+            elif i % 3 == 1:  # Every third query gets geographic focus
+                enhanced_query = f"{geo_term} {query.query}"
+            else:  # Remaining queries get source diversity
+                enhanced_query = f"{query.query} {source_term}"
+            
+            # Create new query with enhanced search
+            enhanced_queries.append(SearchQuery(
+                query=enhanced_query,
+                expected_domains=query.expected_domains,
+                page_types=query.page_types,
+                priority=query.priority,
+                claim_support=query.claim_support,
+                search_strategy=f"{query.search_strategy}_diverse"
+            ))
+        
+        return enhanced_queries

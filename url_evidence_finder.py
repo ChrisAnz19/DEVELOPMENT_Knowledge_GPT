@@ -86,10 +86,12 @@ class URLEvidenceFinder:
             
             print(f"[Evidence Finder] Processing {len(selected_claims)} claims from {len(explanations)} explanations")
             
-            # Step 2: Generate search queries for each claim
+            # Step 2: Generate search queries for each claim with diversity
             all_queries = []
+            candidate_id = candidate_context.get('id', f'candidate_{int(time.time())}') if candidate_context else f'candidate_{int(time.time())}'
+            
             for claim in selected_claims:
-                queries = self.query_generator.generate_queries(claim)
+                queries = self.query_generator.generate_queries(claim, candidate_id)
                 # Limit queries per claim
                 limited_queries = queries[:self.max_queries_per_claim]
                 all_queries.extend(limited_queries)
@@ -106,8 +108,10 @@ class URLEvidenceFinder:
             successful_searches = [r for r in search_results if r.success]
             print(f"[Evidence Finder] Completed {len(successful_searches)}/{len(search_results)} searches successfully")
             
-            # Step 4: Validate and rank evidence URLs
+            # Step 4: Validate and rank evidence URLs with uniqueness
             evidence_urls = []
+            candidate_id = candidate_context.get('id', f'candidate_{int(time.time())}') if candidate_context else f'candidate_{int(time.time())}'
+            
             for claim in selected_claims:
                 # Find search results for this claim
                 claim_results = [r for r in search_results if any(
@@ -115,7 +119,7 @@ class URLEvidenceFinder:
                 )]
                 
                 if claim_results:
-                    claim_evidence = self.evidence_validator.validate_and_rank(claim_results, claim)
+                    claim_evidence = self.evidence_validator.validate_and_rank(claim_results, claim, candidate_id)
                     evidence_urls.extend(claim_evidence)
             
             # Remove duplicates and select final set
