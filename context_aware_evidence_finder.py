@@ -323,28 +323,14 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
         return candidate
     
     def _generate_contextual_queries(self, candidate: Dict[str, Any]) -> List[str]:
-        """Generate highly specific search queries based on context and candidate info."""
-        from specific_search_query_generator import SpecificSearchQueryGenerator
+        """Generate behavioral queries focused on what prospects are looking for, not role definitions."""
         
-        # Use enhanced query generator for specificity
-        specific_generator = SpecificSearchQueryGenerator()
-        
-        # CRITICAL FIX: Use the original search prompt instead of reconstructed one
-        # The original prompt maintains important context and word order
+        # Get the original search prompt for behavioral context extraction
         search_prompt = self.search_context.search_prompt if self.search_context else self._build_search_prompt()
         
-        print(f"[Context-Aware Evidence] Using search prompt for query generation: {search_prompt}")
+        print(f"[Context-Aware Evidence] Using search prompt for behavioral query generation: {search_prompt}")
         
-        # Generate location-specific and context-aware queries
-        specific_queries = specific_generator.generate_location_specific_queries(search_prompt, candidate)
-        
-        if specific_queries:
-            print(f"[Context-Aware Evidence] Generated {len(specific_queries)} specific queries: {specific_queries}")
-            return specific_queries
-        else:
-            print(f"[Context-Aware Evidence] No specific queries generated, using fallback logic")
-        
-        # Fallback to original logic if specific generator doesn't produce results
+        # Start with empty queries list - we'll build behavioral queries
         queries = []
         
         name = candidate.get('name', '')
@@ -408,69 +394,78 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 location_query = f"{self.search_context.industry} {company} {self.search_context.activity_type}"
                 queries.append(location_query)
         
-        # CRITICAL FIX: Use behavioral context query generator
-        # This focuses on what people are looking for (behavioral context) 
-        # rather than generic role definitions like "what is a HR manager"
+        # CRITICAL FIX: Use behavioral context extractor to focus on what people are looking for
+        # This extracts behavioral context from the original search prompt
+        # rather than generating generic role definitions like "what is a HR manager"
         
-        from behavioral_context_query_generator import BehavioralContextQueryGenerator
-        
-        # Build behavioral search prompt from context
-        behavioral_prompt = self._build_behavioral_prompt(candidate)
-        
-        if behavioral_prompt:
-            print(f"[Context-Aware Evidence] Behavioral prompt: {behavioral_prompt}")
+        try:
+            from behavioral_context_extractor import BehavioralContextExtractor
             
-            # Generate behavioral queries
-            behavioral_generator = BehavioralContextQueryGenerator()
-            behavioral_queries = behavioral_generator.generate_behavioral_queries(
-                behavioral_prompt, max_queries=5
-            )
+            # Extract behavioral context from the original search prompt
+            extractor = BehavioralContextExtractor()
+            original_prompt = self.search_context.search_prompt if self.search_context else ""
             
-            # Convert to simple query strings and add to queries
-            for query_obj in behavioral_queries:
-                queries.append(query_obj.query)
-                print(f"[Context-Aware Evidence] Behavioral query: {query_obj.query}")
+            if original_prompt:
+                print(f"[Context-Aware Evidence] Extracting behavioral context from: {original_prompt}")
+                
+                behavioral_context = extractor.extract_behavioral_context(original_prompt)
+                
+                print(f"[Context-Aware Evidence] Behavioral focus: {behavioral_context.behavioral_focus}")
+                print(f"[Context-Aware Evidence] Products: {behavioral_context.products}")
+                print(f"[Context-Aware Evidence] Activities: {behavioral_context.activities}")
+                
+                # Generate behavioral queries based on extracted context
+                if behavioral_context.products:
+                    for product in behavioral_context.products:
+                        queries.append(f"{product} comparison 2024")
+                        queries.append(f"best {product} solutions")
+                        queries.append(f"{product} pricing guide")
+                
+                if behavioral_context.technologies:
+                    for tech in behavioral_context.technologies:
+                        queries.append(f"{tech} implementation guide")
+                        queries.append(f"{tech} market analysis")
+                
+                if behavioral_context.activities:
+                    primary_focus = extractor.get_primary_behavioral_focus(behavioral_context)
+                    for activity in behavioral_context.activities:
+                        queries.append(f"{primary_focus} {activity}")
+                
+                # Add intent-based queries
+                if behavioral_context.intent_keywords:
+                    primary_focus = extractor.get_primary_behavioral_focus(behavioral_context)
+                    for intent in behavioral_context.intent_keywords:
+                        queries.append(f"{primary_focus} {intent}")
+                
+                print(f"[Context-Aware Evidence] Generated {len(queries)} behavioral queries")
+                
+        except ImportError as e:
+            print(f"[Context-Aware Evidence] Could not import behavioral context extractor: {e}")
+        except Exception as e:
+            print(f"[Context-Aware Evidence] Error in behavioral context extraction: {e}")
         
-        # Fallback: Use name-free search generator if no behavioral context found
+        # Fallback: Generate generic industry queries if no behavioral context found
         if not queries:
-            print(f"[Context-Aware Evidence] No behavioral context found, using name-free fallback")
+            print(f"[Context-Aware Evidence] No behavioral context found, using generic industry queries")
             
-            from name_free_search_generator import NameFreeSearchGenerator
-            
-            # Create a mock claim from the candidate data for the name-free generator
-            mock_claim_entities = {}
-            
-            if title:
-                mock_claim_entities['roles'] = [title]
-            
-            if company:
-                mock_claim_entities['companies'] = [company]
-            
-            # Add industry context if available
-            if (self.search_context and 
-                hasattr(self.search_context, 'industry') and 
-                self.search_context.industry):
-                mock_claim_entities['industries'] = [self.search_context.industry]
-            
-            # Create mock claim for name-free generator
-            from explanation_analyzer import SearchableClaim, ClaimType
-            
-            mock_claim = SearchableClaim(
-                text=f"Professional in {title} role at {company}" if title and company else "Professional seeking opportunities",
-                claim_type=ClaimType.GENERAL_ACTIVITY,
-                entities=mock_claim_entities,
-                search_terms=[term for term in [title, company] if term],
-                priority=8,
-                confidence=0.9
-            )
-            
-            # Generate name-free queries
-            name_free_generator = NameFreeSearchGenerator()
-            name_free_queries = name_free_generator.generate_queries(mock_claim)
-            
-            # Convert to simple query strings
-            for query_obj in name_free_queries:
-                queries.append(query_obj.query)
+            # Generate safe, non-role-based queries
+            if self.search_context and self.search_context.industry:
+                industry = self.search_context.industry
+                queries.extend([
+                    f"{industry} industry trends 2024",
+                    f"{industry} market analysis",
+                    f"{industry} technology solutions",
+                    f"{industry} software comparison",
+                    f"{industry} best practices"
+                ])
+            else:
+                # Very generic fallback
+                queries.extend([
+                    "business software solutions 2024",
+                    "enterprise technology trends",
+                    "business process automation",
+                    "digital transformation tools"
+                ])
         
         # Industry-specific queries with current context
         if self.search_context.industry:
