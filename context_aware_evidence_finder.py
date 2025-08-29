@@ -408,47 +408,69 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 location_query = f"{self.search_context.industry} {company} {self.search_context.activity_type}"
                 queries.append(location_query)
         
-        # CRITICAL FIX: Use name-free search generator for all queries
-        # This completely eliminates the risk of using prospect names in searches
+        # CRITICAL FIX: Use behavioral context query generator
+        # This focuses on what people are looking for (behavioral context) 
+        # rather than generic role definitions like "what is a HR manager"
         
-        from name_free_search_generator import NameFreeSearchGenerator
+        from behavioral_context_query_generator import BehavioralContextQueryGenerator
         
-        # Create a mock claim from the candidate data for the name-free generator
-        mock_claim_entities = {}
+        # Build behavioral search prompt from context
+        behavioral_prompt = self._build_behavioral_prompt(candidate)
         
-        if title:
-            # Extract role information
-            mock_claim_entities['roles'] = [title]
+        if behavioral_prompt:
+            print(f"[Context-Aware Evidence] Behavioral prompt: {behavioral_prompt}")
+            
+            # Generate behavioral queries
+            behavioral_generator = BehavioralContextQueryGenerator()
+            behavioral_queries = behavioral_generator.generate_behavioral_queries(
+                behavioral_prompt, max_queries=5
+            )
+            
+            # Convert to simple query strings and add to queries
+            for query_obj in behavioral_queries:
+                queries.append(query_obj.query)
+                print(f"[Context-Aware Evidence] Behavioral query: {query_obj.query}")
         
-        if company:
-            # Extract company information
-            mock_claim_entities['companies'] = [company]
-        
-        # Add industry context if available
-        if (self.search_context and 
-            hasattr(self.search_context, 'industry') and 
-            self.search_context.industry):
-            mock_claim_entities['industries'] = [self.search_context.industry]
-        
-        # Create mock claim for name-free generator
-        from explanation_analyzer import SearchableClaim, ClaimType
-        
-        mock_claim = SearchableClaim(
-            text=f"Professional in {title} role at {company}" if title and company else "Professional seeking opportunities",
-            claim_type=ClaimType.GENERAL_ACTIVITY,
-            entities=mock_claim_entities,
-            search_terms=[term for term in [title, company] if term],
-            priority=8,
-            confidence=0.9
-        )
-        
-        # Generate name-free queries
-        name_free_generator = NameFreeSearchGenerator()
-        name_free_queries = name_free_generator.generate_queries(mock_claim)
-        
-        # Convert to simple query strings
-        for query_obj in name_free_queries:
-            queries.append(query_obj.query)
+        # Fallback: Use name-free search generator if no behavioral context found
+        if not queries:
+            print(f"[Context-Aware Evidence] No behavioral context found, using name-free fallback")
+            
+            from name_free_search_generator import NameFreeSearchGenerator
+            
+            # Create a mock claim from the candidate data for the name-free generator
+            mock_claim_entities = {}
+            
+            if title:
+                mock_claim_entities['roles'] = [title]
+            
+            if company:
+                mock_claim_entities['companies'] = [company]
+            
+            # Add industry context if available
+            if (self.search_context and 
+                hasattr(self.search_context, 'industry') and 
+                self.search_context.industry):
+                mock_claim_entities['industries'] = [self.search_context.industry]
+            
+            # Create mock claim for name-free generator
+            from explanation_analyzer import SearchableClaim, ClaimType
+            
+            mock_claim = SearchableClaim(
+                text=f"Professional in {title} role at {company}" if title and company else "Professional seeking opportunities",
+                claim_type=ClaimType.GENERAL_ACTIVITY,
+                entities=mock_claim_entities,
+                search_terms=[term for term in [title, company] if term],
+                priority=8,
+                confidence=0.9
+            )
+            
+            # Generate name-free queries
+            name_free_generator = NameFreeSearchGenerator()
+            name_free_queries = name_free_generator.generate_queries(mock_claim)
+            
+            # Convert to simple query strings
+            for query_obj in name_free_queries:
+                queries.append(query_obj.query)
         
         # Industry-specific queries with current context
         if self.search_context.industry:
@@ -488,6 +510,48 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
             prompt_parts.extend(self.search_context.key_terms[:3])
         
         return " ".join(prompt_parts) if prompt_parts else "business search"
+    
+    def _build_behavioral_prompt(self, candidate: Dict[str, Any]) -> str:
+        """Build behavioral prompt focusing on what the person is looking for."""
+        
+        # Get candidate information
+        title = candidate.get('title', '')
+        company = candidate.get('company', '')
+        
+        # Get behavioral insight from candidate data
+        behavioral_data = candidate.get('behavioral_data', {})
+        insight = behavioral_data.get('behavioral_insight', '') if isinstance(behavioral_data, dict) else ''
+        
+        # Build behavioral prompt based on available context
+        if insight:
+            # Use the behavioral insight directly if available
+            if title:
+                return f"{title} {insight}"
+            else:
+                return insight
+        
+        # Fallback: Build from search context and role
+        elif self.search_context and title:
+            prompt_parts = []
+            
+            # Add role context
+            prompt_parts.append(title)
+            
+            # Add behavioral context from search context
+            if self.search_context.activity_type:
+                prompt_parts.append(self.search_context.activity_type)
+            
+            # Add industry context
+            if self.search_context.industry:
+                prompt_parts.append(f"{self.search_context.industry} solutions")
+            
+            return " ".join(prompt_parts)
+        
+        # Final fallback: Generic behavioral prompt
+        elif title:
+            return f"{title} looking for software solutions"
+        
+        return ""
     
     async def _execute_searches(self, web_search, search_queries):
         """Execute search queries and return results."""
