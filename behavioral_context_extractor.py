@@ -56,13 +56,13 @@ class BehavioralContextExtractor:
         # Product/service categories to focus on
         self.product_categories = {
             'crm': ['crm', 'customer relationship management', 'salesforce', 'hubspot'],
-            'hris': ['hris', 'hr software', 'human resources', 'workday', 'successfactors'],
-            'accounting': ['accounting software', 'quickbooks', 'netsuite', 'sage'],
-            'marketing': ['marketing automation', 'marketo', 'pardot', 'eloqua'],
-            'sales': ['sales software', 'sales tools', 'pipedrive', 'salesforce'],
-            'analytics': ['analytics', 'business intelligence', 'tableau', 'power bi'],
-            'cloud': ['cloud services', 'aws', 'azure', 'google cloud'],
-            'security': ['cybersecurity', 'security software', 'firewall', 'antivirus']
+            'hris': ['hris', 'hrm', 'hr software', 'hr platform', 'hrm platform', 'human resources', 'workday', 'successfactors'],
+            'accounting': ['accounting software', 'accounting platform', 'quickbooks', 'netsuite', 'sage'],
+            'marketing': ['marketing automation', 'marketing platform', 'marketo', 'pardot', 'eloqua'],
+            'sales': ['sales software', 'sales platform', 'sales tools', 'pipedrive', 'salesforce'],
+            'analytics': ['analytics', 'analytics platform', 'business intelligence', 'tableau', 'power bi'],
+            'cloud': ['cloud services', 'cloud platform', 'aws', 'azure', 'google cloud'],
+            'security': ['cybersecurity', 'security software', 'security platform', 'firewall', 'antivirus']
         }
         
         # Activity keywords that indicate behavioral intent
@@ -123,13 +123,13 @@ class BehavioralContextExtractor:
         """
         # Try to find behavioral triggers and extract what comes after
         for trigger in self.behavioral_triggers:
-            pattern = rf'{trigger}\\s+(.+?)(?:\\s+(?:in|at|for|with|from)\\s+|$)'
+            pattern = rf'{trigger}\s+(.+?)(?:\s+(?:in|at|for|with|from)\s+|$)'
             match = re.search(pattern, prompt, re.IGNORECASE)
             if match:
                 behavioral_text = match.group(1).strip()
                 # Clean up the extracted text
-                behavioral_text = re.sub(r'\\b(?:a|an|the)\\b', '', behavioral_text)
-                behavioral_text = re.sub(r'\\s+', ' ', behavioral_text).strip()
+                behavioral_text = re.sub(r'\b(?:a|an|the)\b', '', behavioral_text)
+                behavioral_text = re.sub(r'\s+', ' ', behavioral_text).strip()
                 return behavioral_text
         
         # Fallback: look for product/service keywords in the entire prompt
@@ -137,20 +137,54 @@ class BehavioralContextExtractor:
         behavioral_words = []
         
         for word in words:
-            word_clean = re.sub(r'[^a-zA-Z0-9\\s]', '', word).lower()
+            word_clean = re.sub(r'[^a-zA-Z0-9\s]', '', word).lower()
             if (word_clean not in self.role_terms and 
                 len(word_clean) > 2 and
                 not word_clean.isdigit()):
                 behavioral_words.append(word_clean)
         
-        return ' '.join(behavioral_words[-3:])  # Take last 3 non-role words
+        # CRITICAL FIX: Preserve multi-word context instead of just taking last 3 words
+        # Look for meaningful product/service combinations
+        behavioral_text = ' '.join(behavioral_words)
+        
+        # Extract multi-word product terms first
+        multi_word_products = [
+            'hrm platform', 'hr platform', 'hris platform', 'crm platform', 
+            'marketing platform', 'sales platform', 'analytics platform',
+            'accounting software', 'hr software', 'sales software',
+            'marketing automation', 'business intelligence'
+        ]
+        
+        for product_term in multi_word_products:
+            if product_term in behavioral_text:
+                return product_term
+        
+        # If no multi-word match, return the full behavioral context (not just last 3 words)
+        return behavioral_text if len(behavioral_text) > 0 else ' '.join(behavioral_words[-3:])
     
     def _extract_products(self, behavioral_focus: str) -> List[str]:
         """Extract product/service names from behavioral focus."""
         products = []
         focus_lower = behavioral_focus.lower()
         
-        # Check for specific product categories
+        # CRITICAL FIX: Check for multi-word product terms first (longer matches take priority)
+        multi_word_products = [
+            'hrm platform', 'hr platform', 'hris platform', 'crm platform', 
+            'marketing platform', 'sales platform', 'analytics platform',
+            'accounting software', 'hr software', 'sales software',
+            'marketing automation', 'business intelligence', 'customer relationship management'
+        ]
+        
+        # Check for multi-word products first
+        for product_term in multi_word_products:
+            if product_term in focus_lower:
+                products.append(product_term)
+        
+        # If we found multi-word products, prioritize those
+        if products:
+            return list(set(products))
+        
+        # Check for specific product categories (single words)
         for category, keywords in self.product_categories.items():
             for keyword in keywords:
                 if keyword in focus_lower:

@@ -414,6 +414,9 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                 print(f"[Context-Aware Evidence] Products: {behavioral_context.products}")
                 print(f"[Context-Aware Evidence] Activities: {behavioral_context.activities}")
                 
+                # CRITICAL FIX: Use full behavioral focus to preserve context like "HRM platforms"
+                primary_focus = extractor.get_primary_behavioral_focus(behavioral_context)
+                
                 # Generate behavioral queries based on extracted context
                 if behavioral_context.products:
                     for product in behavioral_context.products:
@@ -421,19 +424,24 @@ class ContextAwareEvidenceFinder(EnhancedURLEvidenceFinder):
                         queries.append(f"best {product} solutions")
                         queries.append(f"{product} pricing guide")
                 
+                # Use full behavioral focus for more specific queries
+                if behavioral_context.behavioral_focus:
+                    focus = behavioral_context.behavioral_focus
+                    queries.append(f"{focus} comparison")
+                    queries.append(f"best {focus}")
+                    queries.append(f"{focus} reviews")
+                
                 if behavioral_context.technologies:
                     for tech in behavioral_context.technologies:
                         queries.append(f"{tech} implementation guide")
                         queries.append(f"{tech} market analysis")
                 
                 if behavioral_context.activities:
-                    primary_focus = extractor.get_primary_behavioral_focus(behavioral_context)
                     for activity in behavioral_context.activities:
                         queries.append(f"{primary_focus} {activity}")
                 
                 # Add intent-based queries
                 if behavioral_context.intent_keywords:
-                    primary_focus = extractor.get_primary_behavioral_focus(behavioral_context)
                     for intent in behavioral_context.intent_keywords:
                         queries.append(f"{primary_focus} {intent}")
                 
